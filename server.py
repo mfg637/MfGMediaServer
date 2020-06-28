@@ -10,11 +10,26 @@ import base64
 
 import decoders
 
+image_file_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.webm', '.svg', '.mkv', '.mp4'}
+
+
+def browse_folder(folder):
+    path_dir_objects = []
+    path_file_objects = []
+    for entry in folder.iterdir():
+        if entry.is_file() and entry.suffix.lower() in image_file_extensions:
+            path_file_objects.append(entry)
+        elif entry.is_dir() and entry.name[0] != '.':
+            path_dir_objects.append(entry)
+    return path_dir_objects, path_file_objects
+
+
+app = flask.Flask(__name__)
+
 if len(sys.argv)>1:
     os.chdir(sys.argv[1])
 
 root_dir = pathlib.Path('.').absolute()
-app = flask.Flask(__name__)
 
 
 def header(title):
@@ -76,17 +91,16 @@ def gen_thumbnail(format:str, width, height, pathstr):
         flask.abort(404)
 
 
-
 def browse(dir):
+    dirlist, filelist = browse_folder(dir)
     buffer = io.StringIO('')
-    if dir==root_dir:
+    if dir == root_dir:
         buffer.write(header("root"))
     else:
         buffer.write((header(dir.name)))
-    root = pathlib.Path('.')
     if dir != root_dir:
         buffer.write("<p>")
-        if dir.parent==root_dir:
+        if dir.parent == root_dir:
             buffer.write("<a href=\"/\">")
         else:
             buffer.write("<a href=\"/browse/{}\">".format(dir.parent.relative_to(root_dir)))
@@ -101,6 +115,8 @@ def browse(dir):
             buffer.write("<img src=\"/thumbnail/webp/192x144/{}\" />".format(
                 base64.b64encode(str(file.relative_to(root_dir)).encode("utf-8")).hex()
             ))
+        elif file.is_dir():
+            buffer.write("<img src=\"{}\" />".format(flask.url_for('static', filename='images/folder icon.svg')))
         buffer.write(str(file.name))
         if file.is_dir():
             buffer.write("</a>")

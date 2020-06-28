@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg
+		version="1.1"
+		xmlns="http://www.w3.org/2000/svg"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
+		x="0px"
+		y="0px"
+		width="192px"
+		height="144px"
+		viewBox="0 0 192 144"
+		style="enable-background:new 0 0 192 144;"
+		xml:space="preserve"
+>
+<style type="text/css">
+	.back_side_layer_1{fill:url(#back_side_linear_gradient);}
+	.back_side_layer_2{fill:url(#back_side_radial_gradient);}
+	.front_side_layer_1{fill:url(#front_side_linear_gradient);}
+	.front_side_layer_2{fill:url(#front_side_radial_gradient);}
+</style>
+	<linearGradient id="back_side_linear_gradient" gradientUnits="userSpaceOnUse" x1="96.0945" y1="1.1377" x2="96.0473" y2="41.0001">
+		<stop  offset="0" style="stop-color:#FFEA8C"/>
+		<stop  offset="0.7974" style="stop-color:#E6C229"/>
+		<stop  offset="1" style="stop-color:#D6B834"/>
+	</linearGradient>
+    <radialGradient id="back_side_radial_gradient" cx="29" cy="-1.6667" r="154.3423" gradientUnits="userSpaceOnUse">
+		<stop  offset="0" style="stop-color:#FFEA8C"/>
+		<stop  offset="1" style="stop-color:#E6C229;stop-opacity:0"/>
+	</radialGradient>
+    <linearGradient id="front_side_linear_gradient" gradientUnits="userSpaceOnUse" x1="96" y1="40.5" x2="96" y2="144.1967">
+		<stop  offset="0" style="stop-color:#FFEA8C"/>
+		<stop  offset="0.2231" style="stop-color:#F6D443"/>
+		<stop  offset="0.741" style="stop-color:#EDCB3A"/>
+		<stop  offset="1" style="stop-color:#D6B834"/>
+	</linearGradient>
+    <radialGradient id="front_side_radial_gradient" cx="9.3333" cy="45.5" r="216.6719" gradientTransform="matrix(1 0 0 0.7611 0 10.8711)" gradientUnits="userSpaceOnUse">
+		<stop  offset="0" style="stop-color:#FFEFA8"/>
+		<stop  offset="1" style="stop-color:#F6D443;stop-opacity:0"/>
+	</radialGradient>
+<!--
+    base color: 
+        front_side_radial_gradient[1]
+        front_side_linear_gradient[1]
+        #F6D443
+        rgb(246, 212, 67)
+    colors_offset:{
+        back_side_linear_gradient[3] = {
+            rgb(9, 22, 73),//1
+            rgb(-16, -18, -26),//2
+            rgb(2, -28 -15)//3
+        };
+        back_side_radial_gradient[2] = {
+            rgb(9, 22, 73),//1
+            rgb(-16, -18, -26)//2
+        };
+        front_side_linear_gradient[4] = {
+            rgb(9, 22, 73),//1
+            rgb(0, 0, 0),//4
+            rgb(-9, -9, -9),//5
+            rgb(2, -28 -15)//3
+        };
+        front_side_radial_gradient[2] = {
+            rgb(9, 27, 101),//6
+            rgb(0, 0, 0),//4
+        };
+        1 - 4
+        2 - 2
+        3 - 2
+        4 - 2
+        5 - 1
+        6 - 1
+    };
+        
+-->
+<g id="back_side">
+	<path class="back_side_layer_1" d="M80,0c-9.56,0-43.23,0-51.88,0c-1.3,0-2.04,2.62-2.04,2.62s0.11,8.35,0,11.13C26,16,24.58,16.62,23.63,16.7
+		c-2.89,0.24-9.54,0.1-12.13,0.03c-0.66-0.02-1.06,1.21-1.06,1.21V144h171.13V16.7c0,0-78.56-0.14-94.31,0C78.99,16.77,82,0,80,0z"
+		/>
+	<path class="back_side_layer_2" d="M80,0c-9.56,0-43.23,0-51.88,0c-1.3,0-2.04,2.62-2.04,2.62s0.11,8.35,0,11.13C26,16,24.58,16.62,23.63,16.7
+		c-2.89,0.24-9.54,0.1-12.13,0.03c-0.66-0.02-1.06,1.21-1.06,1.21V144h171.13V16.7c0,0-78.56-0.14-94.31,0C78.99,16.77,82,0,80,0z"
+		/>
+</g>
+<g id="front_side">
+	<polygon class="front_side_layer_1" points="10,144 0,41 192,41 182,144 	"/>
+	<polygon class="front_side_layer_2" points="10,144 0,41 192,41 182,144 	"/>
+</g>
+</svg>
