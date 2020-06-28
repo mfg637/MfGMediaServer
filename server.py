@@ -8,6 +8,7 @@ import io
 import PIL.Image
 import base64
 import magic
+import re
 
 import decoders
 
@@ -63,6 +64,10 @@ def cache_check(path):
     except KeyError:
         pass
     return src_hash, None
+
+
+def simplify_filename(name):
+    return re.sub(r"[_-]", ' ', name)
 
 
 @app.route('/')
@@ -124,7 +129,7 @@ def browse(dir):
             {
                 "link": "/browse/{}".format(_dir.relative_to(root_dir)),
                 "icon": flask.url_for('static', filename='images/folder icon.svg'),
-                "name": _dir.name
+                "name": simplify_filename(_dir.name)
             }
         )
     for file in filelist:
@@ -133,32 +138,21 @@ def browse(dir):
             {
                 "link": "/orig/{}".format(base64path),
                 "icon": "/thumbnail/webp/192x144/{}".format(base64path),
-                "name": file.name
+                "name": simplify_filename(file.name)
             }
         )
-    buffer = io.StringIO('')
+    title = ''
     if dir == root_dir:
-        buffer.write(header("root"))
+        title = "root"
     else:
-        buffer.write((header(dir.name)))
+        title = dir.name
+    backlink = None
     if dir != root_dir:
-        buffer.write("<p>")
         if dir.parent == root_dir:
-            buffer.write("<a href=\"/\">")
+            backlink = "/"
         else:
-            buffer.write("<a href=\"/browse/{}\">".format(dir.parent.relative_to(root_dir)))
-        buffer.write('..')
-        buffer.write("</a>")
-        buffer.write("</p>\n")
-    for item in itemslist:
-        buffer.write("<p>")
-        buffer.write("<a href=\"{}\">".format(item['link']))
-        buffer.write("<img src=\"{}\" />".format(item['icon']))
-        buffer.write(str(item['name']))
-        buffer.write("</a>")
-        buffer.write("</p>\n")
-    buffer.write(footer())
-    return buffer.getvalue()
+            backlink = "/browse/{}".format(dir.parent.relative_to(root_dir))
+    return flask.render_template('index.html', title=title, backlink=backlink, itemslist=itemslist)
 
 @app.route('/browse/<path:pathstr>')
 def browse_dir(pathstr):

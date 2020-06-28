@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        a.item{
+            display: block;
+            float: left;
+            width:192px;
+            height: 200px;
+            padding: 4px;
+            margin: 4px;
+        }
+        .item img{
+            display: block;
+            margin: 0 auto;
+        }
+        .item .title-wrapper{
+            text-align: center;
+            width:192px;
+            overflow:hidden;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    {% if backlink is not none %}
+        <p>
+            <a href="{{ backlink  }}">
+                ..
+            </a>
+        </p>
+    {% endif %}
+    <div class="itemsgrid">
+    {% for item in itemslist %}
+        <a class="item" href="{{ item.link }}" title="{{ item.name }}">
+            <div class="icon-wrapper">
+                <img src="{{ item.icon }}" />
+            </div>
+            <div class="title-wrapper">
+                {{ item.name }}
+            </div>
+        </a>
+    {% endfor %}
+    </div>
+</body>
+</html>
