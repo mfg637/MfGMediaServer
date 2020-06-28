@@ -124,6 +124,16 @@ def gen_thumbnail(format:str, width, height, pathstr):
 def browse(dir):
     dirlist, filelist = browse_folder(dir)
     itemslist = list()
+    if dir != root_dir:
+        itemslist.append({
+            "icon": flask.url_for('static', filename='images/updir_icon.svg'),
+            "name": ".."
+        })
+        if dir.parent == root_dir:
+            itemslist[0]["link"] = "/"
+        else:
+            itemslist[0]["link"] = "/browse/{}".format(dir.parent.relative_to(root_dir))
+
     for _dir in dirlist:
         itemslist.append(
             {
@@ -146,13 +156,7 @@ def browse(dir):
         title = "root"
     else:
         title = dir.name
-    backlink = None
-    if dir != root_dir:
-        if dir.parent == root_dir:
-            backlink = "/"
-        else:
-            backlink = "/browse/{}".format(dir.parent.relative_to(root_dir))
-    return flask.render_template('index.html', title=title, backlink=backlink, itemslist=itemslist)
+    return flask.render_template('index.html', title=title, itemslist=itemslist)
 
 @app.route('/browse/<path:pathstr>')
 def browse_dir(pathstr):

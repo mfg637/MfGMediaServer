@@ -26,19 +26,13 @@
         .item .title-wrapper{
             text-align: center;
             width:192px;
+            height: 58px;
             overflow:hidden;
         }
     </style>
 </head>
 <body>
     <h1>{{ title }}</h1>
-    {% if backlink is not none %}
-        <p>
-            <a href="{{ backlink  }}">
-                ..
-            </a>
-        </p>
-    {% endif %}
     <div class="itemsgrid">
     {% for item in itemslist %}
         <a class="item" href="{{ item.link }}" title="{{ item.name }}">
