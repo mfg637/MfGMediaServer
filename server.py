@@ -7,6 +7,7 @@ import pathlib
 import io
 import PIL.Image
 import base64
+import magic
 
 import decoders
 
@@ -49,23 +50,48 @@ def footer():
     return foo
 
 
+def base64_to_str(base64code):
+    return base64.b64decode(bytes.fromhex(base64code)).decode("utf-8")
+
+
+def cache_check(path):
+    src_hash = hashlib.sha3_256(path.read_bytes()).hexdigest()
+    try:
+        if flask.request.headers['If-None-Match'][1:-1] == src_hash:
+            status_code = flask.Response(status=304)
+            return src_hash, status_code
+    except KeyError:
+        pass
+    return src_hash, None
+
+
 @app.route('/')
 def app_root():
     return browse(root_dir)
 
 
-@app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<path:pathstr>')
-def gen_thumbnail(format:str, width, height, pathstr):
-    path = pathlib.Path(base64.b64decode(bytes.fromhex(pathstr)).decode("utf-8"))
-    print(path)
+@app.route('/orig/<string:pathstr>')
+def get_original(pathstr):
+    path = pathlib.Path(base64_to_str(pathstr))
     if path.is_file():
-        src_hash = hashlib.sha3_256(path.read_bytes()).hexdigest()
-        try:
-            if flask.request.headers['If-None-Match'][1:-1] == src_hash:
-                status_code = flask.Response(status=304)
-                return status_code
-        except KeyError:
-            pass
+        src_hash, status_code = cache_check(path)
+        if status_code is not None:
+            return status_code
+        abspath = str(path.absolute())
+        f = flask.send_file(abspath, add_etags=False, mimetype=magic.from_file(abspath, mime=True))
+        f.set_etag(src_hash)
+        return f
+    else:
+        flask.abort(404)
+
+
+@app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<string:pathstr>')
+def gen_thumbnail(format:str, width, height, pathstr):
+    path = pathlib.Path(base64_to_str(pathstr))
+    if path.is_file():
+        src_hash, status_code = cache_check(path)
+        if status_code is not None:
+            return status_code
         img = decoders.open_image(path)
         img = img.convert(mode='RGBA')
         img.thumbnail((width, height), PIL.Image.LANCZOS)
@@ -81,7 +107,6 @@ def gen_thumbnail(format:str, width, height, pathstr):
         f = flask.send_file(
             buffer,
             mimetype=mime,
-            add_etags=src_hash,
             cache_timeout=24*60*60,
             last_modified=path.stat().st_mtime,
         )
@@ -93,6 +118,24 @@ def gen_thumbnail(format:str, width, height, pathstr):
 
 def browse(dir):
     dirlist, filelist = browse_folder(dir)
+    itemslist = list()
+    for _dir in dirlist:
+        itemslist.append(
+            {
+                "link": "/browse/{}".format(_dir.relative_to(root_dir)),
+                "icon": flask.url_for('static', filename='images/folder icon.svg'),
+                "name": _dir.name
+            }
+        )
+    for file in filelist:
+        base64path = base64.b64encode(str(file.relative_to(root_dir)).encode("utf-8")).hex()
+        itemslist.append(
+            {
+                "link": "/orig/{}".format(base64path),
+                "icon": "/thumbnail/webp/192x144/{}".format(base64path),
+                "name": file.name
+            }
+        )
     buffer = io.StringIO('')
     if dir == root_dir:
         buffer.write(header("root"))
@@ -107,19 +150,12 @@ def browse(dir):
         buffer.write('..')
         buffer.write("</a>")
         buffer.write("</p>\n")
-    for file in dir.iterdir():
+    for item in itemslist:
         buffer.write("<p>")
-        if file.is_dir():
-            buffer.write("<a href=\"/browse/{}\">".format(file.relative_to(root_dir)))
-        if file.is_file() and file.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp', '.svg'}:
-            buffer.write("<img src=\"/thumbnail/webp/192x144/{}\" />".format(
-                base64.b64encode(str(file.relative_to(root_dir)).encode("utf-8")).hex()
-            ))
-        elif file.is_dir():
-            buffer.write("<img src=\"{}\" />".format(flask.url_for('static', filename='images/folder icon.svg')))
-        buffer.write(str(file.name))
-        if file.is_dir():
-            buffer.write("</a>")
+        buffer.write("<a href=\"{}\">".format(item['link']))
+        buffer.write("<img src=\"{}\" />".format(item['icon']))
+        buffer.write(str(item['name']))
+        buffer.write("</a>")
         buffer.write("</p>\n")
     buffer.write(footer())
     return buffer.getvalue()
