@@ -151,6 +151,8 @@ def browse(dir):
                 "name": simplify_filename(file.name)
             }
         )
+        if file.suffix == '.mkv':
+            itemslist[-1]['link'] = "/videostream_vp8/{}".format(base64path)
     title = ''
     if dir == root_dir:
         title = "root"
@@ -179,6 +181,34 @@ def browse_dir(pathstr):
 @app.route('/helloword')
 def hello_world():
     return 'Hello, World!'
+
+
+@app.route('/videostream_vp8/<string:pathstr>')
+def ffmpeg_vp8_simplestream(pathstr):
+    import subprocess
+    path = pathlib.Path(base64_to_str(pathstr))
+    if path.is_file():
+        #abspath = str(path.absolute())
+        process = subprocess.Popen(
+            [
+                'ffmpeg',
+                '-i', str(path),
+                '-vf', 'scale=\'min(1440,iw)\':-1',
+                '-vcodec', 'libvpx',
+                '-crf', '10',
+                '-b:v', '8M',
+                '-ac', '2',
+                '-acodec', 'libopus',
+                '-b:a', '144k',
+                '-f', 'webm',
+                '-'
+            ], stdout=subprocess.PIPE
+        )
+        f = flask.send_file(process.stdout, add_etags=False, mimetype="video/webm")
+        return f
+    else:
+        flask.abort(404)
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=3709)
