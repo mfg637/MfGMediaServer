@@ -25,6 +25,24 @@ START_OF_FRAME_MARKERS = {
 }
 
 
+is_arithmetic_SOF = {
+    b'\xff\xc0': False,
+    b'\xff\xc1': False,
+    b'\xff\xc2': False,
+    b'\xff\xc3': False,
+    b'\xff\xc5': False,
+    b'\xff\xc6': False,
+    b'\xff\xc7': False,
+    b'\xff\xc8': True,
+    b'\xff\xc9': True,
+    b'\xff\xca': True,
+    b'\xff\xcb': True,
+    b'\xff\xcd': True,
+    b'\xff\xce': True,
+    b'\xff\xcf': True
+}
+
+
 def is_JPEG(file_path):
     file = open(file_path, 'rb')
     header = file.read(2)
@@ -61,6 +79,20 @@ class JPEGDecoder(CustomDecoder.CustomDecoder):
                     self._file.seek(frame_len-2, 1)
             #self._file.close()
         return self._size
+
+
+    def arithmetic_coding(self):
+        if self._size is None:
+            while self._size is None:
+                marker = self._file.read(2)
+                # fix marker reading position
+                if marker[0] != 255 and marker[1] == 255:
+                    self._file.seek(-1, 1)
+                    marker = self._file.read(2)
+                if marker == b'\xff\x00':
+                    raise ValueError("jpeg marker not found")
+                if marker in START_OF_FRAME_MARKERS:
+                    return is_arithmetic_SOF[marker]
 
     def load_image(self):
         self._file.seek(0, 0)

@@ -90,6 +90,36 @@ def get_original(pathstr):
         flask.abort(404)
 
 
+@app.route('/image/<string:format>/<string:pathstr>')
+def transcode_image(format:str, pathstr):
+    path = pathlib.Path(base64_to_str(pathstr))
+    if path.is_file():
+        src_hash, status_code = cache_check(path)
+        if status_code is not None:
+            return status_code
+        img = decoders.open_image(path)
+        img = img.convert(mode='RGBA')
+        buffer = io.BytesIO()
+        mime = ''
+        if format.lower() == 'webp':
+            img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
+            mime = "image/webp"
+        else:
+            img.save(buffer, format="JPEG", quality=90)
+            mime = "image/jpeg"
+        buffer.seek(0)
+        f = flask.send_file(
+            buffer,
+            mimetype=mime,
+            cache_timeout=24*60*60,
+            last_modified=path.stat().st_mtime,
+        )
+        f.set_etag(src_hash)
+        return f
+    else:
+        flask.abort(404)
+
+
 @app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<string:pathstr>')
 def gen_thumbnail(format:str, width, height, pathstr):
     path = pathlib.Path(base64_to_str(pathstr))
@@ -153,6 +183,13 @@ def browse(dir):
         )
         if file.suffix == '.mkv':
             itemslist[-1]['link'] = "/videostream_vp8/{}".format(base64path)
+        if file.suffix.lower() in {'.jpg', '.jpeg'}:
+            jpg = decoders.jpeg.JPEGDecoder(file)
+            try:
+                if (jpg.arithmetic_coding()):
+                    itemslist[-1]['link'] = "/image/webp/{}".format((base64path))
+            except ValueError:
+                itemslist[-1]['link'] = "/image/webp/{}".format((base64path))
     title = ''
     if dir == root_dir:
         title = "root"
