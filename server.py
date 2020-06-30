@@ -9,6 +9,7 @@ import PIL.Image
 import base64
 import magic
 import re
+import ffmpeg
 
 import decoders
 
@@ -78,12 +79,19 @@ def app_root():
 @app.route('/orig/<string:pathstr>')
 def get_original(pathstr):
     path = pathlib.Path(base64_to_str(pathstr))
+    print(flask.request.headers)
     if path.is_file():
         src_hash, status_code = cache_check(path)
         if status_code is not None:
             return status_code
-        abspath = str(path.absolute())
-        f = flask.send_file(abspath, add_etags=False, mimetype=magic.from_file(abspath, mime=True))
+        abspath = path.absolute()
+        f = flask.send_from_directory(
+            str(abspath.parent),
+            str(abspath.name),
+            add_etags=False,
+            mimetype=magic.from_file(str(abspath), mime=True),
+            conditional=True
+        )
         f.set_etag(src_hash)
         return f
     else:
@@ -138,6 +146,7 @@ def gen_thumbnail(format:str, width, height, pathstr):
         else:
             img.save(buffer, format="JPEG", quality=90)
             mime = "image/jpeg"
+        img.close()
         buffer.seek(0)
         f = flask.send_file(
             buffer,
@@ -224,13 +233,25 @@ def hello_world():
 def ffmpeg_vp8_simplestream(pathstr):
     import subprocess
     path = pathlib.Path(base64_to_str(pathstr))
+    print(flask.request.headers)
     if path.is_file():
-        #abspath = str(path.absolute())
-        process = subprocess.Popen(
-            [
+        data = ffmpeg.probe(path)
+        video = None
+        for stream in data['streams']:
+            if stream['codec_type'] == "video":
+                video = stream
+        fps=None
+        if video['avg_frame_rate'] == "0/0":
+            fps = eval(video['r_frame_rate'])
+        else:
+            fps = eval(video['avg_frame_rate'])
+        commandline = [
                 'ffmpeg',
                 '-i', str(path),
-                '-vf', 'scale=\'min(1440,iw)\':-1',
+                '-vf',
+                'scale=\'min(1440,iw)\':\'min(720, ih)\':force_original_aspect_ratio=decrease'+\
+                (",fps={}".format(fps/2) if fps>30 else ""),
+                '-deadline', 'realtime',
                 '-vcodec', 'libvpx',
                 '-crf', '10',
                 '-b:v', '8M',
@@ -239,7 +260,10 @@ def ffmpeg_vp8_simplestream(pathstr):
                 '-b:a', '144k',
                 '-f', 'webm',
                 '-'
-            ], stdout=subprocess.PIPE
+            ]
+        process = subprocess.Popen(
+            commandline
+            , stdout=subprocess.PIPE
         )
         f = flask.send_file(process.stdout, add_etags=False, mimetype="video/webm")
         return f

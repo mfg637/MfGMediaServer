@@ -25,7 +25,7 @@ def get_output(commandline):
 def probe(source):
     try:
         commandline = ['ffprobe', '-loglevel', '24', '-hide_banner', '-print_format', 'json',
-                       '-show_format', '-show_streams', '-show_chapters', source]
+                       '-show_format', '-show_streams', '-show_chapters', str(source)]
         return json.loads(str(get_output(commandline), 'utf-8'))
     except UnicodeEncodeError:
         raise exceptions.InvalidFilename(source)
