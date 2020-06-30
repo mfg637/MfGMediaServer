@@ -14,13 +14,14 @@ import ffmpeg
 import decoders
 
 image_file_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.webm', '.svg', '.mkv', '.mp4'}
+supported_file_extensions = image_file_extensions.union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac"})
 
 
 def browse_folder(folder):
     path_dir_objects = []
     path_file_objects = []
     for entry in folder.iterdir():
-        if entry.is_file() and entry.suffix.lower() in image_file_extensions:
+        if entry.is_file() and entry.suffix.lower() in supported_file_extensions:
             path_file_objects.append(entry)
         elif entry.is_dir() and entry.name[0] != '.':
             path_dir_objects.append(entry)
@@ -186,10 +187,12 @@ def browse(dir):
         itemslist.append(
             {
                 "link": "/orig/{}".format(base64path),
-                "icon": "/thumbnail/webp/192x144/{}".format(base64path),
+                "icon": None,
                 "name": simplify_filename(file.name)
             }
         )
+        if file.suffix.lower() in image_file_extensions:
+            itemslist[-1]['icon'] = "/thumbnail/webp/192x144/{}".format(base64path)
         if file.suffix == '.mkv':
             itemslist[-1]['link'] = "/videostream_vp8/{}".format(base64path)
         if file.suffix.lower() in {'.jpg', '.jpeg'}:
