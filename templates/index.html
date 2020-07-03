@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }}</title>
     <style>
+        script{
+            display:none;
+        }
         h1{
             text-align: center;
         }
@@ -42,7 +45,11 @@
         {% endif %}
             {% if item.icon is not none %}
             <div class="icon-wrapper">
+                {% if item.object_icon %}
+                <object data="{{ item.icon }}"></object>
+                {% else %}
                 <img src="{{ item.icon }}" />
+                {% endif %}
             </div>
             {% endif %}
             <div class="title-wrapper">
