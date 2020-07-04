@@ -48,7 +48,16 @@
                 {% if item.object_icon %}
                 <object data="{{ item.icon }}"></object>
                 {% else %}
+                {% if item.sources is not none %}
+                <picture>
+                    {% for source in item.sources %}
+                    <source srcset="{{ source }}"/>
+                    {% endfor %}
+                    {% endif %}
                 <img src="{{ item.icon }}" />
+                    {% if item.sources is not none %}
+                </picture>
+                {% endif %}
                 {% endif %}
             </div>
             {% endif %}

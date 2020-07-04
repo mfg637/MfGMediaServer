@@ -170,7 +170,8 @@ def browse(dir):
                 "link": "/browse/{}".format(_dir.relative_to(root_dir)),
                 "icon": flask.url_for('static', filename='images/folder icon.svg'),
                 "object_icon": False,
-                "name": simplify_filename(_dir.name)
+                "name": simplify_filename(_dir.name),
+                "sources": None
             }
         )
         if _dir.joinpath(".imgview-dir-config.json").exists():
@@ -183,11 +184,20 @@ def browse(dir):
                 "link": "/orig/{}".format(base64path),
                 "icon": None,
                 "object_icon": False,
-                "name": simplify_filename(file.name)
+                "name": simplify_filename(file.name),
+                "sources": None
             }
         )
         if file.suffix.lower() in image_file_extensions:
-            itemslist[-1]['icon'] = "/thumbnail/webp/192x144/{}".format(base64path)
+            itemslist[-1]['icon'] = "/thumbnail/jpeg/192x144/{}".format(base64path)
+            itemslist[-1]['sources'] = (
+                "/thumbnail/webp/192x144/{}".format(base64path)+
+                ", /thumbnail/webp/384x288/{} 2x".format(base64path)+
+                ", /thumbnail/webp/768x576/{} 4x".format(base64path),
+                "/thumbnail/jpeg/192x144/{}".format(base64path) +
+                ", /thumbnail/jpeg/384x288/{} 2x".format(base64path) +
+                ", /thumbnail/jpeg/768x576/{} 4x".format(base64path),
+            )
         if file.suffix == '.mkv':
             itemslist[-1]['link'] = "/videostream_vp8/{}".format(base64path)
         if file.suffix.lower() in {'.jpg', '.jpeg'}:
@@ -203,6 +213,7 @@ def browse(dir):
     else:
         title = dir.name
     return flask.render_template('index.html', title=title, itemslist=itemslist)
+
 
 @app.route('/browse/<path:pathstr>')
 def browse_dir(pathstr):
