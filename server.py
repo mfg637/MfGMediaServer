@@ -3,6 +3,7 @@
 
 import hashlib
 
+import json
 import flask
 import sys
 import os
@@ -154,16 +155,18 @@ def gen_thumbnail(format:str, width, height, pathstr):
 def browse(dir):
     dirlist, filelist = browse_folder(dir)
     itemslist = list()
+    filemeta_list = list()
+    items_count: int = 0
     if dir != root_dir:
         itemslist.append({
             "icon": flask.url_for('static', filename='images/updir_icon.svg'),
-            "name": ".."
+            "name": "..",
         })
         if dir.parent == root_dir:
             itemslist[0]["link"] = "/"
         else:
             itemslist[0]["link"] = "/browse/{}".format(dir.parent.relative_to(root_dir))
-
+        items_count += 1
     for _dir in dirlist:
         itemslist.append(
             {
@@ -177,20 +180,21 @@ def browse(dir):
         if _dir.joinpath(".imgview-dir-config.json").exists():
             itemslist[-1]["object_icon"] = True
             itemslist[-1]["icon"] = "/folder_icon_paint/{}".format(_dir.relative_to(root_dir))
+        items_count += 1
     for file in filelist:
         base64path = str_to_base64(str(file.relative_to(root_dir)))
-        itemslist.append(
-            {
+        filemeta = {
                 "link": "/orig/{}".format(base64path),
                 "icon": None,
                 "object_icon": False,
                 "name": simplify_filename(file.name),
-                "sources": None
+                "sources": None,
+                "base64path": base64path,
+                "item_index": items_count,
             }
-        )
         if file.suffix.lower() in image_file_extensions:
-            itemslist[-1]['icon'] = "/thumbnail/jpeg/192x144/{}".format(base64path)
-            itemslist[-1]['sources'] = (
+            filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(base64path)
+            filemeta['sources'] = (
                 "/thumbnail/webp/192x144/{}".format(base64path)+
                 ", /thumbnail/webp/384x288/{} 2x".format(base64path)+
                 ", /thumbnail/webp/768x576/{} 4x".format(base64path),
@@ -199,20 +203,23 @@ def browse(dir):
                 ", /thumbnail/jpeg/768x576/{} 4x".format(base64path),
             )
         if file.suffix == '.mkv':
-            itemslist[-1]['link'] = "/videostream_vp8/{}".format(base64path)
-        if file.suffix.lower() in {'.jpg', '.jpeg'}:
+            filemeta['link'] = "/videostream_vp8/{}".format(base64path)
+        elif file.suffix.lower() in {'.jpg', '.jpeg'}:
             jpg = decoders.jpeg.JPEGDecoder(file)
             try:
                 if (jpg.arithmetic_coding()):
-                    itemslist[-1]['link'] = "/image/webp/{}".format((base64path))
+                    filemeta['link'] = "/image/webp/{}".format((base64path))
             except ValueError:
-                itemslist[-1]['link'] = "/image/webp/{}".format((base64path))
+                filemeta['link'] = "/image/webp/{}".format((base64path))
+        itemslist.append(filemeta)
+        filemeta_list.append(filemeta)
+        items_count += 1
     title = ''
     if dir == root_dir:
         title = "root"
     else:
         title = dir.name
-    return flask.render_template('index.html', title=title, itemslist=itemslist)
+    return flask.render_template('index.html', title=title, itemslist=itemslist, filemeta=json.dumps(filemeta_list))
 
 
 @app.route('/browse/<path:pathstr>')
@@ -280,7 +287,6 @@ def ffmpeg_vp8_simplestream(pathstr):
 @app.route('/folder_icon_paint/<path:pathstr>')
 def icon_paint(pathstr):
     import static.images.folder_icon_painter as folder_icon_painter
-    import json
     dir=pathlib.Path(pathstr).absolute()
     data = None
     with dir.joinpath(".imgview-dir-config.json").open("r") as f:

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="filemeta_json" content="{{ filemeta }}" />
     <title>{{ title }}</title>
     <style>
         script{
@@ -66,6 +67,8 @@
             </div>
         </a>
     {% endfor %}
+            <div style="clear:left"></div>
     </div>
+    <script src="/static/js/photoViewer.js"></script>
 </body>
 </html>
