@@ -17,8 +17,10 @@ import ffmpeg
 
 import decoders
 
-image_file_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.webm', '.svg', '.mkv', '.mp4'}
-supported_file_extensions = image_file_extensions.union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac"})
+image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'}
+video_file_extensions = {'.mkv', '.mp4', '.webm'}
+supported_file_extensions = \
+    image_file_extensions.union(video_file_extensions).union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac"})
 
 
 def browse_folder(folder):
@@ -194,8 +196,9 @@ def browse(dir):
                 "base64path": base64path,
                 "item_index": items_count,
                 "lazy_load": False,
+                "type": "audio",
             }
-        if file.suffix.lower() in image_file_extensions:
+        if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
             filemeta["lazy_load"] = True
             filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(base64path)
             filemeta['sources'] = (
@@ -206,6 +209,10 @@ def browse(dir):
                 ", /thumbnail/jpeg/384x288/{} 2x".format(base64path) +
                 ", /thumbnail/jpeg/768x576/{} 4x".format(base64path),
             )
+        if file.suffix.lower() in image_file_extensions:
+            filemeta["type"] = "picture"
+        elif file.suffix.lower() in video_file_extensions:
+            filemeta["type"] = "video"
         if file.suffix == '.mkv':
             filemeta['link'] = "/videostream_vp8/{}".format(base64path)
         elif file.suffix.lower() in {'.jpg', '.jpeg'}:

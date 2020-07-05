@@ -16,7 +16,7 @@ var intersectionObserver = new IntersectionObserver(function(entries) {
         if (entries[entry_index].intersectionRatio <= 0) continue;
         fmeta = filemeta[entries[entry_index].target.imageID]
         placeholder = entries[entry_index].target.getElementsByTagName('img')[0]
-        if (placeholder.classList.contains('placeholder')){
+        if (((typeof fmeta)!="undefined") && (placeholder.classList.contains('placeholder'))){
             new_elem = null
             if (fmeta.sources!==null){
                 picture_elem = document.createElement('picture');
@@ -61,9 +61,11 @@ function ImageViewer() {
     links = document.querySelectorAll("a.item")
     for (i=0; i<filemeta.length; i++){
         links[filemeta[i].item_index].imageID = i
-        links[filemeta[i].item_index].onclick=function(){
-          imageViewer.watchPhoto(this.imageID);
-          return false;
+        if (filemeta[i].type=="picture"){
+            links[filemeta[i].item_index].onclick=function(){
+                imageViewer.watchPhoto(this.imageID);
+                return false;
+            }
         }
         if (filemeta[i].lazy_load)
             intersectionObserver.observe(links[filemeta[i].item_index]);
