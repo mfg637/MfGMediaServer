@@ -7,6 +7,41 @@ for (i=0; i<meta_tags.length;i++)
         filemeta = JSON.parse(meta_tags[i].getAttribute('content'))
     }
 
+
+
+var intersectionObserver = new IntersectionObserver(function(entries) {
+  // If intersectionRatio is 0, the target is out of view
+  // and we do not need to do anything.
+    for (entry_index=0; entry_index<entries.length; entry_index++){
+        if (entries[entry_index].intersectionRatio <= 0) continue;
+        fmeta = filemeta[entries[entry_index].target.imageID]
+        placeholder = entries[entry_index].target.getElementsByTagName('img')[0]
+        if (placeholder.classList.contains('placeholder')){
+            new_elem = null
+            if (fmeta.sources!==null){
+                picture_elem = document.createElement('picture');
+                for (source_index=0; source_index<fmeta.sources.length; source_index++){
+                    source_elem = document.createElement('source');
+                    source_elem.srcset = fmeta.sources[source_index];
+                    picture_elem.appendChild(source_elem);
+                }
+                img_elem = document.createElement('img');
+                img_elem.src=fmeta.icon;
+                picture_elem.appendChild(img_elem);
+                new_elem = picture_elem;
+            }else{
+                img_elem = document.createElement('img');
+                img_elem.src=fmeta.icon;
+                new_elem = img_elem;
+            }
+        
+            placeholder.parentNode.replaceChild(new_elem, placeholder);
+        }
+    }
+
+});
+
+    
 var imageViewer = new ImageViewer();
 imageViewer.init(filemeta)
 
@@ -25,12 +60,15 @@ function ImageViewer() {
 
     links = document.querySelectorAll("a.item")
     for (i=0; i<filemeta.length; i++){
-        links[filemeta[i].item_index].photoId = i
+        links[filemeta[i].item_index].imageID = i
         links[filemeta[i].item_index].onclick=function(){
-          imageViewer.watchPhoto(this.photoId);
+          imageViewer.watchPhoto(this.imageID);
           return false;
         }
+        if (filemeta[i].lazy_load)
+            intersectionObserver.observe(links[filemeta[i].item_index]);
     }
+    console.log("init done");
     
   }
   this.watchPhoto = function(photoID) {

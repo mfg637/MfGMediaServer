@@ -161,6 +161,7 @@ def browse(dir):
         itemslist.append({
             "icon": flask.url_for('static', filename='images/updir_icon.svg'),
             "name": "..",
+            "lazy_load": False,
         })
         if dir.parent == root_dir:
             itemslist[0]["link"] = "/"
@@ -174,7 +175,8 @@ def browse(dir):
                 "icon": flask.url_for('static', filename='images/folder icon.svg'),
                 "object_icon": False,
                 "name": simplify_filename(_dir.name),
-                "sources": None
+                "sources": None,
+                "lazy_load": False,
             }
         )
         if _dir.joinpath(".imgview-dir-config.json").exists():
@@ -191,8 +193,10 @@ def browse(dir):
                 "sources": None,
                 "base64path": base64path,
                 "item_index": items_count,
+                "lazy_load": False,
             }
         if file.suffix.lower() in image_file_extensions:
+            filemeta["lazy_load"] = True
             filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(base64path)
             filemeta['sources'] = (
                 "/thumbnail/webp/192x144/{}".format(base64path)+

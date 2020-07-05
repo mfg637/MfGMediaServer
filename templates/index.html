@@ -40,35 +40,39 @@
     <div class="itemsgrid">
     {% for item in itemslist %}
         {% if item.icon is not none %}
-        <a class="item icon" href="{{ item.link }}" title="{{ item.name }}">
+            <a class="item icon" href="{{ item.link }}" title="{{ item.name }}">
         {% else %}
-        <a class="item" href="{{ item.link }}" title="{{ item.name }}">
+            <a class="item" href="{{ item.link }}" title="{{ item.name }}">
         {% endif %}
-            {% if item.icon is not none %}
+        {% if item.icon is not none %}
             <div class="icon-wrapper">
-                {% if item.object_icon %}
+            {% if item.object_icon %}
                 <object data="{{ item.icon }}"></object>
-                {% else %}
-                {% if item.sources is not none %}
-                <picture>
-                    {% for source in item.sources %}
-                    <source srcset="{{ source }}"/>
-                    {% endfor %}
-                    {% endif %}
-                <img src="{{ item.icon }}" />
+            {% else %}
+                {% if item.lazy_load %}
+                    <img class="placeholder" src="/static/images/img_icon.png"/>
+                {%else%}
                     {% if item.sources is not none %}
-                </picture>
+                        <picture>
+                        {% for source in item.sources %}
+                            <source srcset="{{ source }}"/>
+                        {% endfor %}
+                    {% endif %}
+                    <img src="{{ item.icon }}"/>
+                    {% if item.sources is not none %}
+                        </picture>
+                    {% endif %}
                 {% endif %}
-                {% endif %}
-            </div>
             {% endif %}
-            <div class="title-wrapper">
-                {{ item.name }}
             </div>
+        {% endif %}
+        <div class="title-wrapper">
+            {{ item.name }}
+        </div>
         </a>
     {% endfor %}
             <div style="clear:left"></div>
     </div>
-    <script src="/static/js/photoViewer.js"></script>
+    <script src="/static/js/imageViewer.js"></script>
 </body>
 </html>
