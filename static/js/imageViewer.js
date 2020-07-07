@@ -47,7 +47,9 @@ imageViewer.init(filemeta)
 
 
 function ImageViewer() {
-  var photo,id,photolist,loadViewportSizePhoto,container;
+  var container, photo, prev, next, caption;
+  var id,photolist,loadViewportSizePhoto;
+  var default_click_handler, default_hide_controls_click_handler, default_goto_url_click_handler;
   var jscontainer = document.createElement('div');
   jscontainer.id = 'writeCodeJS'
   jscontainer.innerHTML
@@ -73,6 +75,15 @@ function ImageViewer() {
     console.log("init done");
     
   }
+  
+    default_hide_controls_click_handler = function(){
+        container.classList.toggle('hideControls');
+    }
+    
+    default_goto_url_click_handler = function(){
+        document.location.href = photolist[id].link;
+    }
+  
   this.watchPhoto = function(photoID) {
     clearTimeout(loadViewportSizePhoto);
     id=photoID;
@@ -83,14 +94,20 @@ function ImageViewer() {
     };
   }
   replacePhoto = function() {
-    document.getElementById('contimgbox').classList.add('load');
+    container.classList.add('load');
 
     //URL generator
     photo.src = '/thumbnail/webp/' + 
-      Math.round(window.innerWidth * window.devicePixelRatio) + 'x' + Math.round(window.innerHeight * window.devicePixelRatio) +
-      '/'+ photolist[id].base64path;
+      Math.round(window.innerWidth * window.devicePixelRatio) + 'x' + 
+        Math.round(window.innerHeight * window.devicePixelRatio) +
+        '/'+ photolist[id].base64path;
+    
+    if (photolist[id].type == "picture")
+        default_click_handler = default_hide_controls_click_handler;
+    else
+        default_click_handler = default_goto_url_click_handler;
 
-    document.getElementById('text').innerHTML = ( +id + 1) + '/' +
+    caption.innerHTML = ( +id + 1) + '/' +
                         photolist.length + '<br /><span class="title">' + 
                         photolist[id].name + '</span>';
     if (id>0) {
@@ -126,31 +143,48 @@ function ImageViewer() {
     container = document.createElement('div');
     container.id = 'contimgbox';
     container.classList.add('photoview-wraper');
+    container.classList.add('container');
     container.classList.add('load');
     jscontainer.appendChild(container);
-    container.innerHTML = 
-      '<div id="bacgr" class="photoview-background"></div>' +
-      '<img id="i" class="photo">' +
-      '<div id="plink" class="photoview-left-plink-bar">' +
-        '<div class="icon"></div></div>' +
-      '<div id="nlink" class="photoview-right-plink-bar">' +
-        '<div class="icon"></div></div>' +
-      '<div id="btn">' +
-        '<div class="icon"></div></div>' +
-      '<button id="clzone" class="close-photoview"></button>' +
-      '<div id="text" class="photoview-text"></div>' +
-      '<div class="photoview-load-anim"></div>';
+    
+    object_container = document.createElement('div');
+    object_container.classList.add('container');
+    container.appendChild(object_container);
 
     document.body.style.overflow = "hidden";
-    document.getElementById('clzone').onclick = close;
-    document.getElementById('btn').onclick = close;
-    photo = document.getElementById('i');
-    document.getElementById('bacgr').onclick = function() {
-      container.classList.toggle('hideControls');
-    }
+    
+    photo = document.createElement('img');
+    photo.id = 'i';
+    photo.classList.add('photo');
+    object_container.appendChild(photo);
+    
+    controls_container = document.createElement('div');
+    controls_container.classList.add('container');
+    container.appendChild(controls_container);
 
-    prev = document.getElementById('plink');
-    next = document.getElementById('nlink');
+    close_button = document.createElement('div');
+    close_button.id = 'btn';
+    close_button.onclick = close;
+    controls_container.appendChild(close_button);
+    
+    prev = document.createElement('div');
+    prev.id = 'plink';
+    prev.classList.add('photoview-left-plink-bar');
+    controls_container.appendChild(prev);
+
+    next = document.createElement('div');
+    next.id = 'nlink';
+    next.classList.add('photoview-right-plink-bar');
+    controls_container.appendChild(next);
+    
+    caption = document.createElement('div');
+    caption.classList.add('imageview-text');
+    controls_container.appendChild(caption);
+    controls_container.onclick = function(event){
+        if (event.target == event.currentTarget){
+            default_click_handler();
+        }
+    }
   
     replacePhoto();
 
