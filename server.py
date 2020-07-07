@@ -154,37 +154,56 @@ def gen_thumbnail(format:str, width, height, pathstr):
         flask.abort(404)
 
 
+def extract_mtime_key(file: pathlib.Path):
+    return file.stat().st_mtime
+
+
 def browse(dir):
-    dirlist, filelist = browse_folder(dir)
+    dirlist, filelist = [], []
     itemslist = list()
     filemeta_list = list()
     items_count: int = 0
-    if dir != root_dir:
+    glob_pattern = flask.request.args.get('glob', None)
+    if glob_pattern is None:
+        dirlist, filelist = browse_folder(dir)
+        if dir != root_dir:
+            itemslist.append({
+                "icon": flask.url_for('static', filename='images/updir_icon.svg'),
+                "name": "..",
+                "lazy_load": False,
+            })
+            if dir.parent == root_dir:
+                itemslist[0]["link"] = "/"
+            else:
+                itemslist[0]["link"] = "/browse/{}".format(dir.parent.relative_to(root_dir))
+            items_count += 1
+        for _dir in dirlist:
+            itemslist.append(
+                {
+                    "link": "/browse/{}".format(_dir.relative_to(root_dir)),
+                    "icon": flask.url_for('static', filename='images/folder icon.svg'),
+                    "object_icon": False,
+                    "name": simplify_filename(_dir.name),
+                    "sources": None,
+                    "lazy_load": False,
+                }
+            )
+            if _dir.joinpath(".imgview-dir-config.json").exists():
+                itemslist[-1]["object_icon"] = True
+                itemslist[-1]["icon"] = "/folder_icon_paint/{}".format(_dir.relative_to(root_dir))
+            items_count += 1
+    else:
         itemslist.append({
             "icon": flask.url_for('static', filename='images/updir_icon.svg'),
-            "name": "..",
+            "name": ".",
             "lazy_load": False,
+            "link": flask.request.path
         })
-        if dir.parent == root_dir:
-            itemslist[0]["link"] = "/"
-        else:
-            itemslist[0]["link"] = "/browse/{}".format(dir.parent.relative_to(root_dir))
         items_count += 1
-    for _dir in dirlist:
-        itemslist.append(
-            {
-                "link": "/browse/{}".format(_dir.relative_to(root_dir)),
-                "icon": flask.url_for('static', filename='images/folder icon.svg'),
-                "object_icon": False,
-                "name": simplify_filename(_dir.name),
-                "sources": None,
-                "lazy_load": False,
-            }
-        )
-        if _dir.joinpath(".imgview-dir-config.json").exists():
-            itemslist[-1]["object_icon"] = True
-            itemslist[-1]["icon"] = "/folder_icon_paint/{}".format(_dir.relative_to(root_dir))
-        items_count += 1
+        for file in dir.glob(glob_pattern):
+            if file.is_file() and file.suffix.lower() in supported_file_extensions:
+                filelist.append(file)
+        filelist.sort(key=extract_mtime_key, reverse=True)
     for file in filelist:
         base64path = str_to_base64(str(file.relative_to(root_dir)))
         filemeta = {

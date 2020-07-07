@@ -37,6 +37,11 @@
 </head>
 <body>
     <h1>{{ title }}</h1>
+    <form action="{{ request.path }}" method="GET">
+        <label>python3 glob pattern</label>
+        <input type="text" id="glob_string" name="glob">
+        <input type="submit" value="Search">
+    </form>
     <div class="itemsgrid">
     {% for item in itemslist %}
         {% if item.icon is not none %}
