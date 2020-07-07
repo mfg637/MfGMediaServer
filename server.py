@@ -233,7 +233,7 @@ def browse(dir):
         elif file.suffix.lower() in video_file_extensions:
             filemeta["type"] = "video"
         if file.suffix == '.mkv':
-            filemeta['link'] = "/videostream_vp8/{}".format(base64path)
+            filemeta['link'] = "/vp8/{}".format(base64path)
         elif file.suffix.lower() in {'.jpg', '.jpeg'}:
             jpg = decoders.jpeg.JPEGDecoder(file)
             try:
@@ -273,7 +273,7 @@ def hello_world():
     return 'Hello, World!'
 
 
-@app.route('/videostream_vp8/<string:pathstr>')
+@app.route('/vp8/<string:pathstr>')
 def ffmpeg_vp8_simplestream(pathstr):
     import subprocess
     path = pathlib.Path(base64_to_str(pathstr))
