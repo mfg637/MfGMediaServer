@@ -138,6 +138,7 @@ def gen_thumbnail(format:str, width, height, pathstr):
             img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
             mime = "image/webp"
         else:
+            img = img.convert(mode='RGB')
             img.save(buffer, format="JPEG", quality=90)
             mime = "image/jpeg"
         img.close()
@@ -216,6 +217,7 @@ def browse(dir):
                 "item_index": items_count,
                 "lazy_load": False,
                 "type": "audio",
+                "is_vp8": False
             }
         if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
             filemeta["lazy_load"] = True
@@ -234,6 +236,7 @@ def browse(dir):
             filemeta["type"] = "video"
         if file.suffix == '.mkv':
             filemeta['link'] = "/vp8/{}".format(base64path)
+            filemeta["is_vp8"] = True
         elif file.suffix.lower() in {'.jpg', '.jpeg'}:
             jpg = decoders.jpeg.JPEGDecoder(file)
             try:

@@ -49,7 +49,7 @@ imageViewer.init(filemeta)
 function ImageViewer() {
   var container, photo, prev, next, caption;
   var id,photolist,loadViewportSizePhoto;
-  var default_click_handler, default_hide_controls_click_handler, default_goto_url_click_handler;
+  var default_click_handler, default_hide_controls_click_handler, default_goto_url_click_handler, default_open_video_click_handler;
   var jscontainer = document.createElement('div');
   jscontainer.id = 'writeCodeJS'
   jscontainer.innerHTML
@@ -68,6 +68,11 @@ function ImageViewer() {
                 imageViewer.watchPhoto(this.imageID);
                 return false;
             }
+        }else if (filemeta[i].type=="video"){
+            links[filemeta[i].item_index].onclick=function(){
+                new RainbowVideoPlayer(filemeta[this.imageID]);
+                return false;
+            }
         }
         if (filemeta[i].lazy_load)
             intersectionObserver.observe(links[filemeta[i].item_index]);
@@ -82,6 +87,10 @@ function ImageViewer() {
     
     default_goto_url_click_handler = function(){
         document.location.href = photolist[id].link;
+    }
+    
+    default_open_video_click_handler = function(){
+        new RainbowVideoPlayer(photolist[id]);
     }
   
   this.watchPhoto = function(photoID) {
@@ -104,6 +113,8 @@ function ImageViewer() {
     
     if (photolist[id].type == "picture")
         default_click_handler = default_hide_controls_click_handler;
+    else if (photolist[id].type == "video")
+        default_click_handler = default_open_video_click_handler;
     else
         default_click_handler = default_goto_url_click_handler;
 
