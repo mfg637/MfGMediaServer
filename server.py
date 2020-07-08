@@ -217,7 +217,8 @@ def browse(dir):
                 "item_index": items_count,
                 "lazy_load": False,
                 "type": "audio",
-                "is_vp8": False
+                "is_vp8": False,
+                "suffix": file.suffix
             }
         if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
             filemeta["lazy_load"] = True

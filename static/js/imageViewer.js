@@ -105,9 +105,11 @@ function ImageViewer() {
   replacePhoto = function() {
     container.classList.add('load');
 
-    //URL generator
-    photo.src = '/thumbnail/webp/' + 
-      Math.round(window.innerWidth * window.devicePixelRatio) + 'x' + 
+    if (photolist[id].suffix == '.gif')
+        photo.src = photolist[id].link;
+    else
+        photo.src = '/thumbnail/webp/' + 
+        Math.round(window.innerWidth * window.devicePixelRatio) + 'x' + 
         Math.round(window.innerHeight * window.devicePixelRatio) +
         '/'+ photolist[id].base64path;
     
