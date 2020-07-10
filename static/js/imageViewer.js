@@ -105,17 +105,20 @@ function ImageViewer() {
   replacePhoto = function() {
     container.classList.add('load');
 
-    if (photolist[id].suffix == '.gif')
+    if (photolist[id].suffix === '.gif')
         photo.src = photolist[id].link;
+    else if (photolist[id].custom_icon){
+        photo.src = photolist[id].icon
+    }
     else
         photo.src = '/thumbnail/webp/' + 
         Math.round(window.innerWidth * window.devicePixelRatio) + 'x' + 
         Math.round(window.innerHeight * window.devicePixelRatio) +
         '/'+ photolist[id].base64path;
     
-    if (photolist[id].type == "picture")
+    if (photolist[id].type === "picture")
         default_click_handler = default_hide_controls_click_handler;
-    else if (photolist[id].type == "video")
+    else if (photolist[id].type === "video")
         default_click_handler = default_open_video_click_handler;
     else
         default_click_handler = default_goto_url_click_handler;

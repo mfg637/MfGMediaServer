@@ -70,24 +70,31 @@ def app_root():
     return browse(root_dir)
 
 
+def static_file(path):
+    src_hash, status_code = cache_check(path)
+    if status_code is not None:
+        return status_code
+    abspath = path.absolute()
+    mime = magic.from_file(str(abspath), mime=True)
+    if path.suffix == '.mpd' and mime == "text/xml":
+        mime = "application/dash+xml"
+    f = flask.send_from_directory(
+        str(abspath.parent),
+        str(abspath.name),
+        add_etags=False,
+        mimetype=mime,
+        conditional=True
+    )
+    f.set_etag(src_hash)
+    return f
+
+
 @app.route('/orig/<string:pathstr>')
 def get_original(pathstr):
     path = pathlib.Path(base64_to_str(pathstr))
     print(flask.request.headers)
     if path.is_file():
-        src_hash, status_code = cache_check(path)
-        if status_code is not None:
-            return status_code
-        abspath = path.absolute()
-        f = flask.send_from_directory(
-            str(abspath.parent),
-            str(abspath.name),
-            add_etags=False,
-            mimetype=magic.from_file(str(abspath), mime=True),
-            conditional=True
-        )
-        f.set_etag(src_hash)
-        return f
+        return static_file(path)
     else:
         flask.abort(404)
 
@@ -218,18 +225,24 @@ def browse(dir):
                 "lazy_load": False,
                 "type": "audio",
                 "is_vp8": False,
-                "suffix": file.suffix
+                "suffix": file.suffix,
+                "custom_icon": False
             }
         if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
             filemeta["lazy_load"] = True
-            filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(base64path)
+            icon_base64path = base64path
+            icon_path = pathlib.Path("{}.icon".format(file))
+            if icon_path.exists():
+                filemeta["custom_icon"] = True
+                icon_base64path = str_to_base64(str(icon_path.relative_to(root_dir)))
+            filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base64path)
             filemeta['sources'] = (
-                "/thumbnail/webp/192x144/{}".format(base64path)+
-                ", /thumbnail/webp/384x288/{} 2x".format(base64path)+
-                ", /thumbnail/webp/768x576/{} 4x".format(base64path),
-                "/thumbnail/jpeg/192x144/{}".format(base64path) +
-                ", /thumbnail/jpeg/384x288/{} 2x".format(base64path) +
-                ", /thumbnail/jpeg/768x576/{} 4x".format(base64path),
+                "/thumbnail/webp/192x144/{}".format(icon_base64path)+
+                ", /thumbnail/webp/384x288/{} 2x".format(icon_base64path)+
+                ", /thumbnail/webp/768x576/{} 4x".format(icon_base64path),
+                "/thumbnail/jpeg/192x144/{}".format(icon_base64path) +
+                ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base64path) +
+                ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base64path),
             )
         if file.suffix.lower() in image_file_extensions:
             filemeta["type"] = "picture"
@@ -269,6 +282,8 @@ def browse_dir(pathstr):
             return browse(path)
         else:
             flask.abort(403)
+    elif pathlib.Path(path).is_file():
+        return static_file(path)
     else:
         flask.abort(404)
 
@@ -370,6 +385,15 @@ def icon_paint(pathstr):
         stops = folder_icon_painter.paint_icon(data['color'])
         rendered_template = flask.render_template('folder icon.svg', stops=stops)
     return flask.Response(rendered_template, mimetype="image/svg+xml")
+
+
+@app.route('/<path:pathstr>')
+def root_open_file(pathstr):
+    path = pathlib.Path(pathstr).absolute()
+    if pathlib.Path(path).is_file():
+        return static_file(path)
+    else:
+        flask.abort(404)
 
 
 if __name__ == '__main__':
