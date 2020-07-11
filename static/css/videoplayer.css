@@ -16,16 +16,12 @@ div.videocontainer.popup{
 
 div.videocontainer .closebtn{
     position:absolute;
-    top: -32px;
+    top: 7px;
     right: 7px;
     width: 32px;
     height: 32px;
     transition: top 0.5s linear;
     background-image: url('/static/images/close_btn_default.svg');
-}
-
-div.videocontainer:hover .closebtn{
-    top: 7px;
 }
 
 div.videocontainer.off .closebtn{
@@ -100,22 +96,22 @@ div.videocontainer div.controls {
 	background:rgba(16,16,16,0.85);
 	transition:bottom 0.5s linear 1s;
 	position: absolute;
-	bottom: -48px;
+	bottom: 0;
 	width: 100%;
 }
+
+div.videocontainer.hide div.controls{
+	bottom: -48px;
+}
+
 div.videocontainer.off div.controls {
 	display: none;
 }
-div.videocontainer:hover div.controls {
-	bottom: 0px;
-	transition:bottom 0.5s linear;
-}
+
 div.videocontainer.hide {
 	cursor: none;
 }
-div.videocontainer.hide:hover div.controls {
-	bottom: -48px;
-}
+
 input#range{
 	display: block;
 	margin: 0;

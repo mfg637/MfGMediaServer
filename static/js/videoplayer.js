@@ -108,8 +108,12 @@ function Scrollbar(root){
 	scrollbar.onmousedown = dragRange;
 	
 	this.setBufferRange = function(buffered, duration){
+		while (bufferRanges.firstChild) {
+        	bufferRanges.removeChild(bufferRanges.firstChild);
+    	}
         for (i=0; i<buffered.length; i++){
             bufferRange = document.createElement('div');
+            bufferRange.classList.add("bufferRange");
             start = buffered.start(i);
             end = buffered.end(i);
             bufferRange.style.left=(start/duration)*100+'%';
@@ -285,7 +289,7 @@ function RainbowVideoPlayer(filemeta){
 	this.showControls = function(){
 		clearTimeout(this.showControlsTime);
 		if (container.classList.contains('hide')){container.classList.remove('hide')};
-		this.showControlsTime=setTimeout(this.hideControls, 2500);
+		this.showControlsTime=setTimeout(this.hideControls, 5000);
 	}
 	this.start = function() {
 		container.classList.remove('off');
@@ -297,18 +301,19 @@ function RainbowVideoPlayer(filemeta){
                 this.cntxt.showControls();
         }
         scrollbar.init();
+		this.showControls();
 		this.playpause();
 	}
-	//poster.onclick=function(){
-	//	this.cntxt.start();
-	//};
 	
 	this.seek = function(position){
 		videoElement.currentTime = position*videoElement.duration;
 	}
 
 
-	videoElement.onprogress=function() {this.cntxt.buffer};
+	videoElement.onprogress=function() {
+		console.log("OnProgress")
+		this.cntxt.buffer()
+	};
 	this.buffer=function(){
 		if(videoElement.buffered.length){
 			scrollbar.setBufferRange(videoElement.buffered, durationTime);
