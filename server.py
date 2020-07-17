@@ -51,7 +51,13 @@ def str_to_base64(string):
 
 
 def cache_check(path):
-    src_hash = hashlib.sha3_256(path.read_bytes()).hexdigest()
+    hash = hashlib.sha3_256()
+    with path.open('br') as f:
+        buffer = f.read(1024)
+        while len(buffer)>0:
+            hash.update(buffer)
+            buffer = f.read(1024*1024)
+    src_hash = hash.hexdigest()
     try:
         if flask.request.headers['If-None-Match'][1:-1] == src_hash:
             status_code = flask.Response(status=304)
@@ -133,7 +139,9 @@ def transcode_image(format:str, pathstr):
 def gen_thumbnail(format:str, width, height, pathstr):
     path = pathlib.Path(base64_to_str(pathstr))
     if path.is_file():
-        src_hash, status_code = cache_check(path)
+        src_hash, status_code = None, None
+        if path.stat().st_size<(1024*1024*1024):
+            src_hash, status_code = cache_check(path)
         if status_code is not None:
             return status_code
         img = decoders.open_image(path)
@@ -156,7 +164,8 @@ def gen_thumbnail(format:str, width, height, pathstr):
             cache_timeout=24*60*60,
             last_modified=path.stat().st_mtime,
         )
-        f.set_etag(src_hash)
+        if src_hash is not None:
+            f.set_etag(src_hash)
         return f
     else:
         flask.abort(404)
