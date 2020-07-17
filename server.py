@@ -316,8 +316,15 @@ def ffmpeg_vp8_simplestream(pathstr):
             fps = eval(video['r_frame_rate'])
         else:
             fps = eval(video['avg_frame_rate'])
+        seek_position = flask.request.args.get('seek', None)
         commandline = [
                 'ffmpeg',
+        ]
+        if seek_position is not None:
+            commandline += [
+                '-ss', seek_position
+            ]
+        commandline += [
                 '-i', str(path),
                 '-vf',
                 'scale=\'min(1440,iw)\':\'min(720, ih)\':force_original_aspect_ratio=decrease'+\
@@ -401,6 +408,16 @@ def root_open_file(pathstr):
     path = pathlib.Path(pathstr).absolute()
     if pathlib.Path(path).is_file():
         return static_file(path)
+    else:
+        flask.abort(404)
+
+
+@app.route('/ffprobe_json/<string:pathstr>')
+def ffprobe_response(pathstr):
+    path = pathlib.Path(base64_to_str(pathstr))
+    print(flask.request.headers)
+    if path.is_file():
+        return flask.Response(ffmpeg.probe_raw(path), mimetype="application/json")
     else:
         flask.abort(404)
 

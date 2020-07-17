@@ -107,15 +107,15 @@ function Scrollbar(root){
 	}
 	scrollbar.onmousedown = dragRange;
 	
-	this.setBufferRange = function(buffered, duration){
+	this.setBufferRange = function(buffered, offset, duration){
 		while (bufferRanges.firstChild) {
         	bufferRanges.removeChild(bufferRanges.firstChild);
     	}
         for (i=0; i<buffered.length; i++){
             bufferRange = document.createElement('div');
             bufferRange.classList.add("bufferRange");
-            start = buffered.start(i);
-            end = buffered.end(i);
+            start = buffered.start(i) + offset;
+            end = buffered.end(i) + offset;
             bufferRange.style.left=(start/duration)*100+'%';
             bufferRange.style.width=(end-start)/duration*100+'%';
             bufferRanges.appendChild(bufferRange);
@@ -126,13 +126,11 @@ function Scrollbar(root){
 function RainbowVideoPlayer(filemeta){
 	//state variables
 	var muted=false,
-	pixelsPerValue=0,
-	durationTime=0,
-	durRefleshInt,
-	starBuffer=0,
-	endBuffer=0;
+		duration=0,
+		offset = 0,
+		durRefleshInt,
+		vp8_active = false;
     var _filemeta = filemeta;
-    var vp8_active = false;
 	this.showControlsTime = 0;
 
 	postersrcurl=filemeta.icon;
@@ -220,20 +218,33 @@ function RainbowVideoPlayer(filemeta){
 		if (n<10) {return Math.floor(seconds/60)+':'+0+n;}
 				else{return Math.floor(seconds/60)+':'+n;}
 	}
-	videoElement.onloadedmetadata=function() {this.cntxt.setDuration()}
-	this.setDuration = function(){
-		durationTime=videoElement.duration;
-		durationTimeLabel.data=formatmmss(durationTime);
+
+	function load_metadata() {
+		function callback(raw_data) {
+			data = JSON.parse(raw_data);
+			this.setDuration(parseFloat(data.format.duration));
+		}
+		ajaxConnect("/ffprobe_json/" + _filemeta.base64path, callback, this);
 	}
-	function updateCurrenTime(){
-		scrollbar.setVideoSliderValue(videoElement.currentTime, durationTime);
-		currentTimeLabel.data=formatmmss(videoElement.currentTime);
+
+	load_metadata.call(this)
+
+	//videoElement.onloadedmetadata=function() {this.cntxt.setDuration()}
+	this.setDuration = function(_duration){
+		duration=_duration;
+		durationTimeLabel.data=formatmmss(duration);
+	}
+
+	function updateCurrentTime(){
+		let current_time = videoElement.currentTime + offset
+		scrollbar.setVideoSliderValue(current_time, duration);
+		currentTimeLabel.data=formatmmss(current_time);
 	}
 	
 	function _play(){
 		videoElement.play();
 		playButton.classList.add('pause');
-		durRefleshInt=setInterval(updateCurrenTime, 1000/8);
+		durRefleshInt=setInterval(updateCurrentTime, 1000/8);
 	}
 	
 	function _pause(){
@@ -250,14 +261,14 @@ function RainbowVideoPlayer(filemeta){
 		}
 	}
 	this.pause = function(){
-		var paused = videoElement.paused;
+		let paused = videoElement.paused;
 		if (!paused){
 			_pause();
 		}
 		return paused;
 	}
 	this.play = function(){
-		var paused = videoElement.paused;
+		let paused = videoElement.paused;
 		if (paused){
 			_play();
 		}
@@ -291,6 +302,7 @@ function RainbowVideoPlayer(filemeta){
 		if (container.classList.contains('hide')){container.classList.remove('hide')};
 		this.showControlsTime=setTimeout(this.hideControls, 5000);
 	}
+
 	this.start = function() {
 		container.classList.remove('off');
 		muteButton.onclick = function(){this.cntxt.muteTogle()};
@@ -306,7 +318,15 @@ function RainbowVideoPlayer(filemeta){
 	}
 	
 	this.seek = function(position){
-		videoElement.currentTime = position*videoElement.duration;
+		let seek_position = position * duration;
+		if (vp8_active && !videoElement.loop){
+			videoElement.src = "/vp8/" + _filemeta.base64path + "?seek="+seek_position;
+			offset = seek_position;
+		}
+		else {
+			videoElement.currentTime = seek_position;
+			offset = 0;
+		}
 	}
 
 
@@ -314,9 +334,10 @@ function RainbowVideoPlayer(filemeta){
 		console.log("OnProgress")
 		this.cntxt.buffer()
 	};
+
 	this.buffer=function(){
 		if(videoElement.buffered.length){
-			scrollbar.setBufferRange(videoElement.buffered, durationTime);
+			scrollbar.setBufferRange(videoElement.buffered, offset, duration);
 		}
 	}
 	
@@ -355,6 +376,7 @@ function RainbowVideoPlayer(filemeta){
                 videoElement.src = _filemeta.link;
                 vp8_mode_btn.classList.remove('active');
                 vp8_active = false;
+                offset = 0;
             }else{
                 videoElement.src = "/vp8/"+_filemeta.base64path;
                 vp8_mode_btn.classList.add("active");

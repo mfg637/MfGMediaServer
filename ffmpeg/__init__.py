@@ -30,6 +30,15 @@ def probe(source):
         raise exceptions.InvalidFilename(source)
 
 
+def probe_raw(source):
+    try:
+        commandline = ['ffprobe', '-loglevel', '24', '-hide_banner', '-print_format', 'json',
+                       '-show_format', '-show_streams', '-show_chapters', str(source)]
+        return str(get_output(commandline), 'utf-8')
+    except UnicodeEncodeError:
+        raise exceptions.InvalidFilename(source)
+
+
 def get_PPM_commandline(source: str, size=None, force=False):
     commandline = ['ffmpeg', '-loglevel', '24', '-i', source,
                    '-vframes', '1']
