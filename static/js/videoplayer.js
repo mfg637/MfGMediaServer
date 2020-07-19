@@ -224,7 +224,7 @@ function RainbowVideoPlayer(filemeta){
 			data = JSON.parse(raw_data);
 			this.setDuration(parseFloat(data.format.duration));
 		}
-		ajaxConnect("/ffprobe_json/" + _filemeta.base64path, callback, this);
+		ajaxConnect("/ffprobe_json/" + _filemeta.base32path, callback, this);
 	}
 
 	load_metadata.call(this)
@@ -260,6 +260,7 @@ function RainbowVideoPlayer(filemeta){
 			_pause();
 		}
 	}
+
 	this.pause = function(){
 		let paused = videoElement.paused;
 		if (!paused){
@@ -320,7 +321,7 @@ function RainbowVideoPlayer(filemeta){
 	this.seek = function(position){
 		let seek_position = position * duration;
 		if (vp8_active && !videoElement.loop){
-			videoElement.src = "/vp8/" + _filemeta.base64path + "?seek="+seek_position;
+			videoElement.src = "/vp8/" + _filemeta.base32path + "?seek="+seek_position;
 			offset = seek_position;
 		}
 		else {
@@ -378,7 +379,7 @@ function RainbowVideoPlayer(filemeta){
                 vp8_active = false;
                 offset = 0;
             }else{
-                videoElement.src = "/vp8/"+_filemeta.base64path;
+                videoElement.src = "/vp8/"+_filemeta.base32path;
                 vp8_mode_btn.classList.add("active");
                 vp8_active = true;
             }

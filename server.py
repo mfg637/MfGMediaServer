@@ -42,12 +42,12 @@ if len(sys.argv)>1:
 root_dir = pathlib.Path('.').absolute()
 
 
-def base64_to_str(base64code):
-    return base64.b64decode(bytes.fromhex(base64code)).decode("utf-8")
+def base32_to_str(base32code: str):
+    return base64.b32decode(base32code.encode("utf-8")).decode("utf-8")
 
 
-def str_to_base64(string):
-    return base64.b64encode(string.encode("utf-8")).hex()
+def str_to_base32(string: str):
+    return base64.b32encode(string.encode("utf-8")).decode("utf-8")
 
 
 def cache_check(path):
@@ -97,7 +97,7 @@ def static_file(path):
 
 @app.route('/orig/<string:pathstr>')
 def get_original(pathstr):
-    path = pathlib.Path(base64_to_str(pathstr))
+    path = pathlib.Path(base32_to_str(pathstr))
     print(flask.request.headers)
     if path.is_file():
         return static_file(path)
@@ -107,7 +107,7 @@ def get_original(pathstr):
 
 @app.route('/image/<string:format>/<string:pathstr>')
 def transcode_image(format:str, pathstr):
-    path = pathlib.Path(base64_to_str(pathstr))
+    path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
         src_hash, status_code = cache_check(path)
         if status_code is not None:
@@ -137,7 +137,7 @@ def transcode_image(format:str, pathstr):
 
 @app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<string:pathstr>')
 def gen_thumbnail(format:str, width, height, pathstr):
-    path = pathlib.Path(base64_to_str(pathstr))
+    path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
         src_hash, status_code = None, None
         if path.stat().st_size<(1024*1024*1024):
@@ -222,14 +222,14 @@ def browse(dir):
                 filelist.append(file)
         filelist.sort(key=extract_mtime_key, reverse=True)
     for file in filelist:
-        base64path = str_to_base64(str(file.relative_to(root_dir)))
+        base32path = str_to_base32(str(file.relative_to(root_dir)))
         filemeta = {
-                "link": "/orig/{}".format(base64path),
+                "link": "/orig/{}".format(base32path),
                 "icon": None,
                 "object_icon": False,
                 "name": simplify_filename(file.name),
                 "sources": None,
-                "base64path": base64path,
+                "base32path": base32path,
                 "item_index": items_count,
                 "lazy_load": False,
                 "type": "audio",
@@ -239,34 +239,34 @@ def browse(dir):
             }
         if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
             filemeta["lazy_load"] = True
-            icon_base64path = base64path
+            icon_base32path = base32path
             icon_path = pathlib.Path("{}.icon".format(file))
             if icon_path.exists():
                 filemeta["custom_icon"] = True
-                icon_base64path = str_to_base64(str(icon_path.relative_to(root_dir)))
-            filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base64path)
+                icon_base32path = str_to_base32(str(icon_path.relative_to(root_dir)))
+            filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base32path)
             filemeta['sources'] = (
-                "/thumbnail/webp/192x144/{}".format(icon_base64path)+
-                ", /thumbnail/webp/384x288/{} 2x".format(icon_base64path)+
-                ", /thumbnail/webp/768x576/{} 4x".format(icon_base64path),
-                "/thumbnail/jpeg/192x144/{}".format(icon_base64path) +
-                ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base64path) +
-                ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base64path),
+                "/thumbnail/webp/192x144/{}".format(icon_base32path)+
+                ", /thumbnail/webp/384x288/{} 2x".format(icon_base32path)+
+                ", /thumbnail/webp/768x576/{} 4x".format(icon_base32path),
+                "/thumbnail/jpeg/192x144/{}".format(icon_base32path) +
+                ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
+                ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
             )
         if file.suffix.lower() in image_file_extensions:
             filemeta["type"] = "picture"
         elif file.suffix.lower() in video_file_extensions:
             filemeta["type"] = "video"
         if file.suffix == '.mkv':
-            filemeta['link'] = "/vp8/{}".format(base64path)
+            filemeta['link'] = "/vp8/{}".format(base32path)
             filemeta["is_vp8"] = True
         elif file.suffix.lower() in {'.jpg', '.jpeg'}:
             jpg = decoders.jpeg.JPEGDecoder(file)
             try:
                 if (jpg.arithmetic_coding()):
-                    filemeta['link'] = "/image/webp/{}".format((base64path))
+                    filemeta['link'] = "/image/webp/{}".format((base32path))
             except ValueError:
-                filemeta['link'] = "/image/webp/{}".format((base64path))
+                filemeta['link'] = "/image/webp/{}".format((base32path))
         itemslist.append(filemeta)
         filemeta_list.append(filemeta)
         items_count += 1
@@ -304,7 +304,7 @@ def hello_world():
 @app.route('/vp8/<string:pathstr>')
 def ffmpeg_vp8_simplestream(pathstr):
     import subprocess
-    path = pathlib.Path(base64_to_str(pathstr))
+    path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
         data = ffmpeg.probe(path)
         video = None
@@ -374,7 +374,7 @@ def icon_paint(pathstr):
         xoffset = (base_size[0] - width) // 2 + base_offset[0]
         yoffset = (base_size[1] - height) // 2 + base_offset[1]
         img_url = "/thumbnail/webp/174x108/{}".format(
-            str_to_base64(str(thumbnail_path.relative_to(root_dir)))
+            str_to_base32(str(thumbnail_path.relative_to(root_dir)))
         )
         if data['color'] is not None:
             stops = folder_icon_painter.paint_icon(data['color'])
@@ -414,7 +414,7 @@ def root_open_file(pathstr):
 
 @app.route('/ffprobe_json/<string:pathstr>')
 def ffprobe_response(pathstr):
-    path = pathlib.Path(base64_to_str(pathstr))
+    path = pathlib.Path(base32_to_str(pathstr))
     print(flask.request.headers)
     if path.is_file():
         return flask.Response(ffmpeg.probe_raw(path), mimetype="application/json")
