@@ -119,9 +119,13 @@ def transcode_image(format:str, pathstr):
         if format.lower() == 'webp':
             img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
             mime = "image/webp"
-        else:
+        elif format.lower() == 'jpeg':
+            img = img.convert(mode='RGB')
             img.save(buffer, format="JPEG", quality=90)
             mime = "image/jpeg"
+        else:
+            img.save(buffer, format="PNG")
+            mime = "image/png"
         buffer.seek(0)
         f = flask.send_file(
             buffer,
