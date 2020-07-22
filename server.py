@@ -430,4 +430,7 @@ def ffprobe_response(pathstr):
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=3709)
+    if len(sys.argv)>=3:
+        app.run(host="0.0.0.0", port=int(sys.argv[2]))
+    else:
+        app.run(host="0.0.0.0", port=3709)
