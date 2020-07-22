@@ -209,9 +209,12 @@ def browse(dir):
                     "lazy_load": False,
                 }
             )
-            if _dir.joinpath(".imgview-dir-config.json").exists():
-                itemslist[-1]["object_icon"] = True
-                itemslist[-1]["icon"] = "/folder_icon_paint/{}".format(_dir.relative_to(root_dir))
+            try:
+                if _dir.joinpath(".imgview-dir-config.json").exists():
+                    itemslist[-1]["object_icon"] = True
+                    itemslist[-1]["icon"] = "/folder_icon_paint/{}".format(_dir.relative_to(root_dir))
+            except PermissionError:
+                pass
             items_count += 1
     else:
         itemslist.append({
