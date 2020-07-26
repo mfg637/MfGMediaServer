@@ -5,6 +5,7 @@ style_tag.href="/static/css/videoplayer.css";
 body_tag = document.getElementsByTagName('body')[0]
 body_tag.appendChild(style_tag);
 
+
 	function fixEvent(e) {
 		e = e || window.event;
 		if (!e.target) e.target = e.srcElement;
@@ -125,6 +126,7 @@ function Scrollbar(root){
 
 function RainbowVideoPlayer(filemeta){
 	//state variables
+	this.cntxt = this;
 	var muted=false,
 		duration=0,
 		offset = 0,
@@ -136,15 +138,15 @@ function RainbowVideoPlayer(filemeta){
 	postersrcurl=filemeta.icon;
 	srcurl=filemeta.link;
 
-	var container=document.createElement('div');
-	container.classList.add('videocontainer');
-	//container.classList.add('off');
-    container.classList.add('popup');
-	container.cntxt=this;
-    body_tag.appendChild(container);
+	this.container=document.createElement('div');
+	this.container.classList.add('videocontainer');
+	//this.container.classList.add('off');
+    this.container.classList.add('popup');
+	this.container.cntxt=this;
+    body_tag.appendChild(this.container);
     body_tag.style.overflow="hidden";
-	var videoElement = document.createElement('video'),
-	loadBanner = document.createElement('div'),
+	this.videoElement = document.createElement('video');
+	var loadBanner = document.createElement('div'),
 	controls = document.createElement('div'),
     
     scrollbar = new Scrollbar(this),
@@ -163,18 +165,19 @@ function RainbowVideoPlayer(filemeta){
 	close_btn = document.createElement('div'),
 	vp8_mode_btn = document.createElement('a');
 	loop_button.appendChild(document.createElement('span'))
-	container.appendChild(videoElement);
-	videoElement.cntxt=this;
-	container.appendChild(loadBanner);
+	this.container.appendChild(this.videoElement);
+	this.videoElement.cntxt=this;
+	this.container.appendChild(loadBanner);
 	loadBanner.classList.add('loader');
-	container.appendChild(controls);
+	this.container.appendChild(controls);
 	controls.classList.add('controls');
     
 	scrollbar.appendTo(controls);
 
 	controls.appendChild(playButton);
 	playButton.classList.add('play-pause_button');
-	playButton.classList.add('button-icon')
+	playButton.classList.add('button-icon');
+	playButton.cntxt = this;
 	playButton.appendChild(span_element_in_play_button);
 	controls.appendChild(timeLabel);
 	timeLabel.classList.add('time');
@@ -185,6 +188,7 @@ function RainbowVideoPlayer(filemeta){
 	fullscreenButton.classList.add('fullscreen');
 	fullscreenButton.classList.add('button-icon');
 	fullscreenButton.classList.add('x16-button');
+	fullscreenButton.cntxt = this;
 	fullscreenButton.appendChild(span_element_in_fullscreen_button);
 	controls.appendChild(muteButton);
 	muteButton.classList.add('speacer');
@@ -195,6 +199,7 @@ function RainbowVideoPlayer(filemeta){
 	loop_button.classList.add('loop-button');
 	loop_button.classList.add('button-icon');
 	loop_button.classList.add('x16-button');
+	loop_button.cntxt = this;
 	controls.appendChild(loop_button);
 	vp8_mode_btn.innerText="VP8";
 	vp8_mode_btn.classList.add("vp8_mode_btn");
@@ -204,12 +209,13 @@ function RainbowVideoPlayer(filemeta){
     }
 	controls.appendChild(vp8_mode_btn);
 	close_btn.classList.add('closebtn');
-	container.appendChild(close_btn);
-	if (srcurl) {videoElement.src=srcurl}
+	close_btn.cntxt = this;
+	this.container.appendChild(close_btn);
+	if (srcurl) {this.videoElement.src=srcurl}
     
     close_btn.onclick = function(){
         window.removeEventListener('resize', this.start);
-        body_tag.removeChild(container);
+        body_tag.removeChild(this.cntxt.container);
         body_tag.style.overflow="auto";
     }
     
@@ -219,7 +225,7 @@ function RainbowVideoPlayer(filemeta){
 				else{return Math.floor(seconds/60)+':'+n;}
 	}
 
-	function load_metadata() {
+	this.load_metadata = function() {
 		function callback(raw_data) {
 			data = JSON.parse(raw_data);
 			this.setDuration(parseFloat(data.format.duration));
@@ -227,90 +233,89 @@ function RainbowVideoPlayer(filemeta){
 		ajaxConnect("/ffprobe_json/" + _filemeta.base32path, callback, this);
 	}
 
-	load_metadata.call(this)
-
-	//videoElement.onloadedmetadata=function() {this.cntxt.setDuration()}
 	this.setDuration = function(_duration){
 		duration=_duration;
 		durationTimeLabel.data=formatmmss(duration);
 	}
 
-	function updateCurrentTime(){
-		let current_time = videoElement.currentTime + offset
+	this._updateCurrentTime = function(){
+		let current_time = this.videoElement.currentTime + offset
 		scrollbar.setVideoSliderValue(current_time, duration);
 		currentTimeLabel.data=formatmmss(current_time);
 	}
 	
 	function _play(){
-		videoElement.play();
+		this.videoElement.play();
 		playButton.classList.add('pause');
-		durRefleshInt=setInterval(updateCurrentTime, 1000/8);
+		durRefleshInt = setInterval(this._updateCurrentTime.bind(this), 1000/8);
 	}
 	
 	function _pause(){
-		videoElement.pause();
+		this.videoElement.pause();
 		playButton.classList.remove('pause');
 		clearInterval(durRefleshInt);
 	}
 	
 	this.playpause=function(){
-		if(videoElement.paused){
-			_play();
+		if(this.cntxt.videoElement.paused){
+			_play.call(this.cntxt);
 		}else{
-			_pause();
+			_pause.call(this.cntxt);
 		}
 	}
 
 	this.pause = function(){
-		let paused = videoElement.paused;
+		let paused = this.videoElement.paused;
 		if (!paused){
-			_pause();
+			_pause.call(this);
 		}
 		return paused;
 	}
 	this.play = function(){
-		let paused = videoElement.paused;
+		let paused = this.videoElement.paused;
 		if (paused){
-			_play();
+			_play.call(this);
 		}
 	}
     playButton.onclick = this.playpause;
-	this.muteTogle = function(){
+	this.muteToggle = function(){
 		if (muted) {
+			this.cntxt.videoElement.muted = false;
 			muted=false;
 			muteButton.classList.remove('mute');
 		}else{
+			this.cntxt.videoElement.muted = true;
 			muted=true;
 			muteButton.classList.add('mute');
 		}
 	}
 	
 	this.toggle_loop = function(){
-		if (videoElement.loop){
-			videoElement.loop = false;
-			loop_button.classList.remove('active');
+		if (this.cntxt.videoElement.loop){
+			this.cntxt.videoElement.loop = false;
+			this.classList.remove('active');
 		}else{
-			videoElement.loop = true;
-			loop_button.classList.add('active');
+			this.cntxt.videoElement.loop = true;
+			this.classList.add('active');
 		}
 	}
 	loop_button.onclick = this.toggle_loop;
 	this.hideControls = function(){
-		container.classList.add('hide')
+		this.container.classList.add('hide')
 	}
 	this.showControls = function(){
 		clearTimeout(this.showControlsTime);
-		if (container.classList.contains('hide')){container.classList.remove('hide')};
-		this.showControlsTime=setTimeout(this.hideControls, 5000);
+		if (this.container.classList.contains('hide')){this.container.classList.remove('hide')};
+		this.showControlsTime=setTimeout(this.hideControls.bind(this), 5000);
 	}
 
 	this.start = function() {
-		container.classList.remove('off');
-		muteButton.onclick = function(){this.cntxt.muteTogle()};
-		container.onmousemove = function(){this.cntxt.showControls()}
-		container.onmouseout=function(){clearTimeout(this.cntxt.showControlsTime)}
-		container.onclick=function(event){
-            if ((event.target==event.currentTarget) || (event.target == videoElement))
+		this.container.classList.remove('off');
+		muteButton.onclick = function(){this.cntxt.muteToggle()};
+		this.container.onmousemove = function(){this.cntxt.showControls()}
+		this.container.onmouseout=function(){clearTimeout(this.cntxt.showControlsTime)}
+		this.container.onclick=function(event){
+            if ((event.target === event.currentTarget) || (event.target === this.videoElement))
                 this.cntxt.showControls();
         }
         scrollbar.init();
@@ -320,25 +325,35 @@ function RainbowVideoPlayer(filemeta){
 	
 	this.seek = function(position){
 		let seek_position = position * duration;
-		if (vp8_active && !videoElement.loop){
-			videoElement.src = "/vp8/" + _filemeta.base32path + "?seek="+seek_position;
+		if (vp8_active && !this.videoElement.loop){
+			this.videoElement.src = "/vp8/" + _filemeta.base32path + "?seek="+seek_position;
 			offset = seek_position;
 		}
 		else {
-			videoElement.currentTime = seek_position;
+			this.videoElement.currentTime = seek_position;
 			offset = 0;
 		}
 	}
 
-
-	videoElement.onprogress=function() {
-		console.log("OnProgress")
-		this.cntxt.buffer()
-	};
+	this.bind_video = function () {
+		this.videoElement.onloadedmetadata=function() {
+			this.cntxt.setDuration(this.duration);
+			this.cntxt.load_metadata.call(this.cntxt);
+		}
+		this.videoElement.onprogress=function() {
+			console.log("OnProgress");
+			this.cntxt.buffer();
+		};
+		this.videoElement.oncanplaythrough=function () {
+			console.log("Can Play event");
+			this.cntxt.play();
+		}
+	}
+	this.bind_video();
 
 	this.buffer=function(){
-		if(videoElement.buffered.length){
-			scrollbar.setBufferRange(videoElement.buffered, offset, duration);
+		if(this.videoElement.buffered.length){
+			scrollbar.setBufferRange(this.videoElement.buffered, offset, duration);
 		}
 	}
 	
@@ -351,49 +366,107 @@ function RainbowVideoPlayer(filemeta){
 			} else if(document.webkitCancelFullScreen) {
 				document.webkitCancelFullScreen();
 			}
-			fullscreenButton.classList.remove('back');
+			this.classList.remove('back');
 		} else{
-			if(container.requestFullScreen) {
-				container.requestFullScreen();
-			} else if(container.requestFullscreen) {
-				container.requestFullscreen();
-			}else if(video.container.webkitRequestFullScreen) {
-				container.webkitRequestFullscreen();
-			} else if(video.container.mozRequestFullScreen) {
-				container.mozRequestFullScreen();
+			if(this.cntxt.container.requestFullScreen) {
+				this.cntxt.container.requestFullScreen();
+			} else if(this.cntxt.container.requestFullscreen) {
+				this.cntxt.container.requestFullscreen();
 			}
-			fullscreenButton.classList.add('back');
-		};
+			this.classList.add('back');
+		}
 	}
 	fullscreenButton.onclick = fullscreen;
-	container.onfullscreenchange = function(){
+	this.container.onfullscreenchange = function(){
 		scrollbar.init();
 	}
 	
-	vp8_mode_btn.root = this;
+	vp8_mode_btn.cntxt = this;
 	vp8_mode_btn.onclick = function(){
+		console.log(this.cntxt);
         if (!_filemeta.is_vp8){
             if (vp8_active){
-                videoElement.src = _filemeta.link;
+                this.videoElement.src = _filemeta.link;
                 vp8_mode_btn.classList.remove('active');
                 vp8_active = false;
                 offset = 0;
             }else{
-                videoElement.src = "/vp8/"+_filemeta.base32path;
+                this.videoElement.src = "/vp8/"+_filemeta.base32path;
                 vp8_mode_btn.classList.add("active");
                 vp8_active = true;
             }
-            this.root.start();
+            this.cntxt.start();
         }
     }
+
+    this.disable_vp8_mode = function () {
+		controls.removeChild(vp8_mode_btn);
+	}
+
 	this.start();
     window.addEventListener('resize', this.start);
 
 }
 
-var videoElement=document.getElementsByTagName('video'),
-players=[];
+function RainbowDASHVideoPlayer(filemeta) {/*
 
-for (var i = 0; i < videoElement.length; i++) {
-	players[i] = new RainbowVideoPlayer(videoElement[i]);
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@(((((((((((((((//////(((((((((((((((((((((((((@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@((((((((((((((((((&&(((((((((((((((((((((((((((((((((%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@(((%@@****,,,,,,,**((((((((((((((((((((((((((((((((//////((((@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@***,,,,,,,,((((/(((((((((((((((((((((((/////////////////((((@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@&***,,,,,,(((((((((((((((((((((((((///////////////////////////(((#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@***,,,,*(((/(((((((((((((((((////////////////////////////////,...,(((@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@***,,,/(((((((((((((((((////////////////////////////////////..........((((@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@***,*((((((((((((((//////////////////////////////////////,...............,(((@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@(**,(((((((((((/////////////////////////////////////////,.....................(((@@@@@@@********@@@@@@@@@@
+@@@@@@@@@@@@@*///((/((((///////////////////////////////////////////...........................(((@@&***,,,,,,***@@@@@@@@
+//@@@@@@@@@@*((((///////////////////////////////////////////////,...............................((***,,,,,,,,,***@@@@@@@
+//@@@@@@@@@(((///////////////////////////////////////////////*...................................**,,,,,,,,,,,,***@@@@@@
+//@@@@@@@(((/////////////(/////////////////////////////////....................................***,,,,,,,,,,,,,,**(@@@@@
+//@@@@@#((/////////(((//////////////////////////////////,.....................................***,,,,,,,,,,,,,,,***@@@@@
+//@@@@(((/////(((((///////////////////////////////////.......................................***,,,,,,,,,,,,*,,,,**@@@@@
+//@@(((//((((*(((//////////////////////////////////,.......................................((**,,,,,,,,,,,,,*,,,,***@@@@
+//@(((((((**,((//////////////////////////////////.......................................(((***,,,,,,,,,,,,,,*,,,,***@@@@
+/*((((&@@@*(((/////////////////////////////////...../(((((((((((//**(((..............(((*,,,*,,,,,,,,,,,,,,**,,,,***@@@@
+@((@@@@@@(((////////////////////////////////(((((((*,,,,,,,,,,,,,(((.............((((,,,,,,,,,,,,,,,,,,,,,,**,,,,,**@@@@
+@@@@@@@@(((///////////////////////////(((((/,,,,,,,,,,,,,,,,,((((............((((*,,,,,,,,,,,,,,,,,,,,,,,,**,,,,,***@@@@
+@@@@@@@((////////////////////////((((/  @@,,,,,,,,,,,,,,/((((...........(((((,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,***@@@@
+@@@@@@((////////////////////(((((&&&&&&&,@@,,,,,,,,(((((,......./(((((((,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,**@@@@@
+*///@((/////////////////((((#&&&&&&&&&&&&&@@,,,,,,*/((((((((((/*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,**(@@@@@
+/*@@((///////////////(((,#&&&&&@@@@      ,&@*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,/@@@@@@@@,,,,,,,,/@,,,*,,,,,,,,**///@@@@
+/*@(((///////////((((   &&&&&@@@@@         @@,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,/@@,          @@,,%@&,,,,,,,,,,,,,***@@@@@@@
+@@%((/////////(((,    *&&&&@@@@@@@         (@,,,,,,,,,,,,,,,,,,,,,,,,,,,,,@@&&&&&&%         @@,,,,,,,,,,,,,,***&@@@@@@@@
+@@((///////(((*,.    ,&&&&@@@@@@@@         *@,,,,,,,,,,,,,,,,,,,,,,,,,,,@@&&&&&&&&&&&&       @@,,,,,,,,,,,,***@@@@@@@@@@
+@&((////((((**,,     %%%&@@@@@@@@@@        (@,,,,,,,,,,,,,,,,,,,,,,,,,@@&@@@@      &&&&(      @@@@%(*,,,,***@@@@@@@@@@@@
+@(((//(((@@/**,,    /%%%@@@@@@     @*      @#,,,,,,,,,,,,,,,,,,,,,,,*@@@@@@@         &&&/     @#,,,,,,,***@@@@@@@@@@@@@@
+@(((((#@@@@/**,,    %%%%@@@@@@@    @@@@(..@@,,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@/          &&&     #*,,,,***@@@@@@@@@@@@@@@@@
+@(((@@@@@@@/**,,    ((((@@@@@@@@@@@@@@@@@@@%,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@@@           &&,    ,*@@@@@@@@@@@@@@@@@@@@@@@@
+@(@@@@@@@@@%**,,    ((((@@@@@@@@@@@@@@@@@@@,,,,,,,,,,,,,,,,,,,,,,*@@@@@@@@@@#          &&,    .,**@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@**,,,    ,,,@@@@@@@@@@@@@@@@@@,,,,,,,,,,,,,,,,,,,,,,,@@@@@@@    %@        .%%     ,***@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@***,,    ,,,#@@@@@@@@@@@@@@@@,,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@@    @@@.    %%%%    .***@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@**,,,    #%%%%@@@@@@@@@@@%#,,,,,,,,,,,,,,,,,,,,,,,,@@@@@@@@@@@@@@@@@@@@%%%%     ,**&@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@%**,,,     %%%%%%%@&%%%%%,,,,,,,,*******,,,,,,,,,,,@@@@@@@@@@@@@@@@@@@%%%%.    ,**(@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@(**,,,.     %%%%%%%%%%,,,,,,,,,,,,,,,,,,,*,,,,,,,,@@@@@@@@@@@@@@@@@@((((     ,***@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@%**,,,,.           ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@@@@@@@@@*,(((     ,**((((((((%@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@***,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,,,,,,,,%%%@@@@@@@@@@@*,,,,     .***%%%%%%%%%(((((((((@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@(**,,,,,,,,,,,,,,,,,,,,**,,,,,,,,,,,,,,,,,,,,,*%%%%%&@@&%%%%%%,      ,**///((((#%%%%%%%%%%%((((((@@@@@
+//@@@@@@@@@@@@@@@@@@***,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,**,,,,,,,,,, #%%%%%%%%%%/       ,*****/((((((((((#%%%%%%%%%%%(((((@
+//@@@@@@@@@@@@@@@@@@@@/***,,,,,,,,,,,,**,,,,,,,,,,,,,,,,*,,,,,,,,,.               ,,*************/((((((((#%%%%%%%%%%%((
+//@@@@@@@@@@@@@@@@@@@@@@%***,,,,,,,,,,,**,,,,,,,,,,,,,**,,,,,,,,,,,,,         .,,***,..,*************/(((((((%%%%%%%%%%%
+//@@@@@@@@@@@@@@@@@@@@@@@@@#****,,,,,,,,,,***,,,,,****,,,,,,,,,,,,,,,,,,,,,,,,***,...........***********(((((((#%%%%%%%%
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*****,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,****..................**********/((((((#%%%%%%
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@********,,,,,,,,,,,,,,,,,,,,,,,,,,,*****((//////.................*********/((((((%%%%%
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@***,,,,,,****************************/((((((/////////...............*********((((((#%%%
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@**,,,,,,,,,,,,,,,,,,,,,,,,,,,((*****((((((((///////////,.............*********(((((((%#
+
+
+	RainbowVideoPlayer.call(this, filemeta);
+	var url = filemeta.link;
+	var player = dashjs.MediaPlayer().create();
+	player.initialize(this.videoElement, url, true);
+	this.videoElement = player.getVideoElement();
+	this.bind_video();
+	this.disable_vp8_mode();
+	console.log(player);
 }

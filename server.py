@@ -20,7 +20,9 @@ import decoders
 image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'}
 video_file_extensions = {'.mkv', '.mp4', '.webm'}
 supported_file_extensions = \
-    image_file_extensions.union(video_file_extensions).union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac"})
+    image_file_extensions.union(video_file_extensions)\
+    .union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac"})\
+    .union({'.mpd'})# dash manifest
 
 
 def browse_folder(folder):
@@ -77,9 +79,9 @@ def app_root():
 
 
 def static_file(path):
-    src_hash, status_code = cache_check(path)
-    if status_code is not None:
-        return status_code
+    #src_hash, status_code = cache_check(path)
+    #if status_code is not None:
+    #    return status_code
     abspath = path.absolute()
     mime = magic.from_file(str(abspath), mime=True)
     if path.suffix == '.mpd' and mime == "text/xml":
@@ -91,7 +93,6 @@ def static_file(path):
         mimetype=mime,
         conditional=True
     )
-    f.set_etag(src_hash)
     return f
 
 
@@ -184,6 +185,22 @@ def browse(dir):
     itemslist = list()
     filemeta_list = list()
     items_count: int = 0
+    def _icon(file, filemeta):
+        filemeta["lazy_load"] = True
+        icon_base32path = filemeta['base32path']
+        icon_path = pathlib.Path("{}.icon".format(file))
+        if icon_path.exists():
+            filemeta["custom_icon"] = True
+            icon_base32path = str_to_base32(str(icon_path.relative_to(root_dir)))
+        filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base32path)
+        filemeta['sources'] = (
+            "/thumbnail/webp/192x144/{}".format(icon_base32path) +
+            ", /thumbnail/webp/384x288/{} 2x".format(icon_base32path) +
+            ", /thumbnail/webp/768x576/{} 4x".format(icon_base32path),
+            "/thumbnail/jpeg/192x144/{}".format(icon_base32path) +
+            ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
+            ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
+        )
     glob_pattern = flask.request.args.get('glob', None)
     if glob_pattern is None:
         dirlist, filelist = browse_folder(dir)
@@ -245,25 +262,17 @@ def browse(dir):
                 "custom_icon": False
             }
         if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
-            filemeta["lazy_load"] = True
-            icon_base32path = base32path
-            icon_path = pathlib.Path("{}.icon".format(file))
-            if icon_path.exists():
-                filemeta["custom_icon"] = True
-                icon_base32path = str_to_base32(str(icon_path.relative_to(root_dir)))
-            filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base32path)
-            filemeta['sources'] = (
-                "/thumbnail/webp/192x144/{}".format(icon_base32path)+
-                ", /thumbnail/webp/384x288/{} 2x".format(icon_base32path)+
-                ", /thumbnail/webp/768x576/{} 4x".format(icon_base32path),
-                "/thumbnail/jpeg/192x144/{}".format(icon_base32path) +
-                ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
-                ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
-            )
+            _icon(file, filemeta)
         if file.suffix.lower() in image_file_extensions:
             filemeta["type"] = "picture"
         elif file.suffix.lower() in video_file_extensions:
             filemeta["type"] = "video"
+        elif file.suffix.lower() == '.mpd':
+            filemeta['type'] = "DASH"
+            filemeta['link'] = "{}/{}".format(flask.request.base_url, file.name)
+            icon_path = pathlib.Path("{}.icon".format(file))
+            if icon_path.exists():
+                _icon(file, filemeta)
         if file.suffix == '.mkv':
             filemeta['link'] = "/vp8/{}".format(base32path)
             filemeta["is_vp8"] = True

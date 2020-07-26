@@ -63,14 +63,20 @@ function ImageViewer() {
     links = document.querySelectorAll("a.item")
     for (i=0; i<filemeta.length; i++){
         links[filemeta[i].item_index].imageID = i
-        if (filemeta[i].type=="picture"){
+        if (filemeta[i].type === "picture"){
             links[filemeta[i].item_index].onclick=function(){
                 imageViewer.watchPhoto(this.imageID);
                 return false;
             }
-        }else if (filemeta[i].type=="video"){
+        }else if (filemeta[i].type === "video"){
             links[filemeta[i].item_index].onclick=function(){
                 new RainbowVideoPlayer(filemeta[this.imageID]);
+                return false;
+            }
+        }
+        else if (filemeta[i].type === "DASH"){
+            links[filemeta[i].item_index].onclick=function(){
+                new RainbowDASHVideoPlayer(filemeta[this.imageID]);
                 return false;
             }
         }
