@@ -146,8 +146,8 @@ function RainbowVideoPlayer(filemeta){
     body_tag.appendChild(this.container);
     body_tag.style.overflow="hidden";
 	this.videoElement = document.createElement('video');
+	this.controls = document.createElement('div');
 	var loadBanner = document.createElement('div'),
-	controls = document.createElement('div'),
     
     scrollbar = new Scrollbar(this),
     
@@ -169,28 +169,28 @@ function RainbowVideoPlayer(filemeta){
 	this.videoElement.cntxt=this;
 	this.container.appendChild(loadBanner);
 	loadBanner.classList.add('loader');
-	this.container.appendChild(controls);
-	controls.classList.add('controls');
+	this.container.appendChild(this.controls);
+	this.controls.classList.add('controls');
     
-	scrollbar.appendTo(controls);
+	scrollbar.appendTo(this.controls);
 
-	controls.appendChild(playButton);
+	this.controls.appendChild(playButton);
 	playButton.classList.add('play-pause_button');
 	playButton.classList.add('button-icon');
 	playButton.cntxt = this;
 	playButton.appendChild(span_element_in_play_button);
-	controls.appendChild(timeLabel);
+	this.controls.appendChild(timeLabel);
 	timeLabel.classList.add('time');
 	timeLabel.appendChild(currentTimeLabel);
 	timeLabel.appendChild(timeDelimiter);
 	timeLabel.appendChild(durationTimeLabel);
-	controls.appendChild(fullscreenButton);
+	this.controls.appendChild(fullscreenButton);
 	fullscreenButton.classList.add('fullscreen');
 	fullscreenButton.classList.add('button-icon');
 	fullscreenButton.classList.add('x16-button');
 	fullscreenButton.cntxt = this;
 	fullscreenButton.appendChild(span_element_in_fullscreen_button);
-	controls.appendChild(muteButton);
+	this.controls.appendChild(muteButton);
 	muteButton.classList.add('speacer');
 	muteButton.classList.add('button-icon')
 	muteButton.classList.add('x16-button');
@@ -200,14 +200,14 @@ function RainbowVideoPlayer(filemeta){
 	loop_button.classList.add('button-icon');
 	loop_button.classList.add('x16-button');
 	loop_button.cntxt = this;
-	controls.appendChild(loop_button);
+	this.controls.appendChild(loop_button);
 	vp8_mode_btn.innerText="VP8";
-	vp8_mode_btn.classList.add("vp8_mode_btn");
+	vp8_mode_btn.classList.add("text_btn");
     if (_filemeta.is_vp8){
         vp8_mode_btn.classList.add('active');
         vp8_active = true;
     }
-	controls.appendChild(vp8_mode_btn);
+	this.controls.appendChild(vp8_mode_btn);
 	close_btn.classList.add('closebtn');
 	close_btn.cntxt = this;
 	this.container.appendChild(close_btn);
@@ -305,8 +305,8 @@ function RainbowVideoPlayer(filemeta){
 	}
 	this.showControls = function(){
 		clearTimeout(this.showControlsTime);
-		if (this.container.classList.contains('hide')){this.container.classList.remove('hide')};
-		this.showControlsTime=setTimeout(this.hideControls.bind(this), 5000);
+		if (this.container.classList.contains('hide')){this.container.classList.remove('hide');}
+		this.showcontrolsTime=setTimeout(this.hideControls.bind(this), 5000);
 	}
 
 	this.start = function() {
@@ -383,16 +383,16 @@ function RainbowVideoPlayer(filemeta){
 	
 	vp8_mode_btn.cntxt = this;
 	vp8_mode_btn.onclick = function(){
-		console.log(this.cntxt);
+		console.log();
         if (!_filemeta.is_vp8){
             if (vp8_active){
-                this.videoElement.src = _filemeta.link;
-                vp8_mode_btn.classList.remove('active');
+                this.cntxt.videoElement.src = _filemeta.link;
+                this.classList.remove('active');
                 vp8_active = false;
                 offset = 0;
             }else{
-                this.videoElement.src = "/vp8/"+_filemeta.base32path;
-                vp8_mode_btn.classList.add("active");
+                this.cntxt.videoElement.src = "/vp8/"+_filemeta.base32path;
+                this.classList.add("active");
                 vp8_active = true;
             }
             this.cntxt.start();
@@ -400,7 +400,7 @@ function RainbowVideoPlayer(filemeta){
     }
 
     this.disable_vp8_mode = function () {
-		controls.removeChild(vp8_mode_btn);
+		this.controls.removeChild(vp8_mode_btn);
 	}
 
 	this.start();
@@ -463,10 +463,52 @@ function RainbowDASHVideoPlayer(filemeta) {/*
 
 	RainbowVideoPlayer.call(this, filemeta);
 	var url = filemeta.link;
-	var player = dashjs.MediaPlayer().create();
-	player.initialize(this.videoElement, url, true);
-	this.videoElement = player.getVideoElement();
+	this.dash_js_player = dashjs.MediaPlayer().create();
+	this.dash_js_player.initialize(this.videoElement, url, true);
+	this.videoElement = this.dash_js_player.getVideoElement();
+	this.dash_js_player.cntxt=this;
+	var _60fps_mode_btn = document.createElement('a');
+	this.dash_js_player.on(dashjs.MediaPlayer.events['PLAYBACK_METADATA_LOADED'], (function () {
+		console.log("PLAYBACK_METADATA_LOADED");
+		let video_tracks = this.dash_js_player.getTracksFor('video');
+		this.track_60fps = null;
+		this.track_30fps = null;
+		this.mode_60fps=false;
+		for (i=0; i<video_tracks.length; i++){
+			if (video_tracks[i]['id']==="60fps")
+				this.track_60fps = video_tracks[i];
+			else if (video_tracks[i]['id']==="30fps"){
+				this.track_30fps = video_tracks[i];
+			}
+		}
+		if (this.track_60fps!==null) {
+			_60fps_mode_btn.innerText = "60FPS";
+			_60fps_mode_btn.classList.add("text_btn");
+			_60fps_mode_btn.cntxt = this;
+			this.controls.appendChild(_60fps_mode_btn);
+			_60fps_mode_btn.onclick = function () {
+				if (this.cntxt.mode_60fps){
+					this.cntxt.mode_60fps = false;
+					this.cntxt.dash_js_player.setCurrentTrack(this.cntxt.track_30fps);
+					this.classList.remove('active');
+				}else{
+					this.cntxt.mode_60fps = true;
+					this.cntxt.dash_js_player.setCurrentTrack(this.cntxt.track_60fps);
+					this.classList.add('active');
+				}
+			}
+		}
+	}).bind(this));
+	this.init_track = function () {
+		console.log("FRAGMENT_LOADING_STARTED");
+		if (this.dash_js_player.getCurrentTrackFor('video') === this.track_60fps){
+			this.mode_60fps = true;
+			_60fps_mode_btn.classList.add('active');
+		}
+		this.dash_js_player.off(dashjs.MediaPlayer.events['FRAGMENT_LOADING_STARTED'], this.init_track.bind(this), this);
+	}
+	this.dash_js_player.on(dashjs.MediaPlayer.events['FRAGMENT_LOADING_STARTED'], this.init_track.bind(this), this)
 	this.bind_video();
 	this.disable_vp8_mode();
-	console.log(player);
+	console.log(this);
 }
