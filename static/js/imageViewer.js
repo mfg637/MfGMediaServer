@@ -98,6 +98,10 @@ function ImageViewer() {
     default_open_video_click_handler = function(){
         new RainbowVideoPlayer(photolist[id]);
     }
+
+    default_open_dash_video_click_handler = function(){
+        new RainbowDASHVideoPlayer(photolist[id]);
+    }
   
   this.watchPhoto = function(photoID) {
     clearTimeout(loadViewportSizePhoto);
@@ -126,6 +130,8 @@ function ImageViewer() {
         default_click_handler = default_hide_controls_click_handler;
     else if (photolist[id].type === "video")
         default_click_handler = default_open_video_click_handler;
+    else if (photolist[id].type === "DASH")
+        default_click_handler = default_open_dash_video_click_handler;
     else
         default_click_handler = default_goto_url_click_handler;
 
