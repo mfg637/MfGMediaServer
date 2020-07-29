@@ -439,7 +439,14 @@ def ffprobe_response(pathstr):
 
 
 if __name__ == '__main__':
-    if len(sys.argv)>=3:
-        app.run(host="0.0.0.0", port=int(sys.argv[2]))
+    ssl_context = None
+    cert_path = os.path.join(app.root_path, 'cert.pem')
+    key_path = os.path.join(app.root_path, 'key.pem')
+    if os.path.exists(cert_path) and os.path.exists(key_path):
+        ssl_context=(cert_path, key_path)
+    print(ssl_context)
+    import config
+    if len(sys.argv) >= 3:
+        app.run(host=config.host_name, port=int(sys.argv[2]), ssl_context=ssl_context)
     else:
-        app.run(host="0.0.0.0", port=3709)
+        app.run(host=config.host_name, port=config.port, ssl_context=ssl_context)
