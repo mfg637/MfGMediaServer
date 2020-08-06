@@ -17,6 +17,10 @@ import ffmpeg
 
 import decoders
 
+
+anonymous_forbidden = True
+
+
 image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'}
 video_file_extensions = {'.mkv', '.mp4', '.webm'}
 supported_file_extensions = \
@@ -73,12 +77,19 @@ def simplify_filename(name):
     return re.sub(r"[_-]", ' ', name)
 
 
+def login_validation():
+    if anonymous_forbidden and not flask.session.get('logged_in'):
+        flask.abort(401)
+
+
 @app.route('/')
 def app_root():
+    login_validation()
     return browse(root_dir)
 
 
 def static_file(path):
+    login_validation()
     #src_hash, status_code = cache_check(path)
     #if status_code is not None:
     #    return status_code
@@ -98,6 +109,7 @@ def static_file(path):
 
 @app.route('/orig/<string:pathstr>')
 def get_original(pathstr):
+    login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     print(flask.request.headers)
     if path.is_file():
@@ -108,6 +120,7 @@ def get_original(pathstr):
 
 @app.route('/image/<string:format>/<string:pathstr>')
 def transcode_image(format:str, pathstr):
+    login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
         src_hash, status_code = cache_check(path)
@@ -142,6 +155,7 @@ def transcode_image(format:str, pathstr):
 
 @app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<string:pathstr>')
 def gen_thumbnail(format:str, width, height, pathstr):
+    login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
         src_hash, status_code = None, None
@@ -296,6 +310,7 @@ def browse(dir):
 
 @app.route('/browse/<path:pathstr>')
 def browse_dir(pathstr):
+    login_validation()
     path = pathlib.Path(pathstr).absolute()
     if pathlib.Path(path).is_dir():
         in_root_dir = False
@@ -319,6 +334,7 @@ def hello_world():
 
 @app.route('/vp8/<string:pathstr>')
 def ffmpeg_vp8_simplestream(pathstr):
+    login_validation()
     import subprocess
     path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
@@ -367,6 +383,7 @@ def ffmpeg_vp8_simplestream(pathstr):
 
 @app.route('/folder_icon_paint/<path:pathstr>')
 def icon_paint(pathstr):
+    login_validation()
     import static.images.folder_icon_painter as folder_icon_painter
     dir=pathlib.Path(pathstr).absolute()
     data = None
@@ -421,6 +438,7 @@ def icon_paint(pathstr):
 
 @app.route('/<path:pathstr>')
 def root_open_file(pathstr):
+    login_validation()
     path = pathlib.Path(pathstr).absolute()
     if pathlib.Path(path).is_file():
         return static_file(path)
@@ -430,6 +448,7 @@ def root_open_file(pathstr):
 
 @app.route('/ffprobe_json/<string:pathstr>')
 def ffprobe_response(pathstr):
+    login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     print(flask.request.headers)
     if path.is_file():
@@ -438,15 +457,40 @@ def ffprobe_response(pathstr):
         flask.abort(404)
 
 
-if __name__ == '__main__':
-    ssl_context = None
-    cert_path = os.path.join(app.root_path, 'cert.pem')
-    key_path = os.path.join(app.root_path, 'key.pem')
-    if os.path.exists(cert_path) and os.path.exists(key_path):
-        ssl_context=(cert_path, key_path)
-    print(ssl_context)
+@app.errorhandler(401)
+def show_login_form(event):
+    return flask.render_template('login.html', redirect_to=str(event.get_headers()))
+
+
+@app.route('/login', methods=['POST'])
+def login_handler():
+    import hashlib
     import config
-    if len(sys.argv) >= 3:
-        app.run(host=config.host_name, port=int(sys.argv[2]), ssl_context=ssl_context)
+    if hashlib.sha3_512(flask.request.form['password'].encode("utf-8")).hexdigest() == \
+            config.valid_password_hash_hex and \
+            flask.request.form['login'] == config.valid_login:
+        flask.session['logged_in'] = True
+        return "Access Granted"
     else:
-        app.run(host=config.host_name, port=config.port, ssl_context=ssl_context)
+        flask.abort(401)
+
+
+if __name__ == '__main__':
+    import config
+    ssl_context = None
+    if len(config.certificate_file) and len(config.private_key_file):
+        cert_path = os.path.join(app.root_path, config.certificate_file)
+        key_path = os.path.join(app.root_path, config.private_key_file)
+        if os.path.exists(cert_path) and os.path.exists(key_path):
+            ssl_context=(cert_path, key_path)
+    port = config.port
+    i=2
+    while i<len(sys.argv):
+        if sys.argv[i] == '--port':
+            i += 1
+            port = sys.argv[i]
+        elif sys.argv[i] == '--anon':
+            anonymous_forbidden = False
+        i += 1
+    app.secret_key = os.urandom(12)
+    app.run(host=config.host_name, port=port, ssl_context=ssl_context)
