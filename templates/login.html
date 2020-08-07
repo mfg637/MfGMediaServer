@@ -10,6 +10,7 @@
     <form method="post" action="/login">
         <label for="login">login</label> <input id="login" type="text" name="login"/><br/>
         <label for="password">password</label> <input id="password" type="password" name="password"/><br/>
+        <input type="hidden" name="redirect_to" value="{{ redirect_to }}">
         <input type="submit" value="SIGN IN"/>
     </form>
 </body>

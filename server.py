@@ -459,7 +459,8 @@ def ffprobe_response(pathstr):
 
 @app.errorhandler(401)
 def show_login_form(event):
-    return flask.render_template('login.html', redirect_to=str(event.get_headers()))
+    f = flask.render_template('login.html', redirect_to=str(flask.request.base_url))
+    return flask.Response(f, status=401)
 
 
 @app.route('/login', methods=['POST'])
@@ -470,7 +471,7 @@ def login_handler():
             config.valid_password_hash_hex and \
             flask.request.form['login'] == config.valid_login:
         flask.session['logged_in'] = True
-        return "Access Granted"
+        return flask.redirect(flask.request.form['redirect_to'])
     else:
         flask.abort(401)
 
