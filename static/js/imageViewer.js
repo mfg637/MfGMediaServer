@@ -49,7 +49,11 @@ imageViewer.init(filemeta)
 function ImageViewer() {
   var container, photo, prev, next, caption;
   var id,photolist,loadViewportSizePhoto;
-  var default_click_handler, default_hide_controls_click_handler, default_goto_url_click_handler, default_open_video_click_handler;
+  var default_click_handler,
+      default_hide_controls_click_handler,
+      default_goto_url_click_handler,
+      default_open_video_click_handler,
+      doubleclick_goto_url_click_handler;
   var jscontainer = document.createElement('div');
   jscontainer.id = 'writeCodeJS'
   jscontainer.innerHTML
@@ -94,6 +98,10 @@ function ImageViewer() {
     default_goto_url_click_handler = function(){
         document.location.href = photolist[id].link;
     }
+
+    doubleclick_goto_url_click_handler = function(){
+        window.open(photolist[id].link, '_blank');
+    }
     
     default_open_video_click_handler = function(){
         new RainbowVideoPlayer(photolist[id]);
@@ -110,7 +118,7 @@ function ImageViewer() {
       replacePhoto(this);
     } else {
       createPhoto(this);
-    };
+    }
   }
   replacePhoto = function() {
     container.classList.add('load');
@@ -134,6 +142,8 @@ function ImageViewer() {
         default_click_handler = default_open_dash_video_click_handler;
     else
         default_click_handler = default_goto_url_click_handler;
+
+
 
     caption.innerHTML = ( +id + 1) + '/' +
                         photolist.length + '<br /><span class="title">' + 
@@ -212,6 +222,9 @@ function ImageViewer() {
         if (event.target == event.currentTarget){
             default_click_handler();
         }
+    }
+    controls_container.ondblclick = function(){
+        doubleclick_goto_url_click_handler();
     }
   
     replacePhoto();
