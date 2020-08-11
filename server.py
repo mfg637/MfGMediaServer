@@ -14,18 +14,20 @@ import base64
 import magic
 import re
 import ffmpeg
+import urllib.parse
 
 import decoders
 
 
 anonymous_forbidden = True
-
+access_tokens = dict()
+# key - URL, value - token
 
 image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'}
 video_file_extensions = {'.mkv', '.mp4', '.webm'}
 supported_file_extensions = \
     image_file_extensions.union(video_file_extensions)\
-    .union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac"})\
+    .union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac", ".m3u8"})\
     .union({'.mpd'})# dash manifest
 
 
@@ -78,6 +80,10 @@ def simplify_filename(name):
 
 
 def login_validation():
+    access_token = flask.request.args.get("access_token", None)
+    if access_token is not None:
+        if access_token == access_tokens[urllib.parse.unquote(flask.request.base_url)]:
+            return
     if anonymous_forbidden and not flask.session.get('logged_in'):
         flask.abort(401)
 
@@ -111,7 +117,6 @@ def static_file(path):
 def get_original(pathstr):
     login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
-    print(flask.request.headers)
     if path.is_file():
         return static_file(path)
     else:
@@ -275,6 +280,7 @@ def browse(dir):
                 "suffix": file.suffix,
                 "custom_icon": False
             }
+        icon_path = pathlib.Path("{}.icon".format(file))
         if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
             _icon(file, filemeta)
         if file.suffix.lower() in image_file_extensions:
@@ -284,7 +290,13 @@ def browse(dir):
         elif file.suffix.lower() == '.mpd':
             filemeta['type'] = "DASH"
             filemeta['link'] = "{}/{}".format(flask.request.base_url, file.name)
-            icon_path = pathlib.Path("{}.icon".format(file))
+            if icon_path.exists():
+                _icon(file, filemeta)
+        elif file.suffix.lower() == ".m3u8":
+            access_token = gen_access_token()
+            filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
+            access_tokens[filemeta['link']] = access_token
+            filemeta['link'] += "?access_token={}".format(access_token)
             if icon_path.exists():
                 _icon(file, filemeta)
         if file.suffix == '.mkv':
@@ -326,6 +338,7 @@ def browse_dir(pathstr):
         return static_file(path)
     else:
         flask.abort(404)
+
 
 @app.route('/helloword')
 def hello_world():
@@ -434,6 +447,41 @@ def icon_paint(pathstr):
         stops = folder_icon_painter.paint_icon(data['color'])
         rendered_template = flask.render_template('folder icon.svg', stops=stops)
     return flask.Response(rendered_template, mimetype="image/svg+xml")
+
+
+def gen_access_token():
+    import random
+    import string
+    access_token = ""
+    for i in random.choices(string.ascii_letters + string.digits, k=64):
+        access_token += i
+    return access_token
+
+
+@app.route('/m3u8/<string:pathstr>.m3u8')
+def gen_m3u8(pathstr):
+    global access_tokens
+    login_validation()
+    path = pathlib.Path(base32_to_str(pathstr))
+    if path.is_file():
+        buffer = io.StringIO()
+        with path.open("r") as f:
+            for line in f:
+                if '#' in line:
+                    buffer.write(line)
+                else:
+                    base32path = str_to_base32(str(path.parent.joinpath(line)).rstrip())
+                    base_url = "https://{}:{}/orig/{}".format(
+                        config.host_name,
+                        config.port,
+                        base32path
+                    )
+                    access_token = gen_access_token()
+                    access_tokens[base_url] = access_token
+                    buffer.write(base_url+"?access_token={}\n".format(access_token))
+        return flask.Response(buffer.getvalue(), mimetype="audio/x-mpegurl", status=200)
+    else:
+        flask.abort(404)
 
 
 @app.route('/<path:pathstr>')
