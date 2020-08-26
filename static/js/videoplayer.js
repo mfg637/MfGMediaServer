@@ -43,7 +43,7 @@ function Scrollbar(root){
 		bufferRanges = document.createElement('div'),
 		wachedRange = document.createElement('div'),
 		scrollButton = document.createElement('span');
-	var pixelsPerValue = null;
+	this.pixelsPerValue = null;
 	var newLeft = null;
 	wrapper_for_slider.classList.add('slider-wrapper');
 	wrapper_for_slider.appendChild(scrollbar);
@@ -60,7 +60,7 @@ function Scrollbar(root){
 	scrollButton.ondragstart = function() { return false; };
 	
 	this.init = function(){
-		pixelsPerValue=scrollbar.clientWidth-scrollButton.clientWidth;
+		this.pixelsPerValue=scrollbar.clientWidth-scrollButton.clientWidth;
 	}
 	
     this.appendTo = function(elem){
@@ -68,7 +68,7 @@ function Scrollbar(root){
     }
     
     this.setVideoSliderValue = function(currentTime, duration){
-		var playing = (currentTime/duration)*pixelsPerValue + 'px';
+		var playing = (currentTime/duration)*this.pixelsPerValue + 'px';
 		scrollButton.style.left=playing;
 		wachedRange.style.width=playing;
 	}
@@ -96,15 +96,17 @@ function Scrollbar(root){
 			}
 		}
 		scrollButton.style.left = newLeft + 'px';
-		document.onmouseup = function() {
+		var mouse_up = function() {
 			wachedRange.style.width=newLeft+'px';
-			root.seek(newLeft/pixelsPerValue)
+			//this.init();
+			root.seek(newLeft/this.pixelsPerValue)
 			document.onmousemove = document.onmouseup = null;
 			root.buffer();
 			if (!paused)
 				root.play();
 			return false;
 		};
+		document.onmouseup = mouse_up.bind(this.cntxt);
 	}
 	scrollbar.onmousedown = dragRange;
 	
@@ -320,7 +322,6 @@ function RainbowVideoPlayer(filemeta){
         }
         scrollbar.init();
 		this.cntxt.showControls();
-		this.cntxt.playpause();
 	}
 	
 	this.seek = function(position){
@@ -382,9 +383,6 @@ function RainbowVideoPlayer(filemeta){
 		}
 	}
 	fullscreenButton.onclick = fullscreen;
-	this.container.onfullscreenchange = function(){
-		scrollbar.init();
-	}
 	
 	vp8_mode_btn.cntxt = this;
 	vp8_mode_btn.onclick = function(){
@@ -409,7 +407,8 @@ function RainbowVideoPlayer(filemeta){
 	}
 
 	this.start();
-    window.addEventListener('resize', this.start);
+	this.playpause();
+    window.addEventListener('resize', this.start.bind(this));
 
 }
 
