@@ -169,6 +169,10 @@ function RainbowVideoPlayer(filemeta){
 	loop_button.appendChild(document.createElement('span'))
 	this.container.appendChild(this.videoElement);
 	this.videoElement.cntxt=this;
+	let track_elem = document.createElement('track');
+	track_elem.src="/webvtt/" + _filemeta.base32path;
+	track_elem.default = true;
+	this.videoElement.appendChild(track_elem);
 	this.container.appendChild(loadBanner);
 	loadBanner.classList.add('loader');
 	this.container.appendChild(this.controls);

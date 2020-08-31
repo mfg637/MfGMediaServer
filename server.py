@@ -94,20 +94,18 @@ def app_root():
     return browse(root_dir)
 
 
-def static_file(path):
+def static_file(path, mimetype=None):
     login_validation()
-    #src_hash, status_code = cache_check(path)
-    #if status_code is not None:
-    #    return status_code
     abspath = path.absolute()
-    mime = magic.from_file(str(abspath), mime=True)
-    if path.suffix == '.mpd' and mime == "text/xml":
-        mime = "application/dash+xml"
+    if mimetype is None:
+        mimetype = magic.from_file(str(abspath), mime=True)
+        if path.suffix == '.mpd' and mimetype == "text/xml":
+            mimetype = "application/dash+xml"
     f = flask.send_from_directory(
         str(abspath.parent),
         str(abspath.name),
         add_etags=False,
-        mimetype=mime,
+        mimetype=mimetype,
         conditional=True
     )
     return f
@@ -501,6 +499,16 @@ def ffprobe_response(pathstr):
     print(flask.request.headers)
     if path.is_file():
         return flask.Response(ffmpeg.probe_raw(path), mimetype="application/json")
+    else:
+        flask.abort(404)
+
+
+@app.route('/webvtt/<string:pathstr>')
+def get_vtt_subs(pathstr):
+    login_validation()
+    path = pathlib.Path(base32_to_str(pathstr)+".vtt")
+    if path.is_file():
+        return static_file(path, mimetype="text/vtt")
     else:
         flask.abort(404)
 
