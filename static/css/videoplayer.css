@@ -94,7 +94,7 @@ div.videocontainer.load div.loader {
 }
 div.videocontainer div.controls {
 	background:rgba(16,16,16,0.85);
-	transition:bottom 0.5s linear 1s;
+	transition:bottom 0.5s linear;
 	position: absolute;
 	bottom: 0;
 	width: 100%;

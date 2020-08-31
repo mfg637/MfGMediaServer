@@ -308,7 +308,7 @@ function RainbowVideoPlayer(filemeta){
 	this.showControls = function(){
 		clearTimeout(this.showControlsTime);
 		if (this.container.classList.contains('hide')){this.container.classList.remove('hide');}
-		this.showcontrolsTime=setTimeout(this.hideControls.bind(this), 5000);
+		this.showcontrolsTime=setTimeout(this.hideControls.bind(this), 10000);
 	}
 
 	this.start = function() {
