@@ -81,6 +81,23 @@
     {% endfor %}
             <div style="clear:left"></div>
     </div>
+    {% if pagination %}
+        {% if _glob != None %}
+            {% if page > 0 %}
+                <a href="{{ url }}?glob={{ _glob }}&page={{ page-1 }}">Back</a>
+            {% endif %}
+            {% if page+1 < max_pages %}
+                <a href="{{ url }}?glob={{ _glob }}&page={{ page+1 }}">Next</a>
+            {% endif %}
+        {% else %}
+            {% if page > 0 %}
+                <a href="{{ url }}?page={{ page-1 }}">Back</a>
+            {% endif %}
+            {% if page+1 < max_pages %}
+                <a href="{{ url }}?page={{ page+1 }}">Next</a>
+            {% endif %}
+        {% endif %}
+    {% endif %}
     <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
     <script src="/static/js/ajax.js"></script>
     <script src="/static/js/videoplayer.js"></script>
