@@ -311,7 +311,10 @@ def browse(dir):
                 filemeta["type"] = "video"
             elif file.suffix.lower() == '.mpd':
                 filemeta['type'] = "DASH"
-                filemeta['link'] = "{}/{}".format(flask.request.base_url, file.name)
+                filemeta['link'] = "/{}{}".format(
+                    ('' if dir == root_dir else 'browse/'),
+                    str(file.relative_to(root_dir))
+                )
                 if icon_path.exists():
                     _icon(file, filemeta)
             elif file.suffix.lower() == ".m3u8":
