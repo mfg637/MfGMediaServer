@@ -306,7 +306,15 @@ def browse(dir):
             if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
                 _icon(file, filemeta)
             if file.suffix.lower() in image_file_extensions:
-                filemeta["type"] = "picture"
+                if file.suffix.lower() == ".webp":
+                    img = PIL.Image.open(file)
+                    if img.is_animated:
+                        filemeta["type"] = "animated"
+                    else:
+                        filemeta["type"] = "picture"
+                    img.close()
+                else:
+                    filemeta["type"] = "picture"
             elif file.suffix.lower() in video_file_extensions:
                 filemeta["type"] = "video"
             elif file.suffix.lower() == '.mpd':
@@ -436,10 +444,10 @@ def ffmpeg_vp8_simplestream(pathstr):
                 '-vf',
                 'scale=\'min(1440,iw)\':\'min(720, ih)\':force_original_aspect_ratio=decrease'+\
                 (",fps={}".format(fps/2) if fps>30 else ""),
-                '-deadline', 'realtime',
+                '-deadline', 'good',
                 '-vcodec', 'libvpx',
                 '-crf', '10',
-                '-b:v', '8M',
+                '-b:v', '4M',
                 '-ac', '2',
                 '-acodec', 'libopus',
                 '-b:a', '144k',
