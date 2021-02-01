@@ -133,7 +133,8 @@ function RainbowVideoPlayer(filemeta){
 		duration=0,
 		offset = 0,
 		durRefleshInt,
-		vp8_active = false;
+		vp8_active = false,
+		nvenc_active = false;
     var _filemeta = filemeta;
 	this.showControlsTime = 0;
 
@@ -165,7 +166,8 @@ function RainbowVideoPlayer(filemeta){
 	span_element_in_mute_button = document.createElement('span'),
 	loop_button = document.createElement('a'),
 	close_btn = document.createElement('div'),
-	vp8_mode_btn = document.createElement('a');
+	vp8_mode_btn = document.createElement('a'),
+	nvenc_mode_btn = document.createElement('a');
 	loop_button.appendChild(document.createElement('span'))
 	this.container.appendChild(this.videoElement);
 	this.videoElement.cntxt=this;
@@ -214,6 +216,9 @@ function RainbowVideoPlayer(filemeta){
         vp8_active = true;
     }
 	this.controls.appendChild(vp8_mode_btn);
+    nvenc_mode_btn.innerText="NV";
+	nvenc_mode_btn.classList.add("text_btn");
+	this.controls.appendChild(nvenc_mode_btn);
 	close_btn.classList.add('closebtn');
 	close_btn.cntxt = this;
 	this.container.appendChild(close_btn);
@@ -401,6 +406,24 @@ function RainbowVideoPlayer(filemeta){
                 this.cntxt.videoElement.src = "/vp8/"+_filemeta.base32path;
                 this.classList.add("active");
                 vp8_active = true;
+            }
+            this.cntxt.start();
+        }
+    }
+
+    nvenc_mode_btn.cntxt = this;
+	nvenc_mode_btn.onclick = function(){
+		console.log();
+        if (!_filemeta.is_vp8){
+            if (nvenc_active){
+                this.cntxt.videoElement.src = _filemeta.link;
+                this.classList.remove('active');
+                nvenc_active = false;
+                offset = 0;
+            }else{
+                this.cntxt.videoElement.src = "/nvenc/"+_filemeta.base32path;
+                this.classList.add("active");
+                nvenc_active = true;
             }
             this.cntxt.start();
         }

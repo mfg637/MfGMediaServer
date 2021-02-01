@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import abc
 import hashlib
 
 import json
+import subprocess
+import tempfile
+
 import flask
 import sys
 import os
@@ -26,6 +29,8 @@ access_tokens = dict()
 
 load_acceleration = shared_enums.LoadAcceleration.NONE
 items_per_page = 1
+
+tmp_file = tempfile.NamedTemporaryFile()
 
 
 class PageCache:
@@ -415,53 +420,136 @@ def hello_world():
     return 'Hello, World!'
 
 
+class VideoTranscoder(abc.ABC):
+    def __init__(self):
+        self._buffer = None
+        self._io = None
+        self.process = None
+
+    @abc.abstractmethod
+    def get_specific_commandline_part(self, path, fps):
+        return None
+
+    @abc.abstractmethod
+    def get_output_buffer(self):
+        return None
+
+    @abc.abstractmethod
+    def read_input_from_pipe(self, pipe_output):
+        pass
+
+    @abc.abstractmethod
+    def get_mimetype(self):
+        return None
+
+    def do_convert(self, pathstr):
+        login_validation()
+        path = pathlib.Path(base32_to_str(pathstr))
+        if path.is_file():
+            data = ffmpeg.probe(path)
+            video = None
+            for stream in data['streams']:
+                if stream['codec_type'] == "video":
+                    video = stream
+            fps = None
+            if video['avg_frame_rate'] == "0/0":
+                fps = eval(video['r_frame_rate'])
+            else:
+                fps = eval(video['avg_frame_rate'])
+            seek_position = flask.request.args.get('seek', None)
+            commandline = [
+                'ffmpeg',
+            ]
+            if seek_position is not None:
+                commandline += [
+                    '-ss', seek_position
+                ]
+            commandline += self.get_specific_commandline_part(path, fps)
+            self.process = subprocess.Popen(
+                commandline
+                , stdout=subprocess.PIPE
+            )
+            self.read_input_from_pipe(self.process.stdout)
+            f = flask.send_file(self.get_output_buffer(), add_etags=False, mimetype=self.get_mimetype())
+            return f
+        else:
+            flask.abort(404)
+
+
+class VP8_VideoTranscoder(VideoTranscoder):
+    def get_mimetype(self):
+        return "video/webm"
+
+    def read_input_from_pipe(self, pipe_output):
+        self._io = pipe_output
+
+    def get_specific_commandline_part(self, path, fps):
+        return [
+            '-i', str(path),
+            '-vf',
+            'scale=\'min(1440,iw)\':\'min(720, ih)\':force_original_aspect_ratio=decrease' + \
+            (",fps={}".format(fps / 2) if fps > 30 else ""),
+            '-deadline', 'good',
+            '-vcodec', 'libvpx',
+            '-crf', '10',
+            '-b:v', '4M',
+            '-ac', '2',
+            '-acodec', 'libopus',
+            '-b:a', '144k',
+            '-f', 'webm',
+            '-'
+        ]
+
+    def get_output_buffer(self):
+        return self._io
+
+
 @app.route('/vp8/<string:pathstr>')
 def ffmpeg_vp8_simplestream(pathstr):
-    login_validation()
-    import subprocess
-    path = pathlib.Path(base32_to_str(pathstr))
-    if path.is_file():
-        data = ffmpeg.probe(path)
-        video = None
-        for stream in data['streams']:
-            if stream['codec_type'] == "video":
-                video = stream
-        fps=None
-        if video['avg_frame_rate'] == "0/0":
-            fps = eval(video['r_frame_rate'])
-        else:
-            fps = eval(video['avg_frame_rate'])
-        seek_position = flask.request.args.get('seek', None)
-        commandline = [
-                'ffmpeg',
+    vp8_converter = VP8_VideoTranscoder()
+    return vp8_converter.do_convert(pathstr)
+
+
+class NVENC_VideoTranscoder(VideoTranscoder):
+    def get_mimetype(self):
+        return "video/mp4"
+
+    def __init__(self):
+        global tmp_file
+        super().__init__()
+        #self.tmpfile = tempfile.TemporaryFile()
+        if not tmp_file.closed:
+            tmp_file.close()
+        tmp_file = tempfile.NamedTemporaryFile(delete=False)
+
+    def get_specific_commandline_part(self, path, fps):
+        return [
+            '-y',
+            '-i', str(path),
+            '-vf',
+            'scale=\'min(1440,iw)\':\'min(720, ih)\':force_original_aspect_ratio=decrease' + \
+            (",fps={}".format(fps / 2) if fps > 30 else ""),
+            '-vcodec', 'h264_nvenc',
+            '-preset', 'fast',
+            '-b:v', '8M',
+            '-ac', '2',
+            '-acodec', 'libfdk_aac',
+            '-vbr', '4',
+            '-f', 'mp4',
+            tmp_file.name
         ]
-        if seek_position is not None:
-            commandline += [
-                '-ss', seek_position
-            ]
-        commandline += [
-                '-i', str(path),
-                '-vf',
-                'scale=\'min(1440,iw)\':\'min(720, ih)\':force_original_aspect_ratio=decrease'+\
-                (",fps={}".format(fps/2) if fps>30 else ""),
-                '-deadline', 'good',
-                '-vcodec', 'libvpx',
-                '-crf', '10',
-                '-b:v', '4M',
-                '-ac', '2',
-                '-acodec', 'libopus',
-                '-b:a', '144k',
-                '-f', 'webm',
-                '-'
-            ]
-        process = subprocess.Popen(
-            commandline
-            , stdout=subprocess.PIPE
-        )
-        f = flask.send_file(process.stdout, add_etags=False, mimetype="video/webm")
-        return f
-    else:
-        flask.abort(404)
+
+    def get_output_buffer(self):
+        return tmp_file.name
+
+    def read_input_from_pipe(self, pipe_output):
+        self.process.wait()
+
+
+@app.route('/nvenc/<string:pathstr>')
+def ffmpeg_nvenc_filestream(pathstr):
+    nvenc_converter = NVENC_VideoTranscoder()
+    return nvenc_converter.do_convert(pathstr)
 
 
 @app.route('/folder_icon_paint/<path:pathstr>')
