@@ -312,19 +312,21 @@ function RainbowVideoPlayer(filemeta){
 	}
 	loop_button.onclick = this.toggle_loop;
 	this.hideControls = function(){
-		this.container.classList.add('hide')
+		this.container.classList.add('hide');
+		clearTimeout(this.showControlsTime);
 	}
+
 	this.showControls = function(){
 		clearTimeout(this.showControlsTime);
 		if (this.container.classList.contains('hide')){this.container.classList.remove('hide');}
-		this.showcontrolsTime=setTimeout(this.hideControls.bind(this), 10000);
+		this.showControlsTime=setTimeout(this.hideControls.bind(this), 10000);
 	}
 
 	this.start = function() {
 		this.cntxt.container.classList.remove('off');
 		muteButton.onclick = function(){this.cntxt.muteToggle()};
 		this.cntxt.container.onmousemove = function(){this.cntxt.showControls()}
-		this.cntxt.container.onmouseout=function(){clearTimeout(this.cntxt.showControlsTime)}
+		this.cntxt.container.onmouseout=function(){this.cntxt.hideControls()}
 		this.cntxt.container.onclick=function(event){
             if ((event.target === event.currentTarget) || (event.target === this.videoElement))
                 this.cntxt.showControls();
