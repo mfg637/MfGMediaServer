@@ -304,15 +304,10 @@ function RainbowVideoPlayer(filemeta){
 	
 	this.toggle_loop = function(){
 		if (this.cntxt.videoElement.loop){
-			//this.cntxt.videoElement.loop = false;
-			this.cntxt.videoElement.onended = null;
+			this.cntxt.videoElement.loop = false;
 			this.classList.remove('active');
 		}else{
-			//this.cntxt.videoElement.loop = true;
-			this.cntxt.videoElement.onended = function (e) {
-				e.target.cntxt.seek(0);
-    			e.target.cntxt.play();
-			}
+			this.cntxt.videoElement.loop = true;
 			this.classList.add('active');
 		}
 	}
