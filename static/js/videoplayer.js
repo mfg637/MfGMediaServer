@@ -289,6 +289,7 @@ function RainbowVideoPlayer(filemeta){
 		}
 	}
     playButton.onclick = this.playpause;
+	this.container.ondblclick = this.playpause;
 	this.muteToggle = function(){
 		if (muted) {
 			this.cntxt.videoElement.muted = false;
@@ -303,10 +304,15 @@ function RainbowVideoPlayer(filemeta){
 	
 	this.toggle_loop = function(){
 		if (this.cntxt.videoElement.loop){
-			this.cntxt.videoElement.loop = false;
+			//this.cntxt.videoElement.loop = false;
+			this.cntxt.videoElement.onended = null;
 			this.classList.remove('active');
 		}else{
-			this.cntxt.videoElement.loop = true;
+			//this.cntxt.videoElement.loop = true;
+			this.cntxt.videoElement.onended = function (e) {
+				e.target.cntxt.seek(0);
+    			e.target.cntxt.play();
+			}
 			this.classList.add('active');
 		}
 	}
