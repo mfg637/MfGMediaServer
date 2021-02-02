@@ -520,7 +520,7 @@ class NVENC_VideoTranscoder(VideoTranscoder):
         #self.tmpfile = tempfile.TemporaryFile()
         if not tmp_file.closed:
             tmp_file.close()
-        tmp_file = tempfile.NamedTemporaryFile(delete=False)
+        tmp_file = tempfile.NamedTemporaryFile(delete=True)
 
     def get_specific_commandline_part(self, path, fps):
         return [
