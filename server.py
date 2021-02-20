@@ -140,6 +140,8 @@ def get_original(pathstr):
     login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
+        if decoders.avif.is_avif(path):
+            return static_file(path, "image/avif")
         return static_file(path)
     else:
         flask.abort(404)
