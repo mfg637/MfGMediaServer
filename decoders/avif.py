@@ -15,5 +15,5 @@ def decode(file):
     if not is_avif(file):
         raise Exception
     tmp_file = tempfile.NamedTemporaryFile(mode='rb', delete=True, suffix='.png')
-    subprocess.call(['davif', '-i', str(file), '-o', tmp_file.name])
+    subprocess.call(['avifdec', str(file), tmp_file.name])
     return PIL.Image.open(tmp_file)
