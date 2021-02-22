@@ -137,7 +137,7 @@ function ImageViewer() {
         photo.src = '/thumbnail/webp/' + 
         Math.round(window.innerWidth * window.devicePixelRatio) + 'x' + 
         Math.round(window.innerHeight * window.devicePixelRatio) +
-        '/'+ photolist[id].base32path;
+        '/'+ photolist[id].base32path+"?allow_origin=1";
     
     if (photolist[id].type === "picture")
         default_click_handler = default_hide_controls_click_handler;

@@ -187,6 +187,7 @@ def transcode_image(format:str, pathstr):
 def gen_thumbnail(format:str, width, height, pathstr):
     login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
+    allow_origin = bool(flask.request.args.get('allow_origin', False))
     if path.is_file():
         src_hash, status_code = None, None
         if path.stat().st_size<(1024*1024*1024):
@@ -194,6 +195,14 @@ def gen_thumbnail(format:str, width, height, pathstr):
         if status_code is not None:
             return status_code
         img = decoders.open_image(path)
+        if allow_origin and img.format == "WEBP" and (img.is_animated or (img.width <= width and img.height <= height)):
+            return flask.redirect(
+                "https://{}:{}/orig/{}".format(
+                    config.host_name,
+                    config.port,
+                    pathstr
+                )
+            )
         img = img.convert(mode='RGBA')
         img.thumbnail((width, height), PIL.Image.LANCZOS)
         buffer = io.BytesIO()
