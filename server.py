@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import abc
+
 import hashlib
 
 import json
 import subprocess
 import tempfile
+import abc
 
 import flask
 import sys
@@ -313,15 +314,7 @@ def browse(dir):
             if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
                 _icon(file, filemeta)
             if file.suffix.lower() in image_file_extensions:
-                if file.suffix.lower() == ".webp":
-                    img = PIL.Image.open(file)
-                    if img.is_animated:
-                        filemeta["type"] = "animated"
-                    else:
-                        filemeta["type"] = "picture"
-                    img.close()
-                else:
-                    filemeta["type"] = "picture"
+                filemeta["type"] = "picture"
             elif file.suffix.lower() in video_file_extensions:
                 filemeta["type"] = "video"
             elif file.suffix.lower() == '.mpd':
