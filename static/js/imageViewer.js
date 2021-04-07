@@ -72,11 +72,6 @@ function ImageViewer() {
                 imageViewer.watchPhoto(this.imageID);
                 return false;
             }
-        }else if (filemeta[i].type === "animated"){
-            links[filemeta[i].item_index].onclick=function(){
-                imageViewer.watchPhoto(this.imageID);
-                return false;
-            }
         }else if (filemeta[i].type === "video"){
             links[filemeta[i].item_index].onclick=function(){
                 new RainbowVideoPlayer(filemeta[this.imageID]);
@@ -128,7 +123,7 @@ function ImageViewer() {
   replacePhoto = function() {
     container.classList.add('load');
 
-    if ((photolist[id].suffix === '.gif') || (photolist[id].type === 'animated'))
+    if (photolist[id].suffix === '.gif')
         photo.src = photolist[id].link;
     else if (photolist[id].custom_icon){
         photo.src = photolist[id].icon

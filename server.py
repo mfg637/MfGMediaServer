@@ -20,7 +20,7 @@ import re
 import ffmpeg
 import urllib.parse
 
-import decoders
+import pyimglib_decoders
 import shared_enums
 
 
@@ -141,7 +141,7 @@ def get_original(pathstr):
     login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
-        if decoders.avif.is_avif(path):
+        if pyimglib_decoders.avif.is_avif(path):
             return static_file(path, "image/avif")
         return static_file(path)
     else:
@@ -156,7 +156,7 @@ def transcode_image(format:str, pathstr):
         src_hash, status_code = cache_check(path)
         if status_code is not None:
             return status_code
-        img = decoders.open_image(path)
+        img = pyimglib_decoders.open_image(path)
         img = img.convert(mode='RGBA')
         buffer = io.BytesIO()
         mime = ''
@@ -194,7 +194,7 @@ def gen_thumbnail(format:str, width, height, pathstr):
             src_hash, status_code = cache_check(path)
         if status_code is not None:
             return status_code
-        img = decoders.open_image(path)
+        img = pyimglib_decoders.open_image(path)
         if allow_origin and img.format == "WEBP" and (img.is_animated or (img.width <= width and img.height <= height)):
             return flask.redirect(
                 "https://{}:{}/orig/{}".format(
@@ -346,7 +346,7 @@ def browse(dir):
                 filemeta["is_vp8"] = True
             elif file.suffix.lower() in {'.jpg', '.jpeg'}:
                 try:
-                    jpg = decoders.jpeg.JPEGDecoder(file)
+                    jpg = pyimglib_decoders.jpeg.JPEGDecoder(file)
                     if (jpg.arithmetic_coding()):
                         filemeta['link'] = "/image/webp/{}".format((base32path))
                 except Exception:
@@ -568,7 +568,7 @@ def icon_paint(pathstr):
     if data['cover'] is not None:
         thumbnail_path = dir.joinpath(data['cover'])
         base_size = (174, 108)
-        img = decoders.open_image(thumbnail_path, base_size)
+        img = pyimglib_decoders.open_image(thumbnail_path, base_size)
         thumb_ratio = base_size[0]/base_size[1]
         src_ratio = img.size[0]/img.size[1]
         width, height = 0, 0
