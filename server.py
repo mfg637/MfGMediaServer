@@ -494,7 +494,7 @@ class VP8_VideoTranscoder(VideoTranscoder):
             '-deadline', 'good',
             '-vcodec', 'libvpx',
             '-crf', '10',
-            '-b:v', '4M',
+            '-b:v', '8M',
             '-ac', '2',
             '-acodec', 'libopus',
             '-b:a', '144k',
