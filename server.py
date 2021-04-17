@@ -53,7 +53,7 @@ class PageCache:
 page_cache = PageCache(None, None, None)
 
 
-image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif'}
+image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif', '.jxl'}
 video_file_extensions = {'.mkv', '.mp4', '.webm'}
 supported_file_extensions = \
     image_file_extensions.union(video_file_extensions)\
