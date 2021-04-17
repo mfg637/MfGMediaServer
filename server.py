@@ -453,7 +453,8 @@ class VideoTranscoder(abc.ABC):
             data = ffmpeg.probe(path)
             video = None
             for stream in data['streams']:
-                if stream['codec_type'] == "video":
+                if stream['codec_type'] == "video" and \
+                        (video is None or stream['disposition']['default'] == 1):
                     video = stream
             fps = None
             if video['avg_frame_rate'] == "0/0":
@@ -469,10 +470,7 @@ class VideoTranscoder(abc.ABC):
                     '-ss', seek_position
                 ]
             commandline += self.get_specific_commandline_part(path, fps)
-            self.process = subprocess.Popen(
-                commandline
-                , stdout=subprocess.PIPE
-            )
+            self.process = subprocess.Popen(commandline, stdout=subprocess.PIPE)
             self.read_input_from_pipe(self.process.stdout)
             f = flask.send_file(self.get_output_buffer(), add_etags=False, mimetype=self.get_mimetype())
             return f
