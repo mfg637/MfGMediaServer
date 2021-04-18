@@ -491,7 +491,8 @@ class VP8_VideoTranscoder(VideoTranscoder):
             '-vf',
             'scale=\'min(1440,iw)\':\'min(720, ih)\':force_original_aspect_ratio=decrease' + \
             (",fps={}".format(fps / 2) if fps > 30 else ""),
-            '-deadline', 'good',
+            '-deadline', 'realtime',
+            '-cpu-used', '5',
             '-vcodec', 'libvpx',
             '-crf', '10',
             '-b:v', '8M',
