@@ -23,7 +23,6 @@ import urllib.parse
 import pyimglib_decoders
 import shared_enums
 
-
 anonymous_forbidden = True
 access_tokens = dict()
 # key - URL, value - token
@@ -52,13 +51,12 @@ class PageCache:
 
 page_cache = PageCache(None, None, None)
 
-
 image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif', '.jxl'}
 video_file_extensions = {'.mkv', '.mp4', '.webm'}
 supported_file_extensions = \
-    image_file_extensions.union(video_file_extensions)\
-    .union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac", ".m3u8"})\
-    .union({'.mpd'})# dash manifest
+    image_file_extensions.union(video_file_extensions) \
+        .union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac", ".m3u8"}) \
+        .union({'.mpd'})  # dash manifest
 
 
 def browse_folder(folder):
@@ -87,9 +85,9 @@ def cache_check(path):
     hash = hashlib.sha3_256()
     with path.open('br') as f:
         buffer = f.read(1024)
-        while len(buffer)>0:
+        while len(buffer) > 0:
             hash.update(buffer)
-            buffer = f.read(1024*1024)
+            buffer = f.read(1024 * 1024)
     src_hash = hash.hexdigest()
     try:
         if flask.request.headers['If-None-Match'][1:-1] == src_hash:
@@ -149,7 +147,7 @@ def get_original(pathstr):
 
 
 @app.route('/image/<string:format>/<string:pathstr>')
-def transcode_image(format:str, pathstr):
+def transcode_image(format: str, pathstr):
     login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
@@ -174,7 +172,7 @@ def transcode_image(format:str, pathstr):
         f = flask.send_file(
             buffer,
             mimetype=mime,
-            cache_timeout=24*60*60,
+            cache_timeout=24 * 60 * 60,
             last_modified=path.stat().st_mtime,
         )
         f.set_etag(src_hash)
@@ -184,13 +182,13 @@ def transcode_image(format:str, pathstr):
 
 
 @app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<string:pathstr>')
-def gen_thumbnail(format:str, width, height, pathstr):
+def gen_thumbnail(format: str, width, height, pathstr):
     login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     allow_origin = bool(flask.request.args.get('allow_origin', False))
     if path.is_file():
         src_hash, status_code = None, None
-        if path.stat().st_size<(1024*1024*1024):
+        if path.stat().st_size < (1024 * 1024 * 1024):
             src_hash, status_code = cache_check(path)
         if status_code is not None:
             return status_code
@@ -219,7 +217,7 @@ def gen_thumbnail(format:str, width, height, pathstr):
         f = flask.send_file(
             buffer,
             mimetype=mime,
-            cache_timeout=24*60*60,
+            cache_timeout=24 * 60 * 60,
             last_modified=path.stat().st_mtime,
         )
         if src_hash is not None:
@@ -260,6 +258,7 @@ def browse(dir):
                 ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
                 ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
             )
+
         if glob_pattern is None:
             dirlist, filelist = browse_folder(dir)
             if dir != root_dir:
@@ -306,19 +305,19 @@ def browse(dir):
         for file in filelist:
             base32path = str_to_base32(str(file.relative_to(root_dir)))
             filemeta = {
-                    "link": "/orig/{}".format(base32path),
-                    "icon": None,
-                    "object_icon": False,
-                    "name": simplify_filename(file.name),
-                    "sources": None,
-                    "base32path": base32path,
-                    "item_index": items_count,
-                    "lazy_load": False,
-                    "type": "audio",
-                    "is_vp8": False,
-                    "suffix": file.suffix,
-                    "custom_icon": False
-                }
+                "link": "/orig/{}".format(base32path),
+                "icon": None,
+                "object_icon": False,
+                "name": simplify_filename(file.name),
+                "sources": None,
+                "base32path": base32path,
+                "item_index": items_count,
+                "lazy_load": False,
+                "type": "audio",
+                "is_vp8": False,
+                "suffix": file.suffix,
+                "custom_icon": False
+            }
             icon_path = pathlib.Path("{}.icon".format(file))
             if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
                 _icon(file, filemeta)
@@ -375,7 +374,7 @@ def browse(dir):
     else:
         import math
         page = int(flask.request.args.get('page', 0))
-        max_pages = math.ceil(len(itemslist)/items_per_page)
+        max_pages = math.ceil(len(itemslist) / items_per_page)
         mix_index = page * items_per_page
         max_index = mix_index + items_per_page
         _filemeta_list = list()
@@ -486,10 +485,13 @@ class VP8_VideoTranscoder(VideoTranscoder):
         self._io = pipe_output
 
     def get_specific_commandline_part(self, path, fps):
+        width = flask.request.args.get('width', 1440)
+        height = flask.request.args.get('height', 720)
         return [
             '-i', str(path),
             '-vf',
-            'scale=\'min(1440,iw)\':\'min(720, ih)\':force_original_aspect_ratio=decrease' + \
+            'scale=\'min({},iw)\':\'min({}, ih)\''.format(width, height) + \
+            ':force_original_aspect_ratio=decrease' + \
             (",fps={}".format(fps / 2) if fps > 30 else ""),
             '-deadline', 'realtime',
             '-cpu-used', '5',
@@ -520,17 +522,20 @@ class NVENC_VideoTranscoder(VideoTranscoder):
     def __init__(self):
         global tmp_file
         super().__init__()
-        #self.tmpfile = tempfile.TemporaryFile()
+        # self.tmpfile = tempfile.TemporaryFile()
         if not tmp_file.closed:
             tmp_file.close()
         tmp_file = tempfile.NamedTemporaryFile(delete=True)
 
     def get_specific_commandline_part(self, path, fps):
+        width = flask.request.args.get('width', 1440)
+        height = flask.request.args.get('height', 720)
         return [
             '-y',
             '-i', str(path),
             '-vf',
-            'scale=\'min(1440,iw)\':\'min(720, ih)\':force_original_aspect_ratio=decrease' + \
+            'scale=\'min({},iw)\':\'min({}, ih)\''.format(width, height) + \
+            ':force_original_aspect_ratio=decrease' + \
             (",fps={}".format(fps / 2) if fps > 30 else ""),
             '-vcodec', 'h264_nvenc',
             '-preset', 'fast',
@@ -559,7 +564,7 @@ def ffmpeg_nvenc_filestream(pathstr):
 def icon_paint(pathstr):
     login_validation()
     import static.images.folder_icon_painter as folder_icon_painter
-    dir=pathlib.Path(pathstr).absolute()
+    dir = pathlib.Path(pathstr).absolute()
     data = None
     with dir.joinpath(".imgview-dir-config.json").open("r") as f:
         data = json.load(f)
@@ -568,14 +573,14 @@ def icon_paint(pathstr):
         thumbnail_path = dir.joinpath(data['cover'])
         base_size = (174, 108)
         img = pyimglib_decoders.open_image(thumbnail_path, base_size)
-        thumb_ratio = base_size[0]/base_size[1]
-        src_ratio = img.size[0]/img.size[1]
+        thumb_ratio = base_size[0] / base_size[1]
+        src_ratio = img.size[0] / img.size[1]
         width, height = 0, 0
-        if src_ratio>thumb_ratio:
+        if src_ratio > thumb_ratio:
             width = base_size[0]
-            height = base_size[0]/src_ratio
+            height = base_size[0] / src_ratio
         else:
-            width = base_size[1]*src_ratio
+            width = base_size[1] * src_ratio
             height = base_size[1]
         base_offset = (10, 30)
         xoffset = (base_size[0] - width) // 2 + base_offset[0]
@@ -639,7 +644,7 @@ def gen_m3u8(pathstr):
                     )
                     access_token = gen_access_token()
                     access_tokens[base_url] = access_token
-                    buffer.write(base_url+"?access_token={}\n".format(access_token))
+                    buffer.write(base_url + "?access_token={}\n".format(access_token))
         return flask.Response(buffer.getvalue(), mimetype="audio/x-mpegurl", status=200)
     else:
         flask.abort(404)
@@ -668,7 +673,7 @@ def ffprobe_response(pathstr):
 @app.route('/webvtt/<string:pathstr>')
 def get_vtt_subs(pathstr):
     login_validation()
-    path = pathlib.Path(base32_to_str(pathstr)+".vtt")
+    path = pathlib.Path(base32_to_str(pathstr) + ".vtt")
     if path.is_file():
         return static_file(path, mimetype="text/vtt")
     else:
@@ -696,12 +701,13 @@ def login_handler():
 
 if __name__ == '__main__':
     import config
+
     ssl_context = None
     if len(config.certificate_file) and len(config.private_key_file):
         cert_path = os.path.join(app.root_path, config.certificate_file)
         key_path = os.path.join(app.root_path, config.private_key_file)
         if os.path.exists(cert_path) and os.path.exists(key_path):
-            ssl_context=(cert_path, key_path)
+            ssl_context = (cert_path, key_path)
     port = config.port
     load_acceleration = config.load_acceleration_method
     items_per_page = config.items_per_page
