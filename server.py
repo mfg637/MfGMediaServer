@@ -155,6 +155,10 @@ def transcode_image(format: str, pathstr):
         if status_code is not None:
             return status_code
         img = pyimglib_decoders.open_image(path)
+        if isinstance(img, pyimglib_decoders.frames_stream.FramesStream):
+            _img = img.next_frame()
+            img.close()
+            img = _img
         img = img.convert(mode='RGBA')
         buffer = io.BytesIO()
         mime = ''
@@ -193,6 +197,10 @@ def gen_thumbnail(format: str, width, height, pathstr):
         if status_code is not None:
             return status_code
         img = pyimglib_decoders.open_image(path)
+        if isinstance(img, pyimglib_decoders.frames_stream.FramesStream):
+            _img = img.next_frame()
+            img.close()
+            img = _img
         if allow_origin and img.format == "WEBP" and (img.is_animated or (img.width <= width and img.height <= height)):
             return flask.redirect(
                 "https://{}:{}/orig/{}".format(
@@ -573,6 +581,10 @@ def icon_paint(pathstr):
         thumbnail_path = dir.joinpath(data['cover'])
         base_size = (174, 108)
         img = pyimglib_decoders.open_image(thumbnail_path, base_size)
+        if isinstance(img, pyimglib_decoders.frames_stream.FramesStream):
+            _img = img.next_frame()
+            img.close()
+            img = _img
         thumb_ratio = base_size[0] / base_size[1]
         src_ratio = img.size[0] / img.size[1]
         width, height = 0, 0
