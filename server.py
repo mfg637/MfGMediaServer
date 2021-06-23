@@ -32,6 +32,8 @@ items_per_page = 1
 
 tmp_file = tempfile.NamedTemporaryFile()
 
+enable_external_scripts = True
+
 
 class PageCache:
     def __init__(self, path, cache, glob_pattern):
@@ -367,17 +369,21 @@ def browse(dir):
         title = "root"
     else:
         title = dir.name
+    template_kwargs = {
+        'title': title,
+        '_glob': glob_pattern,
+        'url': flask.request.base_url,
+        'enable_external_scripts': enable_external_scripts
+    }
     if load_acceleration in {shared_enums.LoadAcceleration.NONE, shared_enums.LoadAcceleration.LAZY_LOAD}:
         return flask.render_template(
             'index.html',
-            title=title,
             itemslist=itemslist,
             filemeta=json.dumps(filemeta_list),
             pagination=False,
             page=0,
             max_pages=0,
-            _glob=glob_pattern,
-            url=flask.request.base_url
+            **template_kwargs
         )
     else:
         import math
@@ -395,14 +401,12 @@ def browse(dir):
                 break
         return flask.render_template(
             'index.html',
-            title=title,
             itemslist=itemslist[mix_index:max_index],
             filemeta=json.dumps(_filemeta_list),
             pagination=True,
             page=page,
             max_pages=max_pages,
-            _glob=glob_pattern,
-            url=flask.request.base_url
+            **template_kwargs
         )
 
 
@@ -730,6 +734,8 @@ if __name__ == '__main__':
             port = sys.argv[argument_index]
         elif sys.argv[argument_index] == '--anon':
             anonymous_forbidden = False
+        elif sys.argv[argument_index] == '--disable-external-scripts':
+            enable_external_scripts = False
         else:
             os.chdir(sys.argv[argument_index])
             root_dir = pathlib.Path('.').absolute()
