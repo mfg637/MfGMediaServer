@@ -716,6 +716,7 @@ def login_handler():
 
 
 if __name__ == '__main__':
+    import argparse
     import config
 
     ssl_context = None
@@ -727,18 +728,21 @@ if __name__ == '__main__':
     port = config.port
     load_acceleration = config.load_acceleration_method
     items_per_page = config.items_per_page
-    argument_index = 1
-    while argument_index < len(sys.argv):
-        if sys.argv[argument_index] == '--port':
-            argument_index += 1
-            port = sys.argv[argument_index]
-        elif sys.argv[argument_index] == '--anon':
-            anonymous_forbidden = False
-        elif sys.argv[argument_index] == '--disable-external-scripts':
-            enable_external_scripts = False
-        else:
-            os.chdir(sys.argv[argument_index])
-            root_dir = pathlib.Path('.').absolute()
-        argument_index += 1
+    parser = argparse.ArgumentParser()
+    parser.add_argument("root_dir", default="")
+    parser.add_argument("--port")
+    parser.add_argument("--anon", help="enable access by anonymous", action="store_false")
+    parser.add_argument(
+        '--disable-external-content',
+        help="Don't include external content links in template (web pages). Useful when you offline.",
+        action="store_false"
+    )
+    args = parser.parse_args()
+    os.chdir(args.root_dir)
+    root_dir = pathlib.Path('.').absolute()
+    if args.port is not None:
+        port = args.port
+    anonymous_forbidden = args.anon
+    enable_external_scripts = args.disable_external_content
     app.secret_key = os.urandom(12)
     app.run(host=config.host_name, port=port, ssl_context=ssl_context)
