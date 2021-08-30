@@ -491,6 +491,10 @@ class VideoTranscoder(abc.ABC):
 
 
 class VP8_VideoTranscoder(VideoTranscoder):
+    def __init__(self):
+        super().__init__()
+        self._encoder = "libvpx"
+
     def get_mimetype(self):
         return "video/webm"
 
@@ -508,7 +512,7 @@ class VP8_VideoTranscoder(VideoTranscoder):
             (",fps={}".format(fps / 2) if fps > 30 else ""),
             '-deadline', 'realtime',
             '-cpu-used', '5',
-            '-vcodec', 'libvpx',
+            '-vcodec', self._encoder,
             '-crf', '10',
             '-b:v', '8M',
             '-ac', '2',
@@ -522,10 +526,22 @@ class VP8_VideoTranscoder(VideoTranscoder):
         return self._io
 
 
+class VP9_VideoTranscoder(VP8_VideoTranscoder):
+    def __init__(self):
+        super().__init__()
+        self._encoder = "libvpx-vp9"
+
+
 @app.route('/vp8/<string:pathstr>')
 def ffmpeg_vp8_simplestream(pathstr):
     vp8_converter = VP8_VideoTranscoder()
     return vp8_converter.do_convert(pathstr)
+
+
+@app.route('/vp9/<string:pathstr>')
+def ffmpeg_vp9_simplestream(pathstr):
+    vp9_converter = VP9_VideoTranscoder()
+    return vp9_converter.do_convert(pathstr)
 
 
 class NVENC_VideoTranscoder(VideoTranscoder):
