@@ -21,6 +21,7 @@ import ffmpeg
 import urllib.parse
 
 import pyimglib_decoders
+import pyimglib_decoders.ffmpeg
 import shared_enums
 
 anonymous_forbidden = True
@@ -461,7 +462,7 @@ class VideoTranscoder(abc.ABC):
         login_validation()
         path = pathlib.Path(base32_to_str(pathstr))
         if path.is_file():
-            data = ffmpeg.probe(path)
+            data = pyimglib_decoders.ffmpeg.probe(path)
             video = None
             for stream in data['streams']:
                 if stream['codec_type'] == "video" and \
