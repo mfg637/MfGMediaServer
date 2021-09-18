@@ -23,6 +23,7 @@ import urllib.parse
 import pyimglib_decoders
 import pyimglib_decoders.ffmpeg
 import shared_enums
+import ACLMMP
 
 anonymous_forbidden = True
 access_tokens = dict()
@@ -59,7 +60,7 @@ video_file_extensions = {'.mkv', '.mp4', '.webm'}
 supported_file_extensions = \
     image_file_extensions.union(video_file_extensions) \
         .union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac", ".m3u8"}) \
-        .union({'.mpd'})  # dash manifest
+        .union({'.mpd', '.srs'})  # dash manifest
 
 
 def browse_folder(folder):
@@ -179,7 +180,7 @@ def transcode_image(format: str, pathstr):
         f = flask.send_file(
             buffer,
             mimetype=mime,
-            cache_timeout=24 * 60 * 60,
+            max_age=24 * 60 * 60,
             last_modified=path.stat().st_mtime,
         )
         f.set_etag(src_hash)
@@ -228,7 +229,7 @@ def gen_thumbnail(format: str, width, height, pathstr):
         f = flask.send_file(
             buffer,
             mimetype=mime,
-            cache_timeout=24 * 60 * 60,
+            max_age=24 * 60 * 60,
             last_modified=path.stat().st_mtime,
         )
         if src_hash is not None:
@@ -342,6 +343,11 @@ def browse(dir):
                     ('' if dir == root_dir else 'browse/'),
                     str(file.relative_to(root_dir))
                 )
+                if icon_path.exists():
+                    _icon(file, filemeta)
+            elif file.suffix.lower() == '.srs':
+                filemeta['type'] = "video"
+                filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
                 if icon_path.exists():
                     _icon(file, filemeta)
             elif file.suffix.lower() == ".m3u8":
@@ -589,6 +595,46 @@ def ffmpeg_nvenc_filestream(pathstr):
     return nvenc_converter.do_convert(pathstr)
 
 
+@app.route('/aclmmp_webm/<string:pathstr>')
+def aclmmp_webm_muxer(pathstr):
+    login_validation()
+    path = pathlib.Path(base32_to_str(pathstr))
+    if path.is_file():
+        dir = path.parent
+        SRS_file = path.open('r')
+        content_metadata, streams_metadata, minimal_content_compatibility_level = ACLMMP.srs_parser.parseJSON(
+            SRS_file,
+            webp_compatible=True
+        )
+        SRS_file.close()
+        LEVEL = int(flask.session['clevel'])
+        CHANNELS = int(flask.session['audio_channels'])
+        if minimal_content_compatibility_level > LEVEL:
+            flask.abort(404)
+        commandline = ['ffmpeg']
+        video_file = False
+        audio_file = False
+        if streams_metadata[0] is not None:
+            video_file= True
+            commandline += ['-i', dir.joinpath(streams_metadata[0].get_compatible_files(LEVEL)[0])]
+        if streams_metadata[1] is not None:
+            audio_file = True
+            file = streams_metadata[1][0].get_file(CHANNELS, LEVEL)
+            if file is not None:
+                commandline += ['-i', dir.joinpath(file)]
+            else:
+                files = streams_metadata[1][0].get_compatible_files(LEVEL)
+                commandline += ['-i', dir.joinpath(files[0])]
+        if video_file and audio_file:
+            commandline += ['-map', '0', '-map', '1']
+        commandline += ['-c', 'copy', '-f', 'webm', '-']
+        process = subprocess.Popen(commandline, stdout=subprocess.PIPE)
+        f = flask.send_file(process.stdout, add_etags=False, mimetype='video/webm')
+        return f
+    else:
+        flask.abort(404)
+
+
 @app.route('/folder_icon_paint/<path:pathstr>')
 def icon_paint(pathstr):
     login_validation()
@@ -715,7 +761,11 @@ def get_vtt_subs(pathstr):
 
 @app.errorhandler(401)
 def show_login_form(event):
-    f = flask.render_template('login.html', redirect_to=str(flask.request.base_url))
+    f = None
+    if 'redirect_to' in flask.request.form:
+        f = flask.render_template('login.html', redirect_to=str(flask.request.form['redirect_to']))
+    else:
+        f = flask.render_template('login.html', redirect_to=str(flask.request.url))
     return flask.Response(f, status=401)
 
 
@@ -727,6 +777,8 @@ def login_handler():
             config.valid_password_hash_hex and \
             flask.request.form['login'] == config.valid_login:
         flask.session['logged_in'] = True
+        flask.session['clevel'] = flask.request.form['clevel']
+        flask.session['audio_channels'] = flask.request.form['ac']
         return flask.redirect(flask.request.form['redirect_to'])
     else:
         flask.abort(401)

@@ -11,6 +11,19 @@
         <label for="login">login</label> <input id="login" type="text" name="login"/><br/>
         <label for="password">password</label> <input id="password" type="password" name="password"/><br/>
         <input type="hidden" name="redirect_to" value="{{ redirect_to }}">
+        <label for="clevel">Compatibility level:</label>
+        <select id="clevel" name="clevel">
+            <option value="0">Level 0: Supercomputer</option>
+            <option value="1">Level 1: PC</option>
+            <option value="2">Level 2: Smart TV & TV Box</option>
+            <option value="3" selected>Level 3: Android smartphone</option>
+        </select><br/>
+        <label for="ac">Audio Configuration:</label>
+        <select id="ac" name="ac">
+            <option value="2">Stereo</option>
+            <option value="6">5.1</option>
+            <option value="8">7.1</option>
+        </select><br/>
         <input type="submit" value="SIGN IN"/>
     </form>
 </body>
