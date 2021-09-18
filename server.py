@@ -348,8 +348,7 @@ def browse(dir):
             elif file.suffix.lower() == '.srs':
                 filemeta['type'] = "video"
                 filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
-                if icon_path.exists():
-                    _icon(file, filemeta)
+                _icon(file, filemeta)
             elif file.suffix.lower() == ".m3u8":
                 access_token = gen_access_token()
                 filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
