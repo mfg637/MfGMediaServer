@@ -9,7 +9,6 @@ import tempfile
 import abc
 
 import flask
-import sys
 import os
 import pathlib
 import io
@@ -138,23 +137,27 @@ def static_file(path, mimetype=None):
     return f
 
 
-@app.route('/orig/<string:pathstr>')
-def get_original(pathstr):
+def file_url_template(body, pathstr, **kwargs):
     login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
-        if pyimglib_decoders.avif.is_avif(path):
-            return static_file(path, "image/avif")
-        return static_file(path)
+        return body(path, **kwargs)
     else:
         flask.abort(404)
 
 
+@app.route('/orig/<string:pathstr>')
+def get_original(pathstr):
+    def body(path):
+        if pyimglib_decoders.avif.is_avif(path):
+            return static_file(path, "image/avif")
+        return static_file(path)
+    return file_url_template(body, pathstr)
+
+
 @app.route('/image/<string:format>/<string:pathstr>')
 def transcode_image(format: str, pathstr):
-    login_validation()
-    path = pathlib.Path(base32_to_str(pathstr))
-    if path.is_file():
+    def body(path, format):
         src_hash, status_code = cache_check(path)
         if status_code is not None:
             return status_code
@@ -185,16 +188,13 @@ def transcode_image(format: str, pathstr):
         )
         f.set_etag(src_hash)
         return f
-    else:
-        flask.abort(404)
+    return file_url_template(body, pathstr, format=format)
 
 
 @app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<string:pathstr>')
 def gen_thumbnail(format: str, width, height, pathstr):
-    login_validation()
-    path = pathlib.Path(base32_to_str(pathstr))
-    allow_origin = bool(flask.request.args.get('allow_origin', False))
-    if path.is_file():
+    def body(path, format, width, height):
+        allow_origin = bool(flask.request.args.get('allow_origin', False))
         src_hash, status_code = None, None
         if path.stat().st_size < (1024 * 1024 * 1024):
             src_hash, status_code = cache_check(path)
@@ -235,8 +235,7 @@ def gen_thumbnail(format: str, width, height, pathstr):
         if src_hash is not None:
             f.set_etag(src_hash)
         return f
-    else:
-        flask.abort(404)
+    return file_url_template(body, pathstr, format=format, width=width, height=height)
 
 
 def extract_mtime_key(file: pathlib.Path):
@@ -464,9 +463,7 @@ class VideoTranscoder(abc.ABC):
         return None
 
     def do_convert(self, pathstr):
-        login_validation()
-        path = pathlib.Path(base32_to_str(pathstr))
-        if path.is_file():
+        def body(path):
             data = pyimglib_decoders.ffmpeg.probe(path)
             video = None
             for stream in data['streams']:
@@ -491,8 +488,8 @@ class VideoTranscoder(abc.ABC):
             self.read_input_from_pipe(self.process.stdout)
             f = flask.send_file(self.get_output_buffer(), add_etags=False, mimetype=self.get_mimetype())
             return f
-        else:
-            flask.abort(404)
+
+        return file_url_template(body, pathstr)
 
 
 class VP8_VideoTranscoder(VideoTranscoder):
@@ -596,9 +593,7 @@ def ffmpeg_nvenc_filestream(pathstr):
 
 @app.route('/aclmmp_webm/<string:pathstr>')
 def aclmmp_webm_muxer(pathstr):
-    login_validation()
-    path = pathlib.Path(base32_to_str(pathstr))
-    if path.is_file():
+    def body(path):
         dir = path.parent
         SRS_file = path.open('r')
         content_metadata, streams_metadata, minimal_content_compatibility_level = ACLMMP.srs_parser.parseJSON(
@@ -630,8 +625,7 @@ def aclmmp_webm_muxer(pathstr):
         process = subprocess.Popen(commandline, stdout=subprocess.PIPE)
         f = flask.send_file(process.stdout, add_etags=False, mimetype='video/webm')
         return f
-    else:
-        flask.abort(404)
+    return file_url_template(body, pathstr)
 
 
 @app.route('/folder_icon_paint/<path:pathstr>')
