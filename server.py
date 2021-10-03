@@ -65,12 +65,15 @@ supported_file_extensions = \
 def browse_folder(folder):
     path_dir_objects = []
     path_file_objects = []
+    path_srs_objects = []
     for entry in folder.iterdir():
-        if entry.is_file() and entry.suffix.lower() in supported_file_extensions:
+        if entry.is_file() and entry.suffix.lower() == '.srs':
+            path_srs_objects.append(entry)
+        elif entry.is_file() and entry.suffix.lower() in supported_file_extensions:
             path_file_objects.append(entry)
         elif entry.is_dir() and entry.name[0] != '.':
             path_dir_objects.append(entry)
-    return path_dir_objects, path_file_objects
+    return path_dir_objects, path_file_objects, path_srs_objects
 
 
 app = flask.Flask(__name__)
@@ -130,7 +133,7 @@ def static_file(path, mimetype=None):
     f = flask.send_from_directory(
         str(abspath.parent),
         str(abspath.name),
-        add_etags=False,
+        etag=False,
         mimetype=mimetype,
         conditional=True
     )
@@ -162,6 +165,30 @@ def transcode_image(format: str, pathstr):
         if status_code is not None:
             return status_code
         img = pyimglib.decoders.open_image(path)
+        if isinstance(img, pyimglib.decoders.srs.ClImage):
+            lods = img.progressive_lods()
+            current_lod = lods.pop(0)
+            current_lod_img = pyimglib.decoders.open_image(current_lod)
+            while len(lods):
+                if isinstance(current_lod_img, pyimglib.decoders.frames_stream.FramesStream):
+                    current_lod_img = current_lod_img.next_frame()
+                if current_lod_img.format != format.upper():
+                    current_lod = lods.pop()
+                    current_lod_img.close()
+                    current_lod_img = pyimglib.decoders.open_image(current_lod)
+                else:
+                    break
+            if current_lod_img.format == format.upper():
+                base32path = str_to_base32(str(current_lod))
+                return flask.redirect(
+                    "https://{}:{}/orig/{}".format(
+                        config.host_name,
+                        config.port,
+                        base32path
+                    )
+                )
+            else:
+                img = current_lod_img
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
@@ -201,6 +228,31 @@ def gen_thumbnail(format: str, width, height, pathstr):
         if status_code is not None:
             return status_code
         img = pyimglib.decoders.open_image(path)
+        if isinstance(img, pyimglib.decoders.srs.ClImage):
+            lods = img.progressive_lods()
+            current_lod = lods.pop(0)
+            current_lod_img = pyimglib.decoders.open_image(current_lod)
+            while len(lods):
+                if isinstance(current_lod_img, pyimglib.decoders.frames_stream.FramesStream):
+                    current_lod_img = current_lod_img.next_frame()
+                if current_lod_img.width < width and current_lod_img.height < height:
+                    current_lod = lods.pop()
+                    print("CURRENT_LOD", current_lod)
+                    current_lod_img.close()
+                    current_lod_img = pyimglib.decoders.open_image(current_lod)
+                else:
+                    break
+            if current_lod_img.format == "WEBP" and allow_origin:
+                base32path = str_to_base32(str(current_lod))
+                return flask.redirect(
+                    "https://{}:{}/orig/{}".format(
+                        config.host_name,
+                        config.port,
+                        base32path
+                    )
+                )
+            else:
+                img = current_lod_img
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
@@ -244,7 +296,7 @@ def extract_mtime_key(file: pathlib.Path):
 
 def browse(dir):
     global page_cache
-    dirlist, filelist = [], []
+    dirlist, filelist, srs_filelist = [], [], []
     glob_pattern = flask.request.args.get('glob', None)
     itemslist, filemeta_list = page_cache.get_cache(dir, glob_pattern)
     if len(itemslist) == 0:
@@ -271,7 +323,7 @@ def browse(dir):
             )
 
         if glob_pattern is None:
-            dirlist, filelist = browse_folder(dir)
+            dirlist, filelist, srs_filelist = browse_folder(dir)
             if dir != root_dir:
                 itemslist.append({
                     "icon": flask.url_for('static', filename='images/updir_icon.svg'),
@@ -313,61 +365,71 @@ def browse(dir):
                 if file.is_file() and file.suffix.lower() in supported_file_extensions:
                     filelist.append(file)
             filelist.sort(key=extract_mtime_key, reverse=True)
+        excluded_filelist = []
+        for srs_file in srs_filelist:
+            excluded_filelist.extend(pyimglib.decoders.srs.get_file_paths(srs_file))
+            filelist.append(srs_file)
         for file in filelist:
-            base32path = str_to_base32(str(file.relative_to(root_dir)))
-            filemeta = {
-                "link": "/orig/{}".format(base32path),
-                "icon": None,
-                "object_icon": False,
-                "name": simplify_filename(file.name),
-                "sources": None,
-                "base32path": base32path,
-                "item_index": items_count,
-                "lazy_load": False,
-                "type": "audio",
-                "is_vp8": False,
-                "suffix": file.suffix,
-                "custom_icon": False
-            }
-            icon_path = pathlib.Path("{}.icon".format(file))
-            if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
-                _icon(file, filemeta)
-            if file.suffix.lower() in image_file_extensions:
-                filemeta["type"] = "picture"
-            elif file.suffix.lower() in video_file_extensions:
-                filemeta["type"] = "video"
-            elif file.suffix.lower() == '.mpd':
-                filemeta['type'] = "DASH"
-                filemeta['link'] = "/{}{}".format(
-                    ('' if dir == root_dir else 'browse/'),
-                    str(file.relative_to(root_dir))
-                )
-                if icon_path.exists():
+            if file not in excluded_filelist:
+                base32path = str_to_base32(str(file.relative_to(root_dir)))
+                filemeta = {
+                    "link": "/orig/{}".format(base32path),
+                    "icon": None,
+                    "object_icon": False,
+                    "name": simplify_filename(file.name),
+                    "sources": None,
+                    "base32path": base32path,
+                    "item_index": items_count,
+                    "lazy_load": False,
+                    "type": "audio",
+                    "is_vp8": False,
+                    "suffix": file.suffix,
+                    "custom_icon": False
+                }
+                icon_path = pathlib.Path("{}.icon".format(file))
+                if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
                     _icon(file, filemeta)
-            elif file.suffix.lower() == '.srs':
-                filemeta['type'] = "video"
-                filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
-                _icon(file, filemeta)
-            elif file.suffix.lower() == ".m3u8":
-                access_token = gen_access_token()
-                filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
-                access_tokens[filemeta['link']] = access_token
-                filemeta['link'] += "?access_token={}".format(access_token)
-                if icon_path.exists():
+                if file.suffix.lower() in image_file_extensions:
+                    filemeta["type"] = "picture"
+                elif file.suffix.lower() in video_file_extensions:
+                    filemeta["type"] = "video"
+                elif file.suffix.lower() == '.mpd':
+                    filemeta['type'] = "DASH"
+                    filemeta['link'] = "/{}{}".format(
+                        ('' if dir == root_dir else 'browse/'),
+                        str(file.relative_to(root_dir))
+                    )
+                    if icon_path.exists():
+                        _icon(file, filemeta)
+                elif file.suffix.lower() == '.srs':
+                    TYPE = pyimglib.decoders.srs.type_detect(file)
+                    if TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEO:
+                        filemeta['type'] = "video"
+                        filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
+                    elif TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.IMAGE:
+                        filemeta['type'] = "picture"
+                        filemeta['link'] = "/image/webp/{}".format(base32path)
                     _icon(file, filemeta)
-            if file.suffix == '.mkv':
-                filemeta['link'] = "/vp8/{}".format(base32path)
-                filemeta["is_vp8"] = True
-            elif file.suffix.lower() in {'.jpg', '.jpeg'}:
-                try:
-                    jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
-                    if (jpg.arithmetic_coding()):
-                        filemeta['link'] = "/image/webp/{}".format((base32path))
-                except Exception:
-                    filemeta['link'] = "/image/webp/{}".format((base32path))
-            itemslist.append(filemeta)
-            filemeta_list.append(filemeta)
-            items_count += 1
+                elif file.suffix.lower() == ".m3u8":
+                    access_token = gen_access_token()
+                    filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
+                    access_tokens[filemeta['link']] = access_token
+                    filemeta['link'] += "?access_token={}".format(access_token)
+                    if icon_path.exists():
+                        _icon(file, filemeta)
+                if file.suffix == '.mkv':
+                    filemeta['link'] = "/vp8/{}".format(base32path)
+                    filemeta["is_vp8"] = True
+                elif file.suffix.lower() in {'.jpg', '.jpeg'}:
+                    try:
+                        jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
+                        if (jpg.arithmetic_coding()):
+                            filemeta['link'] = "/image/webp/{}".format(base32path)
+                    except Exception:
+                        filemeta['link'] = "/image/webp/{}".format(base32path)
+                itemslist.append(filemeta)
+                filemeta_list.append(filemeta)
+                items_count += 1
         page_cache = PageCache(dir, (itemslist, filemeta_list), glob_pattern)
     title = ''
     if dir == root_dir:
@@ -486,7 +548,7 @@ class VideoTranscoder(abc.ABC):
             commandline += self.get_specific_commandline_part(path, fps)
             self.process = subprocess.Popen(commandline, stdout=subprocess.PIPE)
             self.read_input_from_pipe(self.process.stdout)
-            f = flask.send_file(self.get_output_buffer(), add_etags=False, mimetype=self.get_mimetype())
+            f = flask.send_file(self.get_output_buffer(), etag=False, mimetype=self.get_mimetype())
             return f
 
         return file_url_template(body, pathstr)
@@ -771,6 +833,7 @@ def login_handler():
             flask.request.form['login'] == config.valid_login:
         flask.session['logged_in'] = True
         flask.session['clevel'] = flask.request.form['clevel']
+        config.ACLMMP_COMPATIBILITY_LEVEL = int(flask.request.form['clevel'])
         flask.session['audio_channels'] = flask.request.form['ac']
         return flask.redirect(flask.request.form['redirect_to'])
     else:

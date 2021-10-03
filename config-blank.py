@@ -13,3 +13,6 @@ load_acceleration_method = shared_enums.LoadAcceleration.NONE
 items_per_page = 1
 
 pyimglib.config.jpeg_xl_tools_path = None
+
+# Do not change this value
+ACLMMP_COMPATIBILITY_LEVEL = -1
