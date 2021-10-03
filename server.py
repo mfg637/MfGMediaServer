@@ -19,8 +19,8 @@ import re
 import ffmpeg
 import urllib.parse
 
-import pyimglib_decoders
-import pyimglib_decoders.ffmpeg
+import pyimglib
+import pyimglib.decoders.ffmpeg
 import shared_enums
 import ACLMMP
 
@@ -149,7 +149,7 @@ def file_url_template(body, pathstr, **kwargs):
 @app.route('/orig/<string:pathstr>')
 def get_original(pathstr):
     def body(path):
-        if pyimglib_decoders.avif.is_avif(path):
+        if pyimglib.decoders.avif.is_avif(path):
             return static_file(path, "image/avif")
         return static_file(path)
     return file_url_template(body, pathstr)
@@ -161,8 +161,8 @@ def transcode_image(format: str, pathstr):
         src_hash, status_code = cache_check(path)
         if status_code is not None:
             return status_code
-        img = pyimglib_decoders.open_image(path)
-        if isinstance(img, pyimglib_decoders.frames_stream.FramesStream):
+        img = pyimglib.decoders.open_image(path)
+        if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
             img = _img
@@ -200,8 +200,8 @@ def gen_thumbnail(format: str, width, height, pathstr):
             src_hash, status_code = cache_check(path)
         if status_code is not None:
             return status_code
-        img = pyimglib_decoders.open_image(path)
-        if isinstance(img, pyimglib_decoders.frames_stream.FramesStream):
+        img = pyimglib.decoders.open_image(path)
+        if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
             img = _img
@@ -360,7 +360,7 @@ def browse(dir):
                 filemeta["is_vp8"] = True
             elif file.suffix.lower() in {'.jpg', '.jpeg'}:
                 try:
-                    jpg = pyimglib_decoders.jpeg.JPEGDecoder(file)
+                    jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
                     if (jpg.arithmetic_coding()):
                         filemeta['link'] = "/image/webp/{}".format((base32path))
                 except Exception:
@@ -464,7 +464,7 @@ class VideoTranscoder(abc.ABC):
 
     def do_convert(self, pathstr):
         def body(path):
-            data = pyimglib_decoders.ffmpeg.probe(path)
+            data = pyimglib.decoders.ffmpeg.probe(path)
             video = None
             for stream in data['streams']:
                 if stream['codec_type'] == "video" and \
@@ -640,8 +640,8 @@ def icon_paint(pathstr):
     if data['cover'] is not None:
         thumbnail_path = dir.joinpath(data['cover'])
         base_size = (174, 108)
-        img = pyimglib_decoders.open_image(thumbnail_path, base_size)
-        if isinstance(img, pyimglib_decoders.frames_stream.FramesStream):
+        img = pyimglib.decoders.open_image(thumbnail_path, base_size)
+        if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
             img = _img
@@ -737,7 +737,7 @@ def ffprobe_response(pathstr):
     login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
-        return flask.Response(ffmpeg.probe_raw(path), mimetype="application/json")
+        return flask.Response(pyimglib.decoders.ffmpeg.probe_raw(path), mimetype="application/json")
     else:
         flask.abort(404)
 
