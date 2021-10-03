@@ -362,13 +362,15 @@ def browse(dir):
             })
             items_count += 1
             for file in dir.glob(glob_pattern):
-                if file.is_file() and file.suffix.lower() in supported_file_extensions:
+                if file.is_file() and file.suffix.lower() == ".srs":
+                    srs_filelist.append(file)
+                elif file.is_file() and file.suffix.lower() in supported_file_extensions:
                     filelist.append(file)
-            filelist.sort(key=extract_mtime_key, reverse=True)
         excluded_filelist = []
         for srs_file in srs_filelist:
             excluded_filelist.extend(pyimglib.decoders.srs.get_file_paths(srs_file))
             filelist.append(srs_file)
+        filelist.sort(key=extract_mtime_key, reverse=True)
         for file in filelist:
             if file not in excluded_filelist:
                 base32path = str_to_base32(str(file.relative_to(root_dir)))
