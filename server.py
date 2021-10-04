@@ -405,7 +405,8 @@ def browse(dir):
                         _icon(file, filemeta)
                 elif file.suffix.lower() == '.srs':
                     TYPE = pyimglib.decoders.srs.type_detect(file)
-                    if TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEO:
+                    if TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEO or \
+                            TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEOLOOP:
                         filemeta['type'] = "video"
                         filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
                     elif TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.IMAGE:
@@ -667,7 +668,8 @@ def aclmmp_webm_muxer(pathstr):
         SRS_file.close()
         LEVEL = int(flask.session['clevel'])
         CHANNELS = int(flask.session['audio_channels'])
-        if minimal_content_compatibility_level > LEVEL:
+        print(minimal_content_compatibility_level, LEVEL, minimal_content_compatibility_level > LEVEL)
+        if minimal_content_compatibility_level < LEVEL:
             flask.abort(404)
         commandline = ['ffmpeg']
         video_file = False
