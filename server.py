@@ -803,7 +803,7 @@ def ffprobe_response(pathstr):
     login_validation()
     path = pathlib.Path(base32_to_str(pathstr))
     if path.is_file():
-        return flask.Response(pyimglib.decoders.ffmpeg.probe_raw(path), mimetype="application/json")
+        return flask.Response(pyimglib.decoders.ffmpeg.probe(path), mimetype="application/json")
     else:
         flask.abort(404)
 
