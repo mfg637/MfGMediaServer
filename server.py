@@ -419,6 +419,7 @@ def aclmmp_webm_muxer(pathstr):
 def icon_paint(pathstr):
     shared_code.login_validation()
     import static.images.folder_icon_painter as folder_icon_painter
+    scale = float(flask.request.args.get('scale', 1))
     dir = pathlib.Path(pathstr).absolute()
     data = None
     with dir.joinpath(".imgview-dir-config.json").open("r") as f:
@@ -427,16 +428,17 @@ def icon_paint(pathstr):
     if data['cover'] is not None:
         thumbnail_path = dir.joinpath(data['cover'])
         base_size = (174, 108)
-        img = pyimglib.decoders.open_image(thumbnail_path, base_size)
+        scaled_base_size = (round(174 * scale), round(108 * scale))
+        img = pyimglib.decoders.open_image(thumbnail_path, scaled_base_size)
         if isinstance(img, pyimglib.decoders.srs.ClImage):
-            img = img.load_thumbnail(base_size)
+            img = img.load_thumbnail(scaled_base_size)
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
             img = _img
         thumb_ratio = base_size[0] / base_size[1]
         src_ratio = img.size[0] / img.size[1]
-        width, height = 0, 0
+        width, height, = 0, 0
         if src_ratio > thumb_ratio:
             width = base_size[0]
             height = base_size[0] / src_ratio
@@ -446,7 +448,9 @@ def icon_paint(pathstr):
         base_offset = (10, 30)
         xoffset = (base_size[0] - width) // 2 + base_offset[0]
         yoffset = (base_size[1] - height) // 2 + base_offset[1]
-        img_url = "/thumbnail/webp/174x108/{}".format(
+        img_url = "/thumbnail/webp/{}x{}/{}".format(
+            scaled_base_size[0],
+            scaled_base_size[1],
             shared_code.str_to_base32(str(thumbnail_path.relative_to(shared_code.root_dir)))
         )
         if data['color'] is not None:

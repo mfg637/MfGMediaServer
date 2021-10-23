@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="filemeta_json" content="{{ filemeta }}" />
+    <meta name="dirmeta_json" content="{{ dirmeta }}" />
     <title>{{ title }}</title>
     <style>
         script{
@@ -55,7 +56,11 @@
         {% if item.icon is not none %}
             <div class="icon-wrapper">
             {% if item.object_icon %}
-                <object data="{{ item.icon }}"></object>
+                {% if item.lazy_load %}
+                    <img class="placeholder" src="/static/images/folder_icon.png"/>
+                {% else %}
+                    <object data="{{ item.icon }}"></object>
+                {% endif %}
             {% else %}
                 {% if item.lazy_load %}
                     <img class="placeholder" src="/static/images/img_icon.png"/>

@@ -24,7 +24,7 @@ class PageCache:
         if self.is_cached(path, glob_pattern):
             return self._cache
         else:
-            return list(), list()
+            return list(), list(), list()
 
 
 page_cache = PageCache(None, None, None)
@@ -59,7 +59,7 @@ def browse(dir):
     global page_cache
     dirlist, filelist, srs_filelist = [], [], []
     glob_pattern = flask.request.args.get('glob', None)
-    itemslist, filemeta_list = page_cache.get_cache(dir, glob_pattern)
+    itemslist, dirmeta_list, filemeta_list = page_cache.get_cache(dir, glob_pattern)
     if len(itemslist) == 0:
         items_count: int = 0
 
@@ -97,22 +97,29 @@ def browse(dir):
                     itemslist[0]["link"] = "/browse/{}".format(dir.parent.relative_to(shared_code.root_dir))
                 items_count += 1
             for _dir in dirlist:
-                itemslist.append(
-                    {
-                        "link": "/browse/{}".format(_dir.relative_to(shared_code.root_dir)),
-                        "icon": flask.url_for('static', filename='images/folder icon.svg'),
-                        "object_icon": False,
-                        "name": shared_code.simplify_filename(_dir.name),
-                        "sources": None,
-                        "lazy_load": False,
-                    }
-                )
+                dirmeta = {
+                    "link": "/browse/{}".format(_dir.relative_to(shared_code.root_dir)),
+                    "icon": flask.url_for('static', filename='images/folder icon.svg'),
+                    "object_icon": False,
+                    "name": shared_code.simplify_filename(_dir.name),
+                    "sources": None,
+                    "lazy_load": False,
+                    "item_index": items_count,
+                    "type": "dir",
+                }
                 try:
                     if _dir.joinpath(".imgview-dir-config.json").exists():
-                        itemslist[-1]["object_icon"] = True
-                        itemslist[-1]["icon"] = "/folder_icon_paint/{}".format(_dir.relative_to(shared_code.root_dir))
+                        dirmeta["object_icon"] = True
+                        dirmeta["icon"] = "/folder_icon_paint/{}".format(_dir.relative_to(shared_code.root_dir))
+                        if load_acceleration in {
+                            shared_enums.LoadAcceleration.LAZY_LOAD,
+                            shared_enums.LoadAcceleration.BOTH
+                        }:
+                            dirmeta["lazy_load"] = True
+                            dirmeta_list.append(dirmeta)
                 except PermissionError:
                     pass
+                itemslist.append(dirmeta)
                 items_count += 1
         else:
             itemslist.append({
@@ -194,7 +201,7 @@ def browse(dir):
                 itemslist.append(filemeta)
                 filemeta_list.append(filemeta)
                 items_count += 1
-        page_cache = PageCache(dir, (itemslist, filemeta_list), glob_pattern)
+        page_cache = PageCache(dir, (itemslist, dirmeta_list, filemeta_list), glob_pattern)
     title = ''
     if dir == shared_code.root_dir:
         title = "root"
@@ -210,6 +217,7 @@ def browse(dir):
         return flask.render_template(
             'index.html',
             itemslist=itemslist,
+            dirmeta=json.dumps(dirmeta_list),
             filemeta=json.dumps(filemeta_list),
             pagination=False,
             page=0,
@@ -222,18 +230,25 @@ def browse(dir):
         max_pages = math.ceil(len(itemslist) / items_per_page)
         mix_index = page * items_per_page
         max_index = mix_index + items_per_page
-        _filemeta_list = list()
-        for file in filemeta_list:
-            if mix_index <= file["item_index"] < max_index:
-                _file = file.copy()
-                _file["item_index"] -= mix_index
-                _filemeta_list.append(_file)
-            elif file["item_index"] >= max_index:
-                break
+        final_filemeta_list = list()
+        final_dirmeta_list = list()
+
+        def calc_item_page_index(item_list, output_list):
+            for item in item_list:
+                if mix_index <= item["item_index"] < max_index:
+                    final_item = item.copy()
+                    final_item["item_index"] -= mix_index
+                    output_list.append(final_item)
+                elif item["item_index"] >= max_index:
+                    break
+
+        calc_item_page_index(dirmeta_list, final_dirmeta_list)
+        calc_item_page_index(filemeta_list, final_filemeta_list)
         return flask.render_template(
             'index.html',
             itemslist=itemslist[mix_index:max_index],
-            filemeta=json.dumps(_filemeta_list),
+            dirmeta=json.dumps(final_dirmeta_list),
+            filemeta=json.dumps(final_filemeta_list),
             pagination=True,
             page=page,
             max_pages=max_pages,

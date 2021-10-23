@@ -1,47 +1,66 @@
 meta_tags = document.getElementsByTagName('meta')
 
 filemeta = null
+dirmeta = null
 
-for (i=0; i<meta_tags.length;i++)
-    if (meta_tags[i].getAttribute('name') === 'filemeta_json'){
+
+for (let i = 0; i < meta_tags.length; i++) {
+    if (meta_tags[i].getAttribute('name') === 'filemeta_json') {
         filemeta = JSON.parse(meta_tags[i].getAttribute('content'))
     }
+    else if (meta_tags[i].getAttribute('name') === 'dirmeta_json') {
+        dirmeta = JSON.parse(meta_tags[i].getAttribute('content'))
+    }
+}
 
+dpi_scale_coef = window.devicePixelRatio;
 
+FILETYPE = 0;
+DIRTYPE = 1;
 
 var intersectionObserver = new IntersectionObserver(function(entries) {
   // If intersectionRatio is 0, the target is out of view
   // and we do not need to do anything.
     for (entry_index=0; entry_index<entries.length; entry_index++){
         if (entries[entry_index].intersectionRatio <= 0) continue;
-        fmeta = filemeta[entries[entry_index].target.imageID]
+        fmeta = null
+        if (entries[entry_index].target.ftype === FILETYPE)
+            fmeta = filemeta[entries[entry_index].target.imageID]
+        else if (entries[entry_index].target.ftype === DIRTYPE)
+            fmeta = dirmeta[entries[entry_index].target.imageID]
         placeholder = entries[entry_index].target.getElementsByTagName('img')[0]
         if (((typeof fmeta)!="undefined") && (placeholder.classList.contains('placeholder'))){
             new_elem = null
-            if (fmeta.sources!==null){
-                picture_elem = document.createElement('picture');
-                for (source_index=0; source_index<fmeta.sources.length; source_index++){
-                    source_elem = document.createElement('source');
-                    source_elem.srcset = fmeta.sources[source_index];
-                    picture_elem.appendChild(source_elem);
+            if (entries[entry_index].target.ftype === FILETYPE) {
+                if (fmeta.sources !== null) {
+                    picture_elem = document.createElement('picture');
+                    for (source_index = 0; source_index < fmeta.sources.length; source_index++) {
+                        source_elem = document.createElement('source');
+                        source_elem.srcset = fmeta.sources[source_index];
+                        picture_elem.appendChild(source_elem);
+                    }
+                    img_elem = document.createElement('img');
+                    img_elem.src = fmeta.icon;
+                    picture_elem.appendChild(img_elem);
+                    new_elem = picture_elem;
+                } else {
+                    img_elem = document.createElement('img');
+                    img_elem.src = fmeta.icon;
+                    new_elem = img_elem;
                 }
-                img_elem = document.createElement('img');
-                img_elem.src=fmeta.icon;
-                picture_elem.appendChild(img_elem);
-                new_elem = picture_elem;
-            }else{
-                img_elem = document.createElement('img');
-                img_elem.src=fmeta.icon;
-                new_elem = img_elem;
             }
-        
+            else if (entries[entry_index].target.ftype === DIRTYPE){
+                object_elem = document.createElement('object');
+                object_elem.data = fmeta.icon+"?scale=" + dpi_scale_coef;
+                new_elem = object_elem;
+            }
             placeholder.parentNode.replaceChild(new_elem, placeholder);
         }
     }
 
 });
 
-    
+
 var imageViewer = new ImageViewer();
 imageViewer.init(filemeta)
 
@@ -65,8 +84,9 @@ function ImageViewer() {
     photolist = list;
 
     links = document.querySelectorAll("a.item")
-    for (i=0; i<filemeta.length; i++){
-        links[filemeta[i].item_index].imageID = i
+    for (let i=0; i<filemeta.length; i++){
+        links[filemeta[i].item_index].imageID = i;
+        links[filemeta[i].item_index].ftype = FILETYPE;
         if (filemeta[i].type === "picture"){
             links[filemeta[i].item_index].onclick=function(){
                 imageViewer.watchPhoto(this.imageID);
@@ -87,14 +107,20 @@ function ImageViewer() {
         if (filemeta[i].lazy_load)
             intersectionObserver.observe(links[filemeta[i].item_index]);
     }
+    for (let i=0; i<dirmeta.length; i++){
+        links[dirmeta[i].item_index].imageID = i;
+        links[dirmeta[i].item_index].ftype = DIRTYPE;
+        if (dirmeta[i].lazy_load)
+            intersectionObserver.observe(links[dirmeta[i].item_index]);
+    }
     console.log("init done");
-    
+
   }
-  
+
     default_hide_controls_click_handler = function(){
         container.classList.toggle('hideControls');
     }
-    
+
     default_goto_url_click_handler = function(){
         document.location.href = photolist[id].link;
     }
@@ -102,7 +128,7 @@ function ImageViewer() {
     doubleclick_goto_url_click_handler = function(){
         window.open(photolist[id].link, '_blank');
     }
-    
+
     default_open_video_click_handler = function(){
         new RainbowVideoPlayer(photolist[id]);
     }
@@ -110,7 +136,7 @@ function ImageViewer() {
     default_open_dash_video_click_handler = function(){
         new RainbowDASHVideoPlayer(photolist[id]);
     }
-  
+
   this.watchPhoto = function(photoID) {
     clearTimeout(loadViewportSizePhoto);
     id=photoID;
@@ -129,11 +155,11 @@ function ImageViewer() {
         photo.src = photolist[id].icon
     }
     else
-        photo.src = '/thumbnail/webp/' + 
-        Math.round(window.innerWidth * window.devicePixelRatio) + 'x' + 
+        photo.src = '/thumbnail/webp/' +
+        Math.round(window.innerWidth * window.devicePixelRatio) + 'x' +
         Math.round(window.innerHeight * window.devicePixelRatio) +
         '/'+ photolist[id].base32path+"?allow_origin=1";
-    
+
     if (photolist[id].type === "picture")
         default_click_handler = default_hide_controls_click_handler;
     else if (photolist[id].type === "video")
@@ -146,7 +172,7 @@ function ImageViewer() {
 
 
     caption.innerHTML = ( +id + 1) + '/' +
-                        photolist.length + '<br /><span class="title">' + 
+                        photolist.length + '<br /><span class="title">' +
                         photolist[id].name + '</span>';
     if (id>0) {
       prev.style.display='block';
@@ -184,18 +210,18 @@ function ImageViewer() {
     container.classList.add('container');
     container.classList.add('load');
     jscontainer.appendChild(container);
-    
+
     object_container = document.createElement('div');
     object_container.classList.add('container');
     container.appendChild(object_container);
 
     document.body.style.overflow = "hidden";
-    
+
     photo = document.createElement('img');
     photo.id = 'i';
     photo.classList.add('photo');
     object_container.appendChild(photo);
-    
+
     controls_container = document.createElement('div');
     controls_container.classList.add('container');
     container.appendChild(controls_container);
@@ -204,7 +230,7 @@ function ImageViewer() {
     close_button.id = 'btn';
     close_button.onclick = close;
     controls_container.appendChild(close_button);
-    
+
     prev = document.createElement('div');
     prev.id = 'plink';
     prev.classList.add('photoview-left-plink-bar');
@@ -214,7 +240,7 @@ function ImageViewer() {
     next.id = 'nlink';
     next.classList.add('photoview-right-plink-bar');
     controls_container.appendChild(next);
-    
+
     caption = document.createElement('div');
     caption.classList.add('imageview-text');
     controls_container.appendChild(caption);
@@ -226,7 +252,7 @@ function ImageViewer() {
     controls_container.ondblclick = function(){
         doubleclick_goto_url_click_handler();
     }
-  
+
     replacePhoto();
 
     prev.onclick = previousPhoto;
@@ -235,7 +261,7 @@ function ImageViewer() {
 
     window.onkeyup=keyControl;
     window.addEventListener("resize", resize, false);
-  
+
     function keyControl (event) {
       switch(event.keyCode){
         case 27:close(); break;
@@ -268,7 +294,7 @@ function ImageViewer() {
     loadViewportSizePhoto=setTimeout(replacePhoto,2500);
   }
   function alignPhoto() {
-    photo.style.margin = (container.offsetHeight - photo.offsetHeight) / 2 + 
+    photo.style.margin = (container.offsetHeight - photo.offsetHeight) / 2 +
       'px auto';
   }
 }
