@@ -707,6 +707,8 @@ def icon_paint(pathstr):
         thumbnail_path = dir.joinpath(data['cover'])
         base_size = (174, 108)
         img = pyimglib.decoders.open_image(thumbnail_path, base_size)
+        if isinstance(img, pyimglib.decoders.srs.ClImage):
+            img = img.load_thumbnail(base_size)
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
