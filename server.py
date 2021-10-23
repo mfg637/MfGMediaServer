@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import hashlib
-
 import json
 import subprocess
 import tempfile
@@ -13,118 +11,31 @@ import os
 import pathlib
 import io
 import PIL.Image
-import base64
+import filesystem
 import magic
-import re
-import ffmpeg
-import urllib.parse
 
 import pyimglib
 import pyimglib.decoders.ffmpeg
-import shared_enums
+import shared_code
 import ACLMMP
 
-anonymous_forbidden = True
-access_tokens = dict()
-# key - URL, value - token
+from filesystem.browse import browse
 
-load_acceleration = shared_enums.LoadAcceleration.NONE
-items_per_page = 1
 
 tmp_file = tempfile.NamedTemporaryFile()
-
-enable_external_scripts = True
-
-
-class PageCache:
-    def __init__(self, path, cache, glob_pattern):
-        self._path = path
-        self._cache = cache
-        self._glob_pattern = glob_pattern
-
-    def is_cached(self, path, glob_pattern):
-        return path == self._path and glob_pattern == self._glob_pattern
-
-    def get_cache(self, path, glob_pattern):
-        if self.is_cached(path, glob_pattern):
-            return self._cache
-        else:
-            return list(), list()
-
-
-page_cache = PageCache(None, None, None)
-
-image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif', '.jxl'}
-video_file_extensions = {'.mkv', '.mp4', '.webm'}
-supported_file_extensions = \
-    image_file_extensions.union(video_file_extensions) \
-        .union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac", ".m3u8"}) \
-        .union({'.mpd', '.srs'})  # dash manifest
-
-
-def browse_folder(folder):
-    path_dir_objects = []
-    path_file_objects = []
-    path_srs_objects = []
-    for entry in folder.iterdir():
-        if entry.is_file() and entry.suffix.lower() == '.srs':
-            path_srs_objects.append(entry)
-        elif entry.is_file() and entry.suffix.lower() in supported_file_extensions:
-            path_file_objects.append(entry)
-        elif entry.is_dir() and entry.name[0] != '.':
-            path_dir_objects.append(entry)
-    return path_dir_objects, path_file_objects, path_srs_objects
 
 
 app = flask.Flask(__name__)
 
 
-def base32_to_str(base32code: str):
-    return base64.b32decode(base32code.encode("utf-8")).decode("utf-8")
-
-
-def str_to_base32(string: str):
-    return base64.b32encode(string.encode("utf-8")).decode("utf-8")
-
-
-def cache_check(path):
-    hash = hashlib.sha3_256()
-    with path.open('br') as f:
-        buffer = f.read(1024)
-        while len(buffer) > 0:
-            hash.update(buffer)
-            buffer = f.read(1024 * 1024)
-    src_hash = hash.hexdigest()
-    try:
-        if flask.request.headers['If-None-Match'][1:-1] == src_hash:
-            status_code = flask.Response(status=304)
-            return src_hash, status_code
-    except KeyError:
-        pass
-    return src_hash, None
-
-
-def simplify_filename(name):
-    return re.sub(r"[_-]", ' ', name)
-
-
-def login_validation():
-    access_token = flask.request.args.get("access_token", None)
-    if access_token is not None:
-        if access_token == access_tokens[urllib.parse.unquote(flask.request.base_url)]:
-            return
-    if anonymous_forbidden and not flask.session.get('logged_in'):
-        flask.abort(401)
-
-
 @app.route('/')
 def app_root():
-    login_validation()
-    return browse(root_dir)
+    shared_code.login_validation()
+    return browse(shared_code.root_dir)
 
 
 def static_file(path, mimetype=None):
-    login_validation()
+    shared_code.login_validation()
     abspath = path.absolute()
     if mimetype is None:
         mimetype = magic.from_file(str(abspath), mime=True)
@@ -141,8 +52,8 @@ def static_file(path, mimetype=None):
 
 
 def file_url_template(body, pathstr, **kwargs):
-    login_validation()
-    path = pathlib.Path(base32_to_str(pathstr))
+    shared_code.login_validation()
+    path = pathlib.Path(shared_code.base32_to_str(pathstr))
     if path.is_file():
         return body(path, **kwargs)
     else:
@@ -161,7 +72,7 @@ def get_original(pathstr):
 @app.route('/image/<string:format>/<string:pathstr>')
 def transcode_image(format: str, pathstr):
     def body(path, format):
-        src_hash, status_code = cache_check(path)
+        src_hash, status_code = shared_code.cache_check(path)
         if status_code is not None:
             return status_code
         img = pyimglib.decoders.open_image(path)
@@ -179,7 +90,7 @@ def transcode_image(format: str, pathstr):
                 else:
                     break
             if current_lod_img.format == format.upper():
-                base32path = str_to_base32(str(current_lod))
+                base32path = shared_code.str_to_base32(str(current_lod))
                 return flask.redirect(
                     "https://{}:{}/orig/{}".format(
                         config.host_name,
@@ -224,7 +135,7 @@ def gen_thumbnail(format: str, width, height, pathstr):
         allow_origin = bool(flask.request.args.get('allow_origin', False))
         src_hash, status_code = None, None
         if path.stat().st_size < (1024 * 1024 * 1024):
-            src_hash, status_code = cache_check(path)
+            src_hash, status_code = shared_code.cache_check(path)
         if status_code is not None:
             return status_code
         img = pyimglib.decoders.open_image(path)
@@ -243,7 +154,7 @@ def gen_thumbnail(format: str, width, height, pathstr):
                 else:
                     break
             if current_lod_img.format == "WEBP" and allow_origin:
-                base32path = str_to_base32(str(current_lod))
+                base32path = shared_code.str_to_base32(str(current_lod))
                 return flask.redirect(
                     "https://{}:{}/orig/{}".format(
                         config.host_name,
@@ -290,204 +201,14 @@ def gen_thumbnail(format: str, width, height, pathstr):
     return file_url_template(body, pathstr, format=format, width=width, height=height)
 
 
-def extract_mtime_key(file: pathlib.Path):
-    return file.stat().st_mtime
-
-
-def browse(dir):
-    global page_cache
-    dirlist, filelist, srs_filelist = [], [], []
-    glob_pattern = flask.request.args.get('glob', None)
-    itemslist, filemeta_list = page_cache.get_cache(dir, glob_pattern)
-    if len(itemslist) == 0:
-        items_count: int = 0
-
-        def _icon(file, filemeta):
-            filemeta["lazy_load"] = load_acceleration in {
-                shared_enums.LoadAcceleration.LAZY_LOAD,
-                shared_enums.LoadAcceleration.BOTH
-            }
-            icon_base32path = filemeta['base32path']
-            icon_path = pathlib.Path("{}.icon".format(file))
-            if icon_path.exists():
-                filemeta["custom_icon"] = True
-                icon_base32path = str_to_base32(str(icon_path.relative_to(root_dir)))
-            filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base32path)
-            filemeta['sources'] = (
-                "/thumbnail/webp/192x144/{}".format(icon_base32path) +
-                ", /thumbnail/webp/384x288/{} 2x".format(icon_base32path) +
-                ", /thumbnail/webp/768x576/{} 4x".format(icon_base32path),
-                "/thumbnail/jpeg/192x144/{}".format(icon_base32path) +
-                ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
-                ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
-            )
-
-        if glob_pattern is None:
-            dirlist, filelist, srs_filelist = browse_folder(dir)
-            if dir != root_dir:
-                itemslist.append({
-                    "icon": flask.url_for('static', filename='images/updir_icon.svg'),
-                    "name": "..",
-                    "lazy_load": False,
-                })
-                if dir.parent == root_dir:
-                    itemslist[0]["link"] = "/"
-                else:
-                    itemslist[0]["link"] = "/browse/{}".format(dir.parent.relative_to(root_dir))
-                items_count += 1
-            for _dir in dirlist:
-                itemslist.append(
-                    {
-                        "link": "/browse/{}".format(_dir.relative_to(root_dir)),
-                        "icon": flask.url_for('static', filename='images/folder icon.svg'),
-                        "object_icon": False,
-                        "name": simplify_filename(_dir.name),
-                        "sources": None,
-                        "lazy_load": False,
-                    }
-                )
-                try:
-                    if _dir.joinpath(".imgview-dir-config.json").exists():
-                        itemslist[-1]["object_icon"] = True
-                        itemslist[-1]["icon"] = "/folder_icon_paint/{}".format(_dir.relative_to(root_dir))
-                except PermissionError:
-                    pass
-                items_count += 1
-        else:
-            itemslist.append({
-                "icon": flask.url_for('static', filename='images/updir_icon.svg'),
-                "name": ".",
-                "lazy_load": False,
-                "link": flask.request.path
-            })
-            items_count += 1
-            for file in dir.glob(glob_pattern):
-                if file.is_file() and file.suffix.lower() == ".srs":
-                    srs_filelist.append(file)
-                elif file.is_file() and file.suffix.lower() in supported_file_extensions:
-                    filelist.append(file)
-        excluded_filelist = []
-        for srs_file in srs_filelist:
-            excluded_filelist.extend(pyimglib.decoders.srs.get_file_paths(srs_file))
-            filelist.append(srs_file)
-        filelist.sort(key=extract_mtime_key, reverse=True)
-        for file in filelist:
-            if file not in excluded_filelist:
-                base32path = str_to_base32(str(file.relative_to(root_dir)))
-                filemeta = {
-                    "link": "/orig/{}".format(base32path),
-                    "icon": None,
-                    "object_icon": False,
-                    "name": simplify_filename(file.name),
-                    "sources": None,
-                    "base32path": base32path,
-                    "item_index": items_count,
-                    "lazy_load": False,
-                    "type": "audio",
-                    "is_vp8": False,
-                    "suffix": file.suffix,
-                    "custom_icon": False
-                }
-                icon_path = pathlib.Path("{}.icon".format(file))
-                if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
-                    _icon(file, filemeta)
-                if file.suffix.lower() in image_file_extensions:
-                    filemeta["type"] = "picture"
-                elif file.suffix.lower() in video_file_extensions:
-                    filemeta["type"] = "video"
-                elif file.suffix.lower() == '.mpd':
-                    filemeta['type'] = "DASH"
-                    filemeta['link'] = "/{}{}".format(
-                        ('' if dir == root_dir else 'browse/'),
-                        str(file.relative_to(root_dir))
-                    )
-                    if icon_path.exists():
-                        _icon(file, filemeta)
-                elif file.suffix.lower() == '.srs':
-                    TYPE = pyimglib.decoders.srs.type_detect(file)
-                    if TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEO or \
-                            TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEOLOOP:
-                        filemeta['type'] = "video"
-                        filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
-                    elif TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.IMAGE:
-                        filemeta['type'] = "picture"
-                        filemeta['link'] = "/image/webp/{}".format(base32path)
-                    _icon(file, filemeta)
-                elif file.suffix.lower() == ".m3u8":
-                    access_token = gen_access_token()
-                    filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
-                    access_tokens[filemeta['link']] = access_token
-                    filemeta['link'] += "?access_token={}".format(access_token)
-                    if icon_path.exists():
-                        _icon(file, filemeta)
-                if file.suffix == '.mkv':
-                    filemeta['link'] = "/vp8/{}".format(base32path)
-                    filemeta["is_vp8"] = True
-                elif file.suffix.lower() in {'.jpg', '.jpeg'}:
-                    try:
-                        jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
-                        if (jpg.arithmetic_coding()):
-                            filemeta['link'] = "/image/webp/{}".format(base32path)
-                    except Exception:
-                        filemeta['link'] = "/image/webp/{}".format(base32path)
-                itemslist.append(filemeta)
-                filemeta_list.append(filemeta)
-                items_count += 1
-        page_cache = PageCache(dir, (itemslist, filemeta_list), glob_pattern)
-    title = ''
-    if dir == root_dir:
-        title = "root"
-    else:
-        title = dir.name
-    template_kwargs = {
-        'title': title,
-        '_glob': glob_pattern,
-        'url': flask.request.base_url,
-        'enable_external_scripts': enable_external_scripts
-    }
-    if load_acceleration in {shared_enums.LoadAcceleration.NONE, shared_enums.LoadAcceleration.LAZY_LOAD}:
-        return flask.render_template(
-            'index.html',
-            itemslist=itemslist,
-            filemeta=json.dumps(filemeta_list),
-            pagination=False,
-            page=0,
-            max_pages=0,
-            **template_kwargs
-        )
-    else:
-        import math
-        page = int(flask.request.args.get('page', 0))
-        max_pages = math.ceil(len(itemslist) / items_per_page)
-        mix_index = page * items_per_page
-        max_index = mix_index + items_per_page
-        _filemeta_list = list()
-        for file in filemeta_list:
-            if mix_index <= file["item_index"] < max_index:
-                _file = file.copy()
-                _file["item_index"] -= mix_index
-                _filemeta_list.append(_file)
-            elif file["item_index"] >= max_index:
-                break
-        return flask.render_template(
-            'index.html',
-            itemslist=itemslist[mix_index:max_index],
-            filemeta=json.dumps(_filemeta_list),
-            pagination=True,
-            page=page,
-            max_pages=max_pages,
-            **template_kwargs
-        )
-
-
 @app.route('/browse/<path:pathstr>')
 def browse_dir(pathstr):
-    login_validation()
+    shared_code.login_validation()
     path = pathlib.Path(pathstr).absolute()
     if pathlib.Path(path).is_dir():
         in_root_dir = False
         for parent in path.parents:
-            if parent == root_dir:
+            if parent == shared_code.root_dir:
                 in_root_dir = True
                 break
         if in_root_dir:
@@ -696,7 +417,7 @@ def aclmmp_webm_muxer(pathstr):
 
 @app.route('/folder_icon_paint/<path:pathstr>')
 def icon_paint(pathstr):
-    login_validation()
+    shared_code.login_validation()
     import static.images.folder_icon_painter as folder_icon_painter
     dir = pathlib.Path(pathstr).absolute()
     data = None
@@ -726,7 +447,7 @@ def icon_paint(pathstr):
         xoffset = (base_size[0] - width) // 2 + base_offset[0]
         yoffset = (base_size[1] - height) // 2 + base_offset[1]
         img_url = "/thumbnail/webp/174x108/{}".format(
-            str_to_base32(str(thumbnail_path.relative_to(root_dir)))
+            shared_code.str_to_base32(str(thumbnail_path.relative_to(shared_code.root_dir)))
         )
         if data['color'] is not None:
             stops = folder_icon_painter.paint_icon(data['color'])
@@ -755,20 +476,10 @@ def icon_paint(pathstr):
     return flask.Response(rendered_template, mimetype="image/svg+xml")
 
 
-def gen_access_token():
-    import random
-    import string
-    access_token = ""
-    for i in random.choices(string.ascii_letters + string.digits, k=64):
-        access_token += i
-    return access_token
-
-
 @app.route('/m3u8/<string:pathstr>.m3u8')
 def gen_m3u8(pathstr):
-    global access_tokens
-    login_validation()
-    path = pathlib.Path(base32_to_str(pathstr))
+    shared_code.login_validation()
+    path = pathlib.Path(shared_code.base32_to_str(pathstr))
     if path.is_file():
         buffer = io.StringIO()
         with path.open("r") as f:
@@ -776,14 +487,14 @@ def gen_m3u8(pathstr):
                 if '#' in line:
                     buffer.write(line)
                 else:
-                    base32path = str_to_base32(str(path.parent.joinpath(line)).rstrip())
+                    base32path = shared_code.str_to_base32(str(path.parent.joinpath(line)).rstrip())
                     base_url = "https://{}:{}/orig/{}".format(
                         config.host_name,
                         config.port,
                         base32path
                     )
-                    access_token = gen_access_token()
-                    access_tokens[base_url] = access_token
+                    access_token = shared_code.gen_access_token()
+                    shared_code.access_tokens[base_url] = access_token
                     buffer.write(base_url + "?access_token={}\n".format(access_token))
         return flask.Response(buffer.getvalue(), mimetype="audio/x-mpegurl", status=200)
     else:
@@ -792,7 +503,7 @@ def gen_m3u8(pathstr):
 
 @app.route('/<path:pathstr>')
 def root_open_file(pathstr):
-    login_validation()
+    shared_code.login_validation()
     path = pathlib.Path(pathstr).absolute()
     if pathlib.Path(path).is_file():
         return static_file(path)
@@ -802,8 +513,8 @@ def root_open_file(pathstr):
 
 @app.route('/ffprobe_json/<string:pathstr>')
 def ffprobe_response(pathstr):
-    login_validation()
-    path = pathlib.Path(base32_to_str(pathstr))
+    shared_code.login_validation()
+    path = pathlib.Path(shared_code.base32_to_str(pathstr))
     if path.is_file():
         return flask.Response(pyimglib.decoders.ffmpeg.probe(path), mimetype="application/json")
     else:
@@ -812,8 +523,8 @@ def ffprobe_response(pathstr):
 
 @app.route('/webvtt/<string:pathstr>')
 def get_vtt_subs(pathstr):
-    login_validation()
-    path = pathlib.Path(base32_to_str(pathstr) + ".vtt")
+    shared_code.login_validation()
+    path = pathlib.Path(shared_code.base32_to_str(pathstr) + ".vtt")
     if path.is_file():
         return static_file(path, mimetype="text/vtt")
     else:
@@ -857,8 +568,8 @@ if __name__ == '__main__':
         if os.path.exists(cert_path) and os.path.exists(key_path):
             ssl_context = (cert_path, key_path)
     port = config.port
-    load_acceleration = config.load_acceleration_method
-    items_per_page = config.items_per_page
+    filesystem.browse.load_acceleration = config.load_acceleration_method
+    filesystem.browse.items_per_page = config.items_per_page
     parser = argparse.ArgumentParser()
     parser.add_argument("root_dir", default="")
     parser.add_argument("--port")
@@ -870,10 +581,10 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     os.chdir(args.root_dir)
-    root_dir = pathlib.Path('.').absolute()
+    shared_code.root_dir = pathlib.Path('.').absolute()
     if args.port is not None:
         port = args.port
-    anonymous_forbidden = args.anon
-    enable_external_scripts = args.disable_external_content
+    shared_code.anonymous_forbidden = args.anon
+    shared_code.enable_external_scripts = args.disable_external_content
     app.secret_key = os.urandom(12)
     app.run(host=config.host_name, port=port, ssl_context=ssl_context)

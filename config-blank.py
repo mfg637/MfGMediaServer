@@ -1,4 +1,4 @@
-import shared_enums
+import shared_code.enums as shared_enums
 import pyimglib
 
 host_name = 'localhost'
