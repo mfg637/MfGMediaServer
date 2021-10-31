@@ -136,7 +136,10 @@ def browse(dir):
                     filelist.append(file)
         excluded_filelist = []
         for srs_file in srs_filelist:
-            excluded_filelist.extend(pyimglib.decoders.srs.get_file_paths(srs_file))
+            f = srs_file.open('r')
+            content, streams, cl_level = pyimglib.ACLMMP.srs_parser.parseJSON(f)
+            f.close()
+            excluded_filelist.extend(pyimglib.ACLMMP.srs_parser.get_files_list(srs_file, content, streams))
             filelist.append(srs_file)
         filelist.sort(key=extract_mtime_key, reverse=True)
         for file in filelist:
