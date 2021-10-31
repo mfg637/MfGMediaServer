@@ -17,7 +17,7 @@ import magic
 import pyimglib
 import pyimglib.decoders.ffmpeg
 import shared_code
-import ACLMMP
+import pyimglib.ACLMMP as ACLMMP
 
 from filesystem.browse import browse
 
