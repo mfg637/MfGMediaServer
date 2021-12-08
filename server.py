@@ -5,6 +5,7 @@ import json
 import subprocess
 import tempfile
 import abc
+import urllib.parse
 
 import flask
 import os
@@ -18,6 +19,8 @@ import pyimglib
 import pyimglib.decoders.ffmpeg
 import shared_code
 import pyimglib.ACLMMP as ACLMMP
+import medialib_db
+import math
 
 from filesystem.browse import browse
 
@@ -32,6 +35,86 @@ app = flask.Flask(__name__)
 def app_root():
     shared_code.login_validation()
     return browse(shared_code.root_dir)
+
+
+NUMBER_OF_ITEMS = 0
+CACHED_REQUEST = None
+
+
+@app.route('/medialib-tag-search')
+def medialib_tag_search():
+    global NUMBER_OF_ITEMS
+    global CACHED_REQUEST
+    shared_code.login_validation()
+
+    tags = flask.request.args.getlist('tags')
+    page = int(flask.request.args.get('page', 0))
+
+    _args = ""
+    for key in flask.request.args:
+        if key != "page":
+            _args += "&{}={}".format(urllib.parse.quote_plus(key), urllib.parse.quote_plus(flask.request.args[key]))
+
+    global page_cache
+    itemslist, dirmeta_list, filemeta_list = [], [], []
+
+    pagination = filesystem.browse.load_acceleration in \
+            {shared_code.enums.LoadAcceleration.PAGINATION, shared_code.enums.LoadAcceleration.BOTH}
+
+    max_pages = 0
+    if pagination:
+        filelist = medialib_db.files_by_tag_search.get_files_with_every_tag(
+            *tags,
+            limit=filesystem.browse.items_per_page + 1,
+            offset=filesystem.browse.items_per_page*page,
+            sort_by_date=True
+        )
+        if CACHED_REQUEST is not None and CACHED_REQUEST == tuple(tags):
+            max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
+        else:
+            CACHED_REQUEST = tuple(tags)
+            NUMBER_OF_ITEMS = medialib_db.files_by_tag_search.count_files_with_every_tag(*tags)
+            max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
+
+    else:
+        filelist = medialib_db.files_by_tag_search.get_files_with_every_tag(*tags, sort_by_date=True)
+
+    items_count = 0
+    itemslist.append({
+        "icon": flask.url_for('static', filename='images/updir_icon.svg'),
+        "name": "back to file browser",
+        "lazy_load": False,
+    })
+    itemslist[0]["link"] = "/"
+    items_count += 1
+
+    excluded_filelist = []
+
+    filelist.sort(key=filesystem.browse.extract_mtime_key, reverse=True)
+
+    filemeta_list, items_count = filesystem.browse.file_processor(filelist, excluded_filelist, items_count)
+
+    itemslist.extend(filemeta_list)
+
+    title = "Search query results for {}".format(", ".join([str(tag) for tag in tags]))
+    template_kwargs = {
+        'title': title,
+        '_glob': None,
+        'url': flask.request.base_url,
+        "args": _args,
+        'enable_external_scripts': shared_code.enable_external_scripts
+    }
+
+    return flask.render_template(
+        'index.html',
+        itemslist=itemslist,
+        dirmeta=json.dumps(dirmeta_list),
+        filemeta=json.dumps(filemeta_list),
+        pagination=pagination,
+        page=page,
+        max_pages=max_pages,
+        **template_kwargs
+    )
 
 
 def static_file(path, mimetype=None):

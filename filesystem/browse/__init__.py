@@ -123,8 +123,8 @@ def browse(dir):
             filelist.append(srs_file)
         filelist.sort(key=extract_mtime_key, reverse=True)
 
-        filemeta_list, items_count = _file_processor(filelist, excluded_filelist, items_count)
-        
+        filemeta_list, items_count = file_processor(filelist, excluded_filelist, items_count)
+
         itemslist.extend(filemeta_list)
         page_cache = PageCache(dir, (itemslist, dirmeta_list, filemeta_list), glob_pattern)
     title = ''
@@ -136,6 +136,7 @@ def browse(dir):
         'title': title,
         '_glob': glob_pattern,
         'url': flask.request.base_url,
+        "args": "",
         'enable_external_scripts': shared_code.enable_external_scripts
     }
     if load_acceleration in {shared_enums.LoadAcceleration.NONE, shared_enums.LoadAcceleration.LAZY_LOAD}:
@@ -153,25 +154,16 @@ def browse(dir):
         import math
         page = int(flask.request.args.get('page', 0))
         max_pages = math.ceil(len(itemslist) / items_per_page)
-        mix_index = page * items_per_page
-        max_index = mix_index + items_per_page
+        min_index = page * items_per_page
+        max_index = min_index + items_per_page
         final_filemeta_list = list()
         final_dirmeta_list = list()
 
-        def calc_item_page_index(item_list, output_list):
-            for item in item_list:
-                if mix_index <= item["item_index"] < max_index:
-                    final_item = item.copy()
-                    final_item["item_index"] -= mix_index
-                    output_list.append(final_item)
-                elif item["item_index"] >= max_index:
-                    break
-
-        calc_item_page_index(dirmeta_list, final_dirmeta_list)
-        calc_item_page_index(filemeta_list, final_filemeta_list)
+        calc_item_page_index(dirmeta_list, final_dirmeta_list, min_index, max_index)
+        calc_item_page_index(filemeta_list, final_filemeta_list, min_index, max_index)
         return flask.render_template(
             'index.html',
-            itemslist=itemslist[mix_index:max_index],
+            itemslist=itemslist[min_index:max_index],
             dirmeta=json.dumps(final_dirmeta_list),
             filemeta=json.dumps(final_filemeta_list),
             pagination=True,
@@ -181,7 +173,17 @@ def browse(dir):
         )
 
 
-def _file_processor(filelist, excluded_filelist, initial_item_count):
+def calc_item_page_index(item_list, output_list, min_index, max_index):
+    for item in item_list:
+        if min_index <= item["item_index"] < max_index:
+            final_item = item.copy()
+            final_item["item_index"] -= min_index
+            output_list.append(final_item)
+        elif item["item_index"] >= max_index:
+            break
+
+
+def file_processor(filelist, excluded_filelist, initial_item_count):
     def _icon(file, filemeta):
         filemeta["lazy_load"] = load_acceleration in {
             shared_enums.LoadAcceleration.LAZY_LOAD,
@@ -206,7 +208,7 @@ def _file_processor(filelist, excluded_filelist, initial_item_count):
     filemeta_list = list()
     for file in filelist:
         if file not in excluded_filelist:
-            base32path = shared_code.str_to_base32(str(file.relative_to(shared_code.root_dir)))
+            base32path = shared_code.str_to_base32(str(file))
             filemeta = {
                 "link": "/orig/{}".format(base32path),
                 "icon": None,

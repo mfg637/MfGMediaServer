@@ -37,6 +37,9 @@
         .item object{
             pointer-events: none;
         }
+        form{
+            margin-bottom: 1em;
+        }
     </style>
 </head>
 <body>
@@ -45,6 +48,36 @@
         <label>python3 glob pattern</label>
         <input type="text" id="glob_string" name="glob">
         <input type="submit" value="Search">
+    </form>
+    <form class="medialib-search-form" action="/medialib-tag-search">
+        Put your tags in fields below:<br/>
+        <div id="fields-area">
+            <div class="field"><input type="text" name="tags"/></div>
+        </div>
+        <button id="medialib-add-field">Type more tags</button>
+        <input type="submit" value="Search in Medialib database">
+        <script>
+            document.getElementById("medialib-add-field").onclick = function () {
+                wrapper = document.createElement("div");
+                wrapper.classList.add("field")
+                field = document.createElement("input");
+                field.type = "text";
+                field.name = "tags";
+                wrapper.appendChild(field)
+                delete_button = document.createElement("button");
+                delete_button.innerText = "Delete field";
+                delete_button.onclick = function () {
+                    // get wrapper of this button
+                    wrapper = this.parentElement;
+                    wrapper.parentElement.removeChild(wrapper);
+                    return false;
+                }
+                wrapper.appendChild(delete_button);
+                fields_area_wrapper = document.getElementById("fields-area");
+                fields_area_wrapper.appendChild(wrapper);
+                return false;
+            }
+        </script>
     </form>
     <div class="itemsgrid">
     {% for item in itemslist %}
@@ -96,10 +129,10 @@
             {% endif %}
         {% else %}
             {% if page > 0 %}
-                <a href="{{ url }}?page={{ page-1 }}">Back</a>
+                <a href="{{ url }}?page={{ page-1 }}{{ args }}">Back</a>
             {% endif %}
             {% if page+1 < max_pages %}
-                <a href="{{ url }}?page={{ page+1 }}">Next</a>
+                <a href="{{ url }}?page={{ page+1 }}{{ args }}">Next</a>
             {% endif %}
         {% endif %}
     {% endif %}
