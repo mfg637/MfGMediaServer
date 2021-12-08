@@ -63,26 +63,6 @@ def browse(dir):
     if len(itemslist) == 0:
         items_count: int = 0
 
-        def _icon(file, filemeta):
-            filemeta["lazy_load"] = load_acceleration in {
-                shared_enums.LoadAcceleration.LAZY_LOAD,
-                shared_enums.LoadAcceleration.BOTH
-            }
-            icon_base32path = filemeta['base32path']
-            icon_path = pathlib.Path("{}.icon".format(file))
-            if icon_path.exists():
-                filemeta["custom_icon"] = True
-                icon_base32path = shared_code.str_to_base32(str(icon_path.relative_to(shared_code.root_dir)))
-            filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base32path)
-            filemeta['sources'] = (
-                "/thumbnail/webp/192x144/{}".format(icon_base32path) +
-                ", /thumbnail/webp/384x288/{} 2x".format(icon_base32path) +
-                ", /thumbnail/webp/768x576/{} 4x".format(icon_base32path),
-                "/thumbnail/jpeg/192x144/{}".format(icon_base32path) +
-                ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
-                ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
-            )
-
         if glob_pattern is None:
             dirlist, filelist, srs_filelist = browse_folder(dir)
             if dir != shared_code.root_dir:
@@ -142,68 +122,10 @@ def browse(dir):
             excluded_filelist.extend(pyimglib.ACLMMP.srs_parser.get_files_list(srs_file, content, streams))
             filelist.append(srs_file)
         filelist.sort(key=extract_mtime_key, reverse=True)
-        for file in filelist:
-            if file not in excluded_filelist:
-                base32path = shared_code.str_to_base32(str(file.relative_to(shared_code.root_dir)))
-                filemeta = {
-                    "link": "/orig/{}".format(base32path),
-                    "icon": None,
-                    "object_icon": False,
-                    "name": shared_code.simplify_filename(file.name),
-                    "sources": None,
-                    "base32path": base32path,
-                    "item_index": items_count,
-                    "lazy_load": False,
-                    "type": "audio",
-                    "is_vp8": False,
-                    "suffix": file.suffix,
-                    "custom_icon": False
-                }
-                icon_path = pathlib.Path("{}.icon".format(file))
-                if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
-                    _icon(file, filemeta)
-                if file.suffix.lower() in image_file_extensions:
-                    filemeta["type"] = "picture"
-                elif file.suffix.lower() in video_file_extensions:
-                    filemeta["type"] = "video"
-                elif file.suffix.lower() == '.mpd':
-                    filemeta['type'] = "DASH"
-                    filemeta['link'] = "/{}{}".format(
-                        ('' if dir == shared_code.root_dir else 'browse/'),
-                        str(file.relative_to(shared_code.root_dir))
-                    )
-                    if icon_path.exists():
-                        _icon(file, filemeta)
-                elif file.suffix.lower() == '.srs':
-                    TYPE = pyimglib.decoders.srs.type_detect(file)
-                    if TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEO or \
-                            TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEOLOOP:
-                        filemeta['type'] = "video"
-                        filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
-                    elif TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.IMAGE:
-                        filemeta['type'] = "picture"
-                        filemeta['link'] = "/image/webp/{}".format(base32path)
-                    _icon(file, filemeta)
-                elif file.suffix.lower() == ".m3u8":
-                    access_token = shared_code.gen_access_token()
-                    filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
-                    shared_code.access_tokens[filemeta['link']] = access_token
-                    filemeta['link'] += "?access_token={}".format(access_token)
-                    if icon_path.exists():
-                        _icon(file, filemeta)
-                if file.suffix == '.mkv':
-                    filemeta['link'] = "/vp8/{}".format(base32path)
-                    filemeta["is_vp8"] = True
-                elif file.suffix.lower() in {'.jpg', '.jpeg'}:
-                    try:
-                        jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
-                        if (jpg.arithmetic_coding()):
-                            filemeta['link'] = "/image/webp/{}".format(base32path)
-                    except Exception:
-                        filemeta['link'] = "/image/webp/{}".format(base32path)
-                itemslist.append(filemeta)
-                filemeta_list.append(filemeta)
-                items_count += 1
+
+        filemeta_list, items_count = _file_processor(filelist, excluded_filelist, items_count)
+        
+        itemslist.extend(filemeta_list)
         page_cache = PageCache(dir, (itemslist, dirmeta_list, filemeta_list), glob_pattern)
     title = ''
     if dir == shared_code.root_dir:
@@ -257,3 +179,91 @@ def browse(dir):
             max_pages=max_pages,
             **template_kwargs
         )
+
+
+def _file_processor(filelist, excluded_filelist, initial_item_count):
+    def _icon(file, filemeta):
+        filemeta["lazy_load"] = load_acceleration in {
+            shared_enums.LoadAcceleration.LAZY_LOAD,
+            shared_enums.LoadAcceleration.BOTH
+        }
+        icon_base32path = filemeta['base32path']
+        icon_path = pathlib.Path("{}.icon".format(file))
+        if icon_path.exists():
+            filemeta["custom_icon"] = True
+            icon_base32path = shared_code.str_to_base32(str(icon_path.relative_to(shared_code.root_dir)))
+        filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base32path)
+        filemeta['sources'] = (
+            "/thumbnail/webp/192x144/{}".format(icon_base32path) +
+            ", /thumbnail/webp/384x288/{} 2x".format(icon_base32path) +
+            ", /thumbnail/webp/768x576/{} 4x".format(icon_base32path),
+            "/thumbnail/jpeg/192x144/{}".format(icon_base32path) +
+            ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
+            ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
+        )
+
+    items_count = initial_item_count
+    filemeta_list = list()
+    for file in filelist:
+        if file not in excluded_filelist:
+            base32path = shared_code.str_to_base32(str(file.relative_to(shared_code.root_dir)))
+            filemeta = {
+                "link": "/orig/{}".format(base32path),
+                "icon": None,
+                "object_icon": False,
+                "name": shared_code.simplify_filename(file.name),
+                "sources": None,
+                "base32path": base32path,
+                "item_index": items_count,
+                "lazy_load": False,
+                "type": "audio",
+                "is_vp8": False,
+                "suffix": file.suffix,
+                "custom_icon": False
+            }
+            icon_path = pathlib.Path("{}.icon".format(file))
+            if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
+                _icon(file, filemeta)
+            if file.suffix.lower() in image_file_extensions:
+                filemeta["type"] = "picture"
+            elif file.suffix.lower() in video_file_extensions:
+                filemeta["type"] = "video"
+            elif file.suffix.lower() == '.mpd':
+                filemeta['type'] = "DASH"
+                filemeta['link'] = "/{}{}".format(
+                    ('' if dir == shared_code.root_dir else 'browse/'),
+                    str(file.relative_to(shared_code.root_dir))
+                )
+                if icon_path.exists():
+                    _icon(file, filemeta)
+            elif file.suffix.lower() == '.srs':
+                TYPE = pyimglib.decoders.srs.type_detect(file)
+                if TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEO or \
+                        TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEOLOOP:
+                    filemeta['type'] = "video"
+                    filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
+                elif TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.IMAGE:
+                    filemeta['type'] = "picture"
+                    filemeta['link'] = "/image/webp/{}".format(base32path)
+                _icon(file, filemeta)
+            elif file.suffix.lower() == ".m3u8":
+                access_token = shared_code.gen_access_token()
+                filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
+                shared_code.access_tokens[filemeta['link']] = access_token
+                filemeta['link'] += "?access_token={}".format(access_token)
+                if icon_path.exists():
+                    _icon(file, filemeta)
+            if file.suffix == '.mkv':
+                filemeta['link'] = "/vp8/{}".format(base32path)
+                filemeta["is_vp8"] = True
+            elif file.suffix.lower() in {'.jpg', '.jpeg'}:
+                try:
+                    jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
+                    if (jpg.arithmetic_coding()):
+                        filemeta['link'] = "/image/webp/{}".format(base32path)
+                except Exception:
+                    filemeta['link'] = "/image/webp/{}".format(base32path)
+            filemeta_list.append(filemeta)
+            items_count += 1
+    return filemeta_list, items_count
+
