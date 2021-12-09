@@ -49,6 +49,7 @@ def medialib_tag_search():
 
     tags = flask.request.args.getlist('tags')
     page = int(flask.request.args.get('page', 0))
+    order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.DATE_DECREASING.value))
 
     _args = ""
     for key in flask.request.args:
@@ -61,13 +62,14 @@ def medialib_tag_search():
     pagination = filesystem.browse.load_acceleration in \
             {shared_code.enums.LoadAcceleration.PAGINATION, shared_code.enums.LoadAcceleration.BOTH}
 
+
     max_pages = 0
     if pagination:
         filelist = medialib_db.files_by_tag_search.get_files_with_every_tag(
             *tags,
             limit=filesystem.browse.items_per_page + 1,
             offset=filesystem.browse.items_per_page*page,
-            sort_by_date=True
+            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by)
         )
         if CACHED_REQUEST is not None and CACHED_REQUEST == tuple(tags):
             max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
@@ -77,7 +79,9 @@ def medialib_tag_search():
             max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
 
     else:
-        filelist = medialib_db.files_by_tag_search.get_files_with_every_tag(*tags, sort_by_date=True)
+        filelist = medialib_db.files_by_tag_search.get_files_with_every_tag(
+            *tags, order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by)
+        )
 
     items_count = 0
     itemslist.append({
@@ -102,6 +106,7 @@ def medialib_tag_search():
         '_glob': None,
         'url': flask.request.base_url,
         "args": _args,
+        "medialib_sorting": shared_code.get_medialib_sorting_constants_for_template(),
         'enable_external_scripts': shared_code.enable_external_scripts
     }
 

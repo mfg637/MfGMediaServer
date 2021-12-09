@@ -4,6 +4,7 @@ import flask
 import hashlib
 import re
 import urllib
+import medialib_db
 
 
 anonymous_forbidden = True
@@ -18,6 +19,13 @@ def base32_to_str(base32code: str):
 
 def str_to_base32(string: str):
     return base64.b32encode(string.encode("utf-8")).decode("utf-8")
+
+
+def get_medialib_sorting_constants_for_template():
+    return [
+        {"value": sort_order.value, "name": sort_order.name.lower().replace("_", " ")}
+        for sort_order in medialib_db.files_by_tag_search.ORDERING_BY
+    ]
 
 
 def cache_check(path):

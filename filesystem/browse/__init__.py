@@ -1,6 +1,7 @@
 import flask
 import json
 import pathlib
+
 import shared_code
 import shared_code.enums as shared_enums
 import pyimglib
@@ -137,6 +138,7 @@ def browse(dir):
         '_glob': glob_pattern,
         'url': flask.request.base_url,
         "args": "",
+        "medialib_sorting": shared_code.get_medialib_sorting_constants_for_template(),
         'enable_external_scripts': shared_code.enable_external_scripts
     }
     if load_acceleration in {shared_enums.LoadAcceleration.NONE, shared_enums.LoadAcceleration.LAZY_LOAD}:
