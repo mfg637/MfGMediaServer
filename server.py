@@ -100,7 +100,9 @@ def medialib_tag_search():
 
     itemslist.extend(filemeta_list)
 
-    title = "Search query results for {}".format(", ".join([str(tag) for tag in tags]))
+    title = "Search query results for {}".format(
+        ", ".join([str(medialib_db.get_tag_name_by_alias(tag)) for tag in tags])
+    )
     template_kwargs = {
         'title': title,
         '_glob': None,
