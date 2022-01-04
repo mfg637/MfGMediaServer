@@ -54,7 +54,8 @@ def medialib_tag_search():
     _args = ""
     for key in flask.request.args:
         if key != "page":
-            _args += "&{}={}".format(urllib.parse.quote_plus(key), urllib.parse.quote_plus(flask.request.args[key]))
+            for value in flask.request.args.getlist(key):
+                _args += "&{}={}".format(urllib.parse.quote_plus(key), urllib.parse.quote_plus(value))
 
     global page_cache
     itemslist, dirmeta_list, filemeta_list = [], [], []
