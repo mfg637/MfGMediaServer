@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Content metadata for «{{ file_name }}»</title>
+</head>
+<body>
+    <h1>Content metadata for «{{ file_name }}»</h1>
+    {% if item.icon is not none %}
+        <a class="item icon" href="{{ item.link }}" title="{{ item.name }}">
+    {% else %}
+        <a class="item" href="{{ item.link }}" title="{{ item.name }}">
+    {% endif %}
+    {% if item.icon is not none %}
+        {% if item.sources is not none %}
+            <picture>
+            {% for source in item.sources %}
+                <source srcset="{{ source }}"/>
+            {% endfor %}
+        {% endif %}
+        <img src="{{ item.icon }}"/>
+        {% if item.sources is not none %}
+            </picture>
+        {% endif %}
+        <div class="title-wrapper">
+            {{ item.name }}
+        </div>
+    {% endif %}
+    </a>
+            <form action="{{ request.path }}" method="POST">
+
+                <label for="title">Title:</label>
+                <input id="title" type="text" name="content_title" value="{{ content_title }}">
+                <br/>
+
+                <label for="origin">Origin:</label>
+                <input id="origin" type="text" name="origin_name" value="{{ origin_name }}">
+                <br/>
+
+                <label for="origin_id">Origin ID:</label>
+                <input id="origin_id" type="text" name="origin_id" value="{{ origin_id }}">
+                <br/>
+
+                {% if origin_link is not none %}
+                    <a href="{{origin_link}}">Go to origin</a><br/>
+                {% endif %}
+
+                <input type="submit"/>
+            </form>
+</body>
+</html>

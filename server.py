@@ -97,7 +97,7 @@ def medialib_tag_search():
 
     filelist.sort(key=filesystem.browse.extract_mtime_key, reverse=True)
 
-    filemeta_list, items_count = filesystem.browse.file_processor(filelist, excluded_filelist, items_count)
+    filemeta_list, items_count = filesystem.browse.files_processor(filelist, excluded_filelist, items_count)
 
     itemslist.extend(filemeta_list)
 
@@ -291,6 +291,60 @@ def gen_thumbnail(format: str, width, height, pathstr):
         return f
     return file_url_template(body, pathstr, format=format, width=width, height=height)
 
+
+@app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'])
+def get_content_metadata(pathstr):
+    def body(path: pathlib.Path):
+        print()
+
+        ORIGIN_URL_TEMPLATE = {
+            "derpibooru": "https://derpibooru.org/images/{}",
+            "ponybooru": "https://ponybooru.org/images/{}",
+            "twobooru": "https://twibooru.org/{}",
+            "e621": "https://e621.net/posts/{}",
+            "furbooru": "https://furbooru.org/images/{}"
+        }
+        db_query_results = medialib_db.get_file_data_by_file_path(path)
+        template_kwargs = {
+            'content_title': "",
+            'content_id': "",
+            'origin_name': "",
+            'origin_id': "",
+            'origin_link': None
+        }
+
+        if db_query_results is not None:
+            template_kwargs['content_id'] = db_query_results[0]
+            if db_query_results[2] is not None:
+                template_kwargs['content_title'] = db_query_results[2]
+            if db_query_results[-2] is not None:
+                template_kwargs['origin_name'] = db_query_results[-2]
+                if db_query_results[-1] is not None and db_query_results[-2] in ORIGIN_URL_TEMPLATE:
+                    template_kwargs['origin_link'] = \
+                        ORIGIN_URL_TEMPLATE[db_query_results[-2]].format(db_query_results[-1])
+            if db_query_results[-1] is not None:
+                template_kwargs['origin_id'] = db_query_results[-1]
+        if len(flask.request.form):
+            content_new_data = {
+                'content_title': None,
+                'content_id': db_query_results[0],
+                'origin_name': None,
+                'origin_id': None,
+            }
+            for key in flask.request.form:
+                if key in content_new_data and len(flask.request.form[key]):
+                    content_new_data[key] = flask.request.form[key]
+                if key in template_kwargs:
+                    template_kwargs[key] = flask.request.form[key]
+            print(content_new_data)
+            medialib_db.content_update(**content_new_data)
+        return flask.render_template(
+            'content-metadata.html',
+            item=filesystem.browse.get_file_info(path),
+            file_name=path.name,
+            **template_kwargs
+        )
+    return file_url_template(body, pathstr)
 
 @app.route('/browse/<path:pathstr>')
 def browse_dir(pathstr):

@@ -13,7 +13,7 @@
         h1{
             text-align: center;
         }
-        a.item{
+        .item{
             display: block;
             float: left;
             width:192px;
@@ -28,10 +28,13 @@
             display: block;
             margin: 0 auto;
         }
-        .item.icon .title-wrapper{
+        .item .icon .title-wrapper{
+            max-height: 58px;
+        }
+        .item .icon .title-wrapper, a.content-info-link{
+            display: block;
             text-align: center;
             width:192px;
-            height: 58px;
             overflow:hidden;
         }
         .item object{
@@ -87,10 +90,11 @@
     </form>
     <div class="itemsgrid">
     {% for item in itemslist %}
+        <div class="item">
         {% if item.icon is not none %}
-            <a class="item icon" href="{{ item.link }}" title="{{ item.name }}">
+            <a class="icon" href="{{ item.link }}" title="{{ item.name }}">
         {% else %}
-            <a class="item" href="{{ item.link }}" title="{{ item.name }}">
+            <a href="{{ item.link }}" title="{{ item.name }}">
         {% endif %}
         {% if item.icon is not none %}
             <div class="icon-wrapper">
@@ -118,10 +122,14 @@
             {% endif %}
             </div>
         {% endif %}
-        <div class="title-wrapper">
-            {{ item.name }}
+            <div class="title-wrapper">
+                {{ item.name }}
+            </div>
+            </a>
+                <a class="content-info-link" href="/content_metadata/{{ item.base32path }}">
+                    Content info
+                </a>
         </div>
-        </a>
     {% endfor %}
             <div style="clear:left"></div>
     </div>
