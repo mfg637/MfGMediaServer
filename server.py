@@ -295,8 +295,6 @@ def gen_thumbnail(format: str, width, height, pathstr):
 @app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'])
 def get_content_metadata(pathstr):
     def body(path: pathlib.Path):
-        print()
-
         ORIGIN_URL_TEMPLATE = {
             "derpibooru": "https://derpibooru.org/images/{}",
             "ponybooru": "https://ponybooru.org/images/{}",
@@ -304,7 +302,10 @@ def get_content_metadata(pathstr):
             "e621": "https://e621.net/posts/{}",
             "furbooru": "https://furbooru.org/images/{}"
         }
-        db_query_results = medialib_db.get_file_data_by_file_path(path)
+        medialib_db.common.open_connection_if_not_opened()
+        db_query_results = medialib_db.get_file_data_by_file_path(
+            path, auto_open_connection=False
+        )
         template_kwargs = {
             'content_title': "",
             'content_id': "",
@@ -337,11 +338,14 @@ def get_content_metadata(pathstr):
                 if key in template_kwargs:
                     template_kwargs[key] = flask.request.form[key]
             print(content_new_data)
-            medialib_db.content_update(**content_new_data)
+            medialib_db.content_update(auto_open_connection=False, **content_new_data)
+        tags = medialib_db.get_tags_by_content_id(db_query_results[0], auto_open_connection=False)
+        medialib_db.common.close_connection_if_not_closed()
         return flask.render_template(
             'content-metadata.html',
             item=filesystem.browse.get_file_info(path),
             file_name=path.name,
+            tags=tags,
             **template_kwargs
         )
     return file_url_template(body, pathstr)

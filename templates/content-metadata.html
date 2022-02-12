@@ -6,6 +6,7 @@
 </head>
 <body>
     <h1>Content metadata for «{{ file_name }}»</h1>
+    <h2>Preview</h2>
     {% if item.icon is not none %}
         <a class="item icon" href="{{ item.link }}" title="{{ item.name }}">
     {% else %}
@@ -27,6 +28,7 @@
         </div>
     {% endif %}
     </a>
+            <h2>Content metadata edit form</h2>
             <form action="{{ request.path }}" method="POST">
 
                 <label for="title">Title:</label>
@@ -47,5 +49,14 @@
 
                 <input type="submit"/>
             </form>
+            <h2>Content tags list</h2>
+            {% for category, tag_list in tags.items() %}
+                <h3>{{category}}</h3>
+                <ul>
+                {% for tag in tag_list %}
+                    <li>{{tag}}</li>
+                {% endfor %}
+                </ul>
+            {% endfor %}
 </body>
 </html>
