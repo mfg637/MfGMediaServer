@@ -85,21 +85,24 @@ function ImageViewer() {
 
     links = document.querySelectorAll(".item")
     for (let i=0; i<filemeta.length; i++){
+        link = links[filemeta[i].item_index].getElementsByTagName('a')[0];
         links[filemeta[i].item_index].imageID = i;
+        link.imageID = i;
         links[filemeta[i].item_index].ftype = FILETYPE;
+        link.ftype = FILETYPE;
         if (filemeta[i].type === "picture"){
-            links[filemeta[i].item_index].getElementsByTagName('a')[0].onclick=function(){
+            link.onclick=function(){
                 imageViewer.watchPhoto(this.imageID);
                 return false;
             }
         }else if (filemeta[i].type === "video"){
-            links[filemeta[i].item_index].getElementsByTagName('a')[0].onclick=function(){
+            link.onclick=function(){
                 new RainbowVideoPlayer(filemeta[this.imageID]);
                 return false;
             }
         }
         else if (filemeta[i].type === "DASH"){
-            links[filemeta[i].item_index].getElementsByTagName('a')[0].onclick=function(){
+            link.onclick=function(){
                 new RainbowDASHVideoPlayer(filemeta[this.imageID]);
                 return false;
             }
