@@ -339,7 +339,9 @@ def get_content_metadata(pathstr):
                     template_kwargs[key] = flask.request.form[key]
             print(content_new_data)
             medialib_db.content_update(auto_open_connection=False, **content_new_data)
-        tags = medialib_db.get_tags_by_content_id(db_query_results[0], auto_open_connection=False)
+        tags = dict()
+        if db_query_results is not None:
+            tags = medialib_db.get_tags_by_content_id(db_query_results[0], auto_open_connection=False)
         medialib_db.common.close_connection_if_not_closed()
         return flask.render_template(
             'content-metadata.html',
