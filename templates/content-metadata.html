@@ -43,6 +43,14 @@
                 <input id="origin_id" type="text" name="origin_id" value="{{ origin_id }}">
                 <br/>
 
+                <label for="origin_id">Is hidden:</label>
+                <input id="origin_id" type="checkbox" name="hidden"
+                {% if hidden %}
+                       checked
+                {% endif %}
+                >
+                <br/>
+
                 {% if origin_link is not none %}
                     <a href="{{origin_link}}">Go to origin</a><br/>
                 {% endif %}

@@ -64,6 +64,13 @@
             <option value="{{ sort.value }}">{{ sort.name }}</option>
         {% endfor %}
         </select>
+        <br/>
+        Hidden content
+        <select id="ml-hidden_filtering" name="hidden_filtering">
+        {% for filter in medialib_hidden_filtering %}
+            <option value="{{ filter.value }}">{{ filter.name }}</option>
+        {% endfor %}
+        </select>
         <input type="submit" value="Search in Medialib database">
         <script>
             document.getElementById("medialib-add-field").onclick = function () {

@@ -50,6 +50,8 @@ def medialib_tag_search():
     tags = flask.request.args.getlist('tags')
     page = int(flask.request.args.get('page', 0))
     order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.DATE_DECREASING.value))
+    hidden_filtering = int(flask.request.args.get("hidden_filtering",
+                                                  medialib_db.files_by_tag_search.HIDDEN_FILTERING.FILTER.value))
 
     _args = ""
     for key in flask.request.args:
@@ -70,18 +72,24 @@ def medialib_tag_search():
             *tags,
             limit=filesystem.browse.items_per_page + 1,
             offset=filesystem.browse.items_per_page*page,
-            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by)
+            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
+            filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
         )
         if CACHED_REQUEST is not None and CACHED_REQUEST == tuple(tags):
             max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
         else:
             CACHED_REQUEST = tuple(tags)
-            NUMBER_OF_ITEMS = medialib_db.files_by_tag_search.count_files_with_every_tag(*tags)
+            NUMBER_OF_ITEMS = medialib_db.files_by_tag_search.count_files_with_every_tag(
+                *tags,
+                filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
+            )
             max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
 
     else:
         filelist = medialib_db.files_by_tag_search.get_files_with_every_tag(
-            *tags, order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by)
+            *tags,
+            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
+            filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
         )
 
     items_count = 0
@@ -108,8 +116,9 @@ def medialib_tag_search():
         'title': title,
         '_glob': None,
         'url': flask.request.base_url,
-        "args": _args,
-        "medialib_sorting": shared_code.get_medialib_sorting_constants_for_template(),
+        'args': _args,
+        'medialib_sorting': shared_code.get_medialib_sorting_constants_for_template(),
+        'medialib_hidden_filtering': medialib_db.files_by_tag_search.HIDDEN_FILTERING,
         'enable_external_scripts': shared_code.enable_external_scripts
     }
 
@@ -298,7 +307,7 @@ def get_content_metadata(pathstr):
         ORIGIN_URL_TEMPLATE = {
             "derpibooru": "https://derpibooru.org/images/{}",
             "ponybooru": "https://ponybooru.org/images/{}",
-            "twobooru": "https://twibooru.org/{}",
+            "twibooru": "https://twibooru.org/{}",
             "e621": "https://e621.net/posts/{}",
             "furbooru": "https://furbooru.org/images/{}"
         }
@@ -311,32 +320,37 @@ def get_content_metadata(pathstr):
             'content_id': "",
             'origin_name': "",
             'origin_id': "",
-            'origin_link': None
+            'origin_link': None,
+            'hidden': False,
         }
 
         if db_query_results is not None:
             template_kwargs['content_id'] = db_query_results[0]
             if db_query_results[2] is not None:
                 template_kwargs['content_title'] = db_query_results[2]
-            if db_query_results[-2] is not None:
-                template_kwargs['origin_name'] = db_query_results[-2]
-                if db_query_results[-1] is not None and db_query_results[-2] in ORIGIN_URL_TEMPLATE:
+            if db_query_results[-3] is not None:
+                template_kwargs['origin_name'] = db_query_results[-3]
+                if db_query_results[-2] is not None and db_query_results[-3] in ORIGIN_URL_TEMPLATE:
                     template_kwargs['origin_link'] = \
-                        ORIGIN_URL_TEMPLATE[db_query_results[-2]].format(db_query_results[-1])
-            if db_query_results[-1] is not None:
-                template_kwargs['origin_id'] = db_query_results[-1]
+                        ORIGIN_URL_TEMPLATE[db_query_results[-3]].format(db_query_results[-2])
+            if db_query_results[-2] is not None:
+                template_kwargs['origin_id'] = db_query_results[-2]
+            template_kwargs['hidden'] = bool(db_query_results[-1])
         if len(flask.request.form):
             content_new_data = {
                 'content_title': None,
                 'content_id': db_query_results[0],
                 'origin_name': None,
                 'origin_id': None,
+                'hidden': False,
             }
             for key in flask.request.form:
                 if key in content_new_data and len(flask.request.form[key]):
                     content_new_data[key] = flask.request.form[key]
                 if key in template_kwargs:
                     template_kwargs[key] = flask.request.form[key]
+            if content_new_data['hidden'] == 'on':
+                content_new_data['hidden'] = True
             print(content_new_data)
             medialib_db.content_update(auto_open_connection=False, **content_new_data)
         tags = dict()
@@ -351,6 +365,7 @@ def get_content_metadata(pathstr):
             **template_kwargs
         )
     return file_url_template(body, pathstr)
+
 
 @app.route('/browse/<path:pathstr>')
 def browse_dir(pathstr):
