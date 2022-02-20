@@ -322,6 +322,7 @@ def get_content_metadata(pathstr):
             'origin_id': "",
             'origin_link': None,
             'hidden': False,
+            'description': '',
         }
 
         if db_query_results is not None:
@@ -335,6 +336,8 @@ def get_content_metadata(pathstr):
                         ORIGIN_URL_TEMPLATE[db_query_results[-3]].format(db_query_results[-2])
             if db_query_results[-2] is not None:
                 template_kwargs['origin_id'] = db_query_results[-2]
+            if db_query_results[4] is not None:
+                template_kwargs['description'] = db_query_results[4]
             template_kwargs['hidden'] = bool(db_query_results[-1])
         if len(flask.request.form):
             content_new_data = {
@@ -343,12 +346,13 @@ def get_content_metadata(pathstr):
                 'origin_name': None,
                 'origin_id': None,
                 'hidden': False,
+                'description': None,
             }
             for key in flask.request.form:
-                if key in content_new_data and len(flask.request.form[key]):
-                    content_new_data[key] = flask.request.form[key]
+                if key in content_new_data and len(flask.request.form[key].strip()):
+                    content_new_data[key] = flask.request.form[key].strip()
                 if key in template_kwargs:
-                    template_kwargs[key] = flask.request.form[key]
+                    template_kwargs[key] = flask.request.form[key].strip()
             if content_new_data['hidden'] == 'on':
                 content_new_data['hidden'] = True
             print(content_new_data)
