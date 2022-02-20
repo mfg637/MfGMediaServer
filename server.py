@@ -47,7 +47,9 @@ def medialib_tag_search():
     global CACHED_REQUEST
     shared_code.login_validation()
 
-    tags = flask.request.args.getlist('tags')
+    tag = flask.request.args.getlist('tags')
+    not_tag = flask.request.args.getlist('not')
+    tags = [{"not": bool(int(not_tag[i])), "title": tag[i]} for i in range(len(tag))]
     page = int(flask.request.args.get('page', 0))
     order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.DATE_DECREASING.value))
     hidden_filtering = int(flask.request.args.get("hidden_filtering",
@@ -110,7 +112,7 @@ def medialib_tag_search():
     itemslist.extend(filemeta_list)
 
     title = "Search query results for {}".format(
-        ", ".join([str(medialib_db.get_tag_name_by_alias(tag)) for tag in tags])
+        ", ".join([(("not " if tag["not"] else "") + str(medialib_db.get_tag_name_by_alias(tag["title"]))) for tag in tags])
     )
     template_kwargs = {
         'title': title,

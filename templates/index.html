@@ -55,7 +55,12 @@
     <form class="medialib-search-form" action="/medialib-tag-search">
         Put your tags in fields below:<br/>
         <div id="fields-area">
-            <div class="field"><input type="text" name="tags"/></div>
+            <div class="field">
+                <input type="checkbox" name="not" value="1" id="not_1_check">
+                <input type="hidden" name="not" value="0" id="not_1_hidden">
+                <label for="not_1_check">NOT</label>
+                <input type="text" name="tags"/>
+            </div>
         </div>
         <button id="medialib-add-field">Type more tags</button><br>
         <label for="ml-sorting-order">Sort by:</label>
@@ -73,13 +78,45 @@
         </select>
         <input type="submit" value="Search in Medialib database">
         <script>
+            let not_checkbox_1 = document.getElementById("not_1_check");
+            var not_hidden_1 = document.getElementById("not_1_hidden");
+            not_checkbox_1.onchange = function () {
+                not_hidden_1.disabled = this.checked;
+            }
+            var fields_counter = 1;
             document.getElementById("medialib-add-field").onclick = function () {
                 wrapper = document.createElement("div");
-                wrapper.classList.add("field")
-                field = document.createElement("input");
-                field.type = "text";
-                field.name = "tags";
-                wrapper.appendChild(field)
+                wrapper.classList.add("field");
+                not_hidden = document.createElement("input");
+                not_hidden.type = "hidden";
+                not_hidden.name = "not";
+                not_hidden.value = "0";
+                not_hidden.disabled = false;
+                wrapper.appendChild(not_hidden);
+                not_checkbox = document.createElement("input");
+                not_checkbox.type = "checkbox";
+                not_checkbox.name = "not";
+                not_checkbox.value = "1";
+                not_checkbox.hidden_field = not_hidden;
+                fields_counter += 1;
+                let not_field_id = "not_"+fields_counter+"_check";
+                not_checkbox.id = not_field_id;
+                not_checkbox.onchange = function () {
+                    this.hidden_field.disabled = this.checked;
+                }
+                wrapper.appendChild(not_checkbox);
+                space_character = document.createTextNode(" ");
+                wrapper.appendChild(space_character);
+                not_label = document.createElement("label");
+                not_label.htmlFor = not_field_id;
+                not_label.innerText = "NOT";
+                wrapper.appendChild(not_label);
+                space_character2 = document.createTextNode(" ");
+                wrapper.appendChild(space_character2);
+                tag_field = document.createElement("input");
+                tag_field.type = "text";
+                tag_field.name = "tags";
+                wrapper.appendChild(tag_field)
                 delete_button = document.createElement("button");
                 delete_button.innerText = "Delete field";
                 delete_button.onclick = function () {
