@@ -55,12 +55,82 @@
                 >
                 <br/>
 
-                {% if origin_link is not none %}
-                    <a href="{{origin_link}}">Go to origin</a><br/>
-                {% endif %}
+                <h3>Add new tags</h3>
+
+                <div id="tags_fields_wrapper"></div>
+                <button id="add_tag_fields_btn">Add tag…</button>
 
                 <input type="submit"/>
             </form>
+            <script>
+                tags_wrappers = document.getElementById("tags_fields_wrapper");
+                add_tag_button = document.getElementById("add_tag_fields_btn");
+
+                var tag_counter = 0;
+
+                TAG_CATEGORY = [
+                    'artist',
+                    'set',
+                    'copyright',
+                    'original character',
+                    'rating',
+                    'species',
+                    'content',
+                    'character'
+                ]
+
+                add_tag_button.onclick = function () {
+                    let tag_wrapper = document.createElement("div");
+                    let tag_name_label = document.createElement("label");
+                    let tag_name_id = "tag_name_" + tag_counter;
+                    tag_name_label.htmlFor = tag_name_id;
+                    tag_name_label.innerText = "Name: ";
+                    let tag_name_field = document.createElement("input");
+                    tag_name_field.type = "text";
+                    tag_name_field.name = "tag_name";
+                    tag_name_field.id = tag_name_id;
+                    tag_wrapper.appendChild(tag_name_label);
+                    tag_wrapper.appendChild(tag_name_field);
+
+                    let tag_category_label = document.createElement("label");
+                    let tag_category_id = "tag_category_" + tag_counter;
+                    tag_category_label.htmlFor = tag_category_id;
+                    tag_category_label.innerText = "Category: ";
+                    let tag_category_field = document.createElement("select");
+                    tag_category_field.name = "tag_category";
+                    tag_category_field.id = tag_category_id;
+                    for (let tagCategoryElement of TAG_CATEGORY) {
+                        let optionElement = document.createElement("option");
+                        optionElement.innerText = tagCategoryElement;
+                        tag_category_field.appendChild(optionElement);
+                    }
+                    tag_wrapper.appendChild(tag_category_label);
+                    tag_wrapper.appendChild(tag_category_field);
+
+                    let tag_alias_label = document.createElement("label");
+                    let tag_alias_id = "tag_alias_" + tag_counter;
+                    tag_alias_label.htmlFor = tag_alias_id;
+                    tag_alias_label.innerText = "Alias: ";
+                    let tag_alias_field = document.createElement("input");
+                    tag_alias_field.type = "text";
+                    tag_alias_field.name = "tag_alias";
+                    tag_alias_field.id = tag_alias_id;
+                    tag_wrapper.appendChild(tag_alias_label);
+                    tag_wrapper.appendChild(tag_alias_field);
+
+                    let delete_button = document.createElement("button");
+                    delete_button.wrapper_context = tag_wrapper;
+                    delete_button.innerText = "Delete tag";
+                    delete_button.onclick = function () {
+                        tags_wrappers.removeChild(this.wrapper_context);
+                        return false;
+                    }
+                    tag_wrapper.appendChild(delete_button);
+                    tags_wrappers.appendChild(tag_wrapper);
+                    tag_counter++;
+                    return false;
+                }
+            </script>
             <h2>Content tags list</h2>
             {% for category, tag_list in tags.items() %}
                 <h3>{{category}}</h3>

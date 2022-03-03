@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import datetime
 import json
 import subprocess
 import tempfile
@@ -306,6 +306,25 @@ def gen_thumbnail(format: str, width, height, pathstr):
 @app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'])
 def get_content_metadata(pathstr):
     def body(path: pathlib.Path):
+        def detect_content_type(path: pathlib.Path):
+            if path.suffix in filesystem.browse.image_file_extensions:
+                return "image"
+            elif path.suffix in filesystem.browse.video_file_extensions:
+                data = pyimglib.decoders.ffmpeg.probe(path)
+                if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
+                    return "video"
+                else:
+                    return "video-loop"
+            elif path.suffix in filesystem.browse.audio_file_extensions:
+                return "audio"
+            elif path.suffix == ".srs":
+                f = path.open("r")
+                data = json.load(f)
+                f.close()
+                return medialib_db.srs_indexer.get_content_type(data)
+            else:
+                raise Exception("undetected content type", path.suffix, path)
+
         ORIGIN_URL_TEMPLATE = {
             "derpibooru": "https://derpibooru.org/images/{}",
             "ponybooru": "https://ponybooru.org/images/{}",
@@ -344,12 +363,19 @@ def get_content_metadata(pathstr):
         if len(flask.request.form):
             content_new_data = {
                 'content_title': None,
-                'content_id': db_query_results[0],
+                'content_id': None,
                 'origin_name': None,
                 'origin_id': None,
                 'hidden': False,
                 'description': None,
             }
+            if db_query_results is not None:
+                content_new_data['content_id'] = db_query_results[0]
+            else:
+                content_new_data['file_path'] = path
+                content_new_data['content_type'] = detect_content_type(path)
+                content_new_data['addition_date'] = \
+                    datetime.datetime.fromtimestamp(path.stat().st_mtime)
             for key in flask.request.form:
                 if key in content_new_data and len(flask.request.form[key].strip()):
                     content_new_data[key] = flask.request.form[key].strip()
@@ -358,7 +384,21 @@ def get_content_metadata(pathstr):
             if content_new_data['hidden'] == 'on':
                 content_new_data['hidden'] = True
             print(content_new_data)
-            medialib_db.content_update(auto_open_connection=False, **content_new_data)
+            tag_names = flask.request.form.getlist('tag_name')
+            tag_categories = flask.request.form.getlist('tag_category')
+            tag_aliases = flask.request.form.getlist('tag_alias')
+            for i, tag_alias in enumerate(tag_aliases):
+                if len(tag_alias) == 0:
+                    tag_aliases[i] = tag_names[i]
+            tags = list(zip(tag_names, tag_categories, tag_aliases))
+            print(tags)
+            content_id = template_kwargs['content_id']
+            if db_query_results is not None:
+                medialib_db.content_update(auto_open_connection=False, **content_new_data)
+            else:
+                content_id = medialib_db.content_regster(**content_new_data, auto_open_connection=False)
+            print(content_id)
+            medialib_db.add_tags_for_content(content_id, tags, auto_open_connection=False)
         tags = dict()
         if db_query_results is not None:
             tags = medialib_db.get_tags_by_content_id(db_query_results[0], auto_open_connection=False)
