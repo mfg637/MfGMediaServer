@@ -345,9 +345,10 @@ def get_content_metadata(pathstr):
             'hidden': False,
             'description': '',
         }
-
+        content_id = None
         if db_query_results is not None:
             template_kwargs['content_id'] = db_query_results[0]
+            content_id = db_query_results[0]
             if db_query_results[2] is not None:
                 template_kwargs['content_title'] = db_query_results[2]
             if db_query_results[-3] is not None:
@@ -392,7 +393,6 @@ def get_content_metadata(pathstr):
                     tag_aliases[i] = tag_names[i]
             tags = list(zip(tag_names, tag_categories, tag_aliases))
             print(tags)
-            content_id = template_kwargs['content_id']
             if db_query_results is not None:
                 medialib_db.content_update(auto_open_connection=False, **content_new_data)
             else:
@@ -400,8 +400,9 @@ def get_content_metadata(pathstr):
             print(content_id)
             medialib_db.add_tags_for_content(content_id, tags, auto_open_connection=False)
         tags = dict()
-        if db_query_results is not None:
-            tags = medialib_db.get_tags_by_content_id(db_query_results[0], auto_open_connection=False)
+        if content_id is not None:
+            tags = medialib_db.get_tags_by_content_id(content_id, auto_open_connection=False)
+        medialib_db.common.connection.commit()
         medialib_db.common.close_connection_if_not_closed()
         return flask.render_template(
             'content-metadata.html',

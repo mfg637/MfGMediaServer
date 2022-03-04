@@ -32,10 +32,10 @@ page_cache = PageCache(None, None, None)
 
 image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif', '.jxl'}
 video_file_extensions = {'.mkv', '.mp4', '.webm'}
+audio_file_extensions = {'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac"}
 supported_file_extensions = \
-    image_file_extensions.union(video_file_extensions) \
-        .union({'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac", ".m3u8"}) \
-        .union({'.mpd', '.srs'})  # dash manifest
+    image_file_extensions.union(video_file_extensions).union(audio_file_extensions)\
+        .union({'.mpd', '.srs', ".m3u8"})
 
 
 def browse_folder(folder):
