@@ -388,6 +388,9 @@ def get_content_metadata(pathstr):
             tag_names = flask.request.form.getlist('tag_name')
             tag_categories = flask.request.form.getlist('tag_category')
             tag_aliases = flask.request.form.getlist('tag_alias')
+            for i, tag_category in enumerate(tag_categories):
+                if len(tag_category) == 0:
+                    tag_categories[i] = None
             for i, tag_alias in enumerate(tag_aliases):
                 if len(tag_alias) == 0:
                     tag_aliases[i] = tag_names[i]
