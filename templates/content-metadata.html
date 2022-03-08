@@ -2,7 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Content metadata for «{{ file_name }}»</title>
+    <style>
+        .origin_link{
+            display: inline-block;
+            margin: 1em 0;
+        }
+
+        textarea{
+            max-width: 100%;
+        }
+    </style>
 </head>
 <body>
     <h1>Content metadata for «{{ file_name }}»</h1>
@@ -58,7 +69,11 @@
                 <h3>Add new tags</h3>
 
                 <div id="tags_fields_wrapper"></div>
-                <button id="add_tag_fields_btn">Add tag…</button>
+                <button id="add_tag_fields_btn">Add tag…</button><br/>
+
+                {% if origin_link is not none %}
+                    <a href="{{origin_link}}" class="origin_link">Go to origin</a><br/>
+                {% endif %}
 
                 <input type="submit"/>
             </form>
