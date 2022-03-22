@@ -270,33 +270,64 @@ def gen_thumbnail(format: str, width, height, pathstr):
             _img = img.next_frame()
             img.close()
             img = _img
-        if allow_origin and img.format == "WEBP" and (img.is_animated or (img.width <= width and img.height <= height)):
-            return flask.redirect(
-                "https://{}:{}/orig/{}".format(
-                    config.host_name,
-                    config.port,
-                    pathstr
+        f = None
+        def set_f(img, format):
+            db_connection = None
+            if config.thumbnail_cache_dir is not None and len(medialib_db.config.db_name):
+                MIME_TYPES = {
+                    "jpeg": "image/jpeg",
+                    "webp": "image/webp"
+                }
+                db_connection = medialib_db.common.make_connection()
+                thumbnail_file_path, thumbnail_format = medialib_db.get_thumbnail(path, width, height, format, db_connection)
+                if thumbnail_file_path is not None:
+                    print("thumbnail filepath", thumbnail_file_path)
+                    return flask.send_file(
+                        config.thumbnail_cache_dir.joinpath(thumbnail_file_path),
+                        mimetype=MIME_TYPES[thumbnail_format],
+                        max_age=24 * 60 * 60,
+                        last_modified=path.stat().st_mtime,
+                    )
+            if allow_origin and img.format == "WEBP" and (img.is_animated or (img.width <= width and img.height <= height)):
+                return flask.redirect(
+                    "https://{}:{}/orig/{}".format(
+                        config.host_name,
+                        config.port,
+                        pathstr
+                    )
                 )
+            img = img.convert(mode='RGBA')
+            img.thumbnail((width, height), PIL.Image.LANCZOS)
+            buffer = io.BytesIO()
+            thumbnail_file_path = None
+            mime = ''
+            if format.lower() == 'webp':
+                img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
+                mime = "image/webp"
+                format = "webp"
+            else:
+                img = img.convert(mode='RGB')
+                img.save(buffer, format="JPEG", quality=90)
+                mime = "image/jpeg"
+                format = "jpeg"
+            img.close()
+            buffer.seek(0)
+            if config.thumbnail_cache_dir is not None and len(medialib_db.config.db_name):
+                content_id, thumbnail_file_name = medialib_db.register_thumbnail(path, width, height, format, db_connection)
+                thumbnail_file_path = pathlib.Path(config.thumbnail_cache_dir).joinpath(thumbnail_file_name)
+                f = thumbnail_file_path.open("bw")
+                f.write(buffer.getvalue())
+                f.close()
+                buffer.close()
+                buffer = thumbnail_file_path
+                db_connection.close()
+            return flask.send_file(
+                buffer,
+                mimetype=mime,
+                max_age=24 * 60 * 60,
+                last_modified=path.stat().st_mtime,
             )
-        img = img.convert(mode='RGBA')
-        img.thumbnail((width, height), PIL.Image.LANCZOS)
-        buffer = io.BytesIO()
-        mime = ''
-        if format.lower() == 'webp':
-            img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
-            mime = "image/webp"
-        else:
-            img = img.convert(mode='RGB')
-            img.save(buffer, format="JPEG", quality=90)
-            mime = "image/jpeg"
-        img.close()
-        buffer.seek(0)
-        f = flask.send_file(
-            buffer,
-            mimetype=mime,
-            max_age=24 * 60 * 60,
-            last_modified=path.stat().st_mtime,
-        )
+        f = set_f(img, format)
         if src_hash is not None:
             f.set_etag(src_hash)
         return f
