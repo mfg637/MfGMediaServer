@@ -314,12 +314,13 @@ def gen_thumbnail(format: str, width, height, pathstr):
             buffer.seek(0)
             if config.thumbnail_cache_dir is not None and len(medialib_db.config.db_name):
                 content_id, thumbnail_file_name = medialib_db.register_thumbnail(path, width, height, format, db_connection)
-                thumbnail_file_path = pathlib.Path(config.thumbnail_cache_dir).joinpath(thumbnail_file_name)
-                f = thumbnail_file_path.open("bw")
-                f.write(buffer.getvalue())
-                f.close()
-                buffer.close()
-                buffer = thumbnail_file_path
+                if thumbnail_file_name is not None:
+                    thumbnail_file_path = pathlib.Path(config.thumbnail_cache_dir).joinpath(thumbnail_file_name)
+                    f = thumbnail_file_path.open("bw")
+                    f.write(buffer.getvalue())
+                    f.close()
+                    buffer.close()
+                    buffer = thumbnail_file_path
                 db_connection.close()
             return flask.send_file(
                 buffer,
