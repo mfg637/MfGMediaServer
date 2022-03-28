@@ -105,8 +105,6 @@ def medialib_tag_search():
 
     excluded_filelist = []
 
-    filelist.sort(key=filesystem.browse.extract_mtime_key, reverse=True)
-
     filemeta_list, items_count = filesystem.browse.files_processor(filelist, excluded_filelist, items_count)
 
     itemslist.extend(filemeta_list)
