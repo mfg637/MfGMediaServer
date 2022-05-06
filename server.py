@@ -429,7 +429,7 @@ def get_content_metadata(pathstr):
             if db_query_results is not None:
                 medialib_db.content_update(auto_open_connection=False, **content_new_data)
             else:
-                content_id = medialib_db.content_regster(**content_new_data, auto_open_connection=False)
+                content_id = medialib_db.content_register(**content_new_data, auto_open_connection=False)
             print(content_id)
             medialib_db.add_tags_for_content(content_id, tags, auto_open_connection=False)
         tags = dict()
