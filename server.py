@@ -360,7 +360,8 @@ def get_content_metadata(pathstr):
             "ponybooru": "https://ponybooru.org/images/{}",
             "twibooru": "https://twibooru.org/{}",
             "e621": "https://e621.net/posts/{}",
-            "furbooru": "https://furbooru.org/images/{}"
+            "furbooru": "https://furbooru.org/images/{}",
+            "furaffinity": "https://www.furaffinity.net/view/{}/"
         }
         medialib_db.common.open_connection_if_not_opened()
         db_query_results = medialib_db.get_file_data_by_file_path(
