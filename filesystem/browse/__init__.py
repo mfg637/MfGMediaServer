@@ -256,7 +256,7 @@ def get_file_info(file: pathlib.Path, items_count=0):
             filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
         elif TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.IMAGE:
             filemeta['type'] = "picture"
-            filemeta['link'] = "/image/webp/{}".format(base32path)
+            filemeta['link'] = "/image/autodetect/{}".format(base32path)
         _icon(file, filemeta)
     elif file.suffix.lower() == ".m3u8":
         access_token = shared_code.gen_access_token()

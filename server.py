@@ -176,20 +176,28 @@ def transcode_image(format: str, pathstr):
         if status_code is not None:
             return status_code
         img = pyimglib.decoders.open_image(path)
+        possible_formats = ("webp",)
+        LEVEL = int(flask.session['clevel'])
+        if format.lower() == "autodetect":
+            format = "webp"
+            if LEVEL <= 1:
+                possible_formats = ("avif", "webp")
+            if LEVEL == 4:
+                possible_formats = ("jpeg", "png", "gif")
+                format = "jpeg"
         if isinstance(img, pyimglib.decoders.srs.ClImage):
-            lods = img.progressive_lods()
+            lods = img.get_image_file_list()
             current_lod = lods.pop(0)
-            current_lod_img = pyimglib.decoders.open_image(current_lod)
+            current_lod_format = pyimglib.decoders.get_image_format(current_lod)
+            print("select srs lod", current_lod_format, possible_formats, LEVEL)
             while len(lods):
-                if isinstance(current_lod_img, pyimglib.decoders.frames_stream.FramesStream):
-                    current_lod_img = current_lod_img.next_frame()
-                if current_lod_img.format != format.upper():
+                if current_lod_format not in possible_formats:
                     current_lod = lods.pop()
-                    current_lod_img.close()
-                    current_lod_img = pyimglib.decoders.open_image(current_lod)
+                    current_lod_format = pyimglib.decoders.get_image_format(current_lod)
                 else:
                     break
-            if current_lod_img.format == format.upper():
+            if current_lod_format in possible_formats:
+                print("current_lod", current_lod_format, possible_formats, LEVEL)
                 base32path = shared_code.str_to_base32(str(current_lod))
                 return flask.redirect(
                     "https://{}:{}/orig/{}".format(
@@ -199,7 +207,7 @@ def transcode_image(format: str, pathstr):
                     )
                 )
             else:
-                img = current_lod_img
+                img = pyimglib.decoders.open_image(current_lod)
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
