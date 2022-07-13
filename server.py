@@ -261,7 +261,7 @@ def gen_thumbnail(format: str, width, height, pathstr):
                     current_lod_img = pyimglib.decoders.open_image(current_lod)
                 else:
                     break
-            if current_lod_img.format == "WEBP" and allow_origin:
+            if current_lod_img.format == "webp" and allow_origin:
                 base32path = shared_code.str_to_base32(str(current_lod))
                 return flask.redirect(
                     "https://{}:{}/orig/{}".format(
