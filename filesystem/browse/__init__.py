@@ -196,28 +196,38 @@ def files_processor(filelist, excluded_filelist, initial_item_count):
     return filemeta_list, items_count
 
 
+def db_content_processing(content_list, initial_item_count):
+    items_count = initial_item_count
+    content_data_list = list()
+    for file in content_list:
+        print(file)
+        file_data, items_count = get_db_content_info(file[0], file[1], file[2], items_count)
+        content_data_list.append(file_data)
+    return content_data_list
+
+
+def _icon(file, filemeta):
+    filemeta["lazy_load"] = load_acceleration in {
+        shared_enums.LoadAcceleration.LAZY_LOAD,
+        shared_enums.LoadAcceleration.BOTH
+    }
+    icon_base32path = filemeta['base32path']
+    icon_path = pathlib.Path("{}.icon".format(file))
+    if icon_path.exists():
+        filemeta["custom_icon"] = True
+        icon_base32path = shared_code.str_to_base32(str(icon_path.relative_to(shared_code.root_dir)))
+    filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base32path)
+    filemeta['sources'] = (
+        "/thumbnail/webp/192x144/{}".format(icon_base32path) +
+        ", /thumbnail/webp/384x288/{} 2x".format(icon_base32path) +
+        ", /thumbnail/webp/768x576/{} 4x".format(icon_base32path),
+        "/thumbnail/jpeg/192x144/{}".format(icon_base32path) +
+        ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
+        ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
+    )
+
+
 def get_file_info(file: pathlib.Path, items_count=0):
-
-    def _icon(file, filemeta):
-        filemeta["lazy_load"] = load_acceleration in {
-            shared_enums.LoadAcceleration.LAZY_LOAD,
-            shared_enums.LoadAcceleration.BOTH
-        }
-        icon_base32path = filemeta['base32path']
-        icon_path = pathlib.Path("{}.icon".format(file))
-        if icon_path.exists():
-            filemeta["custom_icon"] = True
-            icon_base32path = shared_code.str_to_base32(str(icon_path.relative_to(shared_code.root_dir)))
-        filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base32path)
-        filemeta['sources'] = (
-            "/thumbnail/webp/192x144/{}".format(icon_base32path) +
-            ", /thumbnail/webp/384x288/{} 2x".format(icon_base32path) +
-            ", /thumbnail/webp/768x576/{} 4x".format(icon_base32path),
-            "/thumbnail/jpeg/192x144/{}".format(icon_base32path) +
-            ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
-            ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
-        )
-
     base32path = shared_code.str_to_base32(str(file))
     filemeta = {
         "link": "/orig/{}".format(base32path),
@@ -276,4 +286,61 @@ def get_file_info(file: pathlib.Path, items_count=0):
         except Exception:
             filemeta['link'] = "/image/webp/{}".format(base32path)
     return filemeta
+
+
+def get_db_content_info(file_str: str, content_type, title, items_count=0):
+    file = pathlib.Path(file_str)
+    base32path = shared_code.str_to_base32(str(file))
+    filemeta = {
+        "link": "/orig/{}".format(base32path),
+        "icon": None,
+        "object_icon": False,
+        "name": title,
+        "sources": None,
+        "base32path": base32path,
+        "item_index": items_count,
+        "lazy_load": False,
+        "is_vp8": False,
+        "suffix": file.suffix,
+        "custom_icon": False,
+        "type": content_type
+    }
+    icon_path = pathlib.Path("{}.icon".format(file))
+    if content_type in ("image", "video", "video-loop"):
+        _icon(file, filemeta)
+    if file.suffix.lower() == '.mpd':
+        filemeta['type'] = "DASH"
+        filemeta['link'] = "/{}{}".format(
+            ('' if dir == shared_code.root_dir else 'browse/'),
+            str(file.relative_to(shared_code.root_dir))
+        )
+        if icon_path.exists():
+            _icon(file, filemeta)
+    elif file.suffix.lower() == '.srs':
+        TYPE = pyimglib.decoders.srs.type_detect(file)
+        if content_type in ("video", "video-loop"):
+            filemeta['type'] = "video"
+            filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
+        elif content_type == "image":
+            filemeta['type'] = "picture"
+            filemeta['link'] = "/image/autodetect/{}".format(base32path)
+        _icon(file, filemeta)
+    elif file.suffix.lower() == ".m3u8":
+        access_token = shared_code.gen_access_token()
+        filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
+        shared_code.access_tokens[filemeta['link']] = access_token
+        filemeta['link'] += "?access_token={}".format(access_token)
+        if icon_path.exists():
+            _icon(file, filemeta)
+    if file.suffix == '.mkv':
+        filemeta['link'] = "/vp8/{}".format(base32path)
+        filemeta["is_vp8"] = True
+    elif file.suffix.lower() in {'.jpg', '.jpeg'}:
+        try:
+            jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
+            if (jpg.arithmetic_coding()):
+                filemeta['link'] = "/image/webp/{}".format(base32path)
+        except Exception:
+            filemeta['link'] = "/image/webp/{}".format(base32path)
+    return filemeta, items_count + 1
 

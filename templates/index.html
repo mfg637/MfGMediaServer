@@ -167,7 +167,11 @@
             </div>
         {% endif %}
             <div class="title-wrapper">
-                {{ item.name }}
+                {% if item.name is not none %}
+                    {{ item.name }}
+                {%else%}
+                    Untitled
+                {% endif %}
             </div>
             </a>
                 <a class="content-info-link" href="/content_metadata/{{ item.base32path }}">

@@ -175,7 +175,9 @@ function ImageViewer() {
 
 
     caption.innerHTML = ( +id + 1) + '/' +
-                        photolist.length + '<br /><span class="title">' +
+                        photolist.length;
+    if (photolist[id].name !== null)
+      caption.innerHTML += '<br /><span class="title">' +
                         photolist[id].name + '</span>';
     if (id>0) {
       prev.style.display='block';

@@ -62,7 +62,7 @@ def medialib_tag_search():
                 _args += "&{}={}".format(urllib.parse.quote_plus(key), urllib.parse.quote_plus(value))
 
     global page_cache
-    itemslist, dirmeta_list, filemeta_list = [], [], []
+    itemslist, dirmeta_list, content_list = [], [], []
 
     pagination = filesystem.browse.load_acceleration in \
             {shared_code.enums.LoadAcceleration.PAGINATION, shared_code.enums.LoadAcceleration.BOTH}
@@ -70,7 +70,7 @@ def medialib_tag_search():
 
     max_pages = 0
     if pagination:
-        filelist = medialib_db.files_by_tag_search.get_files_with_every_tag(
+        raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
             *tags,
             limit=filesystem.browse.items_per_page + 1,
             offset=filesystem.browse.items_per_page*page,
@@ -88,7 +88,7 @@ def medialib_tag_search():
             max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
 
     else:
-        filelist = medialib_db.files_by_tag_search.get_files_with_every_tag(
+        raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
             *tags,
             order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
             filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
@@ -103,11 +103,9 @@ def medialib_tag_search():
     itemslist[0]["link"] = "/"
     items_count += 1
 
-    excluded_filelist = []
+    content_list = filesystem.browse.db_content_processing(raw_content_list, items_count)
 
-    filemeta_list, items_count = filesystem.browse.files_processor(filelist, excluded_filelist, items_count)
-
-    itemslist.extend(filemeta_list)
+    itemslist.extend(content_list)
 
     title = "Search query results for {}".format(
         ", ".join([(("not " if tag["not"] else "") + str(medialib_db.get_tag_name_by_alias(tag["title"]))) for tag in tags])
@@ -126,7 +124,7 @@ def medialib_tag_search():
         'index.html',
         itemslist=itemslist,
         dirmeta=json.dumps(dirmeta_list),
-        filemeta=json.dumps(filemeta_list),
+        filemeta=json.dumps(content_list),
         pagination=pagination,
         page=page,
         max_pages=max_pages,
