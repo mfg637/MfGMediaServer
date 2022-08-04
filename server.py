@@ -743,6 +743,8 @@ def gen_m3u8(pathstr):
             for line in f:
                 if '#' in line:
                     buffer.write(line)
+                elif line.strip() == "":
+                    buffer.write(line)
                 else:
                     base32path = shared_code.str_to_base32(str(path.parent.joinpath(line)).rstrip())
                     base_url = "https://{}:{}/orig/{}".format(

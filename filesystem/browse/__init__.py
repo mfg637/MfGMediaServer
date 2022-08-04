@@ -312,7 +312,7 @@ def get_db_content_info(file_str: str, content_type, title, items_count=0):
         filemeta['type'] = "DASH"
         filemeta['link'] = "/{}{}".format(
             ('' if dir == shared_code.root_dir else 'browse/'),
-            str(file.relative_to(shared_code.root_dir))
+            str(file)
         )
         if icon_path.exists():
             _icon(file, filemeta)
