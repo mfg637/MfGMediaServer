@@ -1,3 +1,5 @@
+import pathlib
+
 from . import enums
 import base64
 import flask
@@ -67,4 +69,4 @@ def gen_access_token():
     return access_token
 
 
-root_dir = None
+root_dir: pathlib.Path = None

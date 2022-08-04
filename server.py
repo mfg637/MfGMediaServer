@@ -244,7 +244,7 @@ def gen_thumbnail(format: str, width, height, pathstr):
             src_hash, status_code = shared_code.cache_check(path)
         if status_code is not None:
             return status_code
-        img = pyimglib.decoders.open_image(path)
+        img = pyimglib.decoders.open_image(shared_code.root_dir.joinpath(path))
         if isinstance(img, pyimglib.decoders.srs.ClImage):
             lods = img.progressive_lods()
             current_lod = lods.pop(0)
