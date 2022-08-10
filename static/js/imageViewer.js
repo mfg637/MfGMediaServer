@@ -90,7 +90,7 @@ function ImageViewer() {
         link.imageID = i;
         links[filemeta[i].item_index].ftype = FILETYPE;
         link.ftype = FILETYPE;
-        if (filemeta[i].type === "picture"){
+        if ((filemeta[i].type === "picture") || (filemeta[i].type === "image")){
             link.onclick=function(){
                 imageViewer.watchPhoto(this.imageID);
                 return false;
