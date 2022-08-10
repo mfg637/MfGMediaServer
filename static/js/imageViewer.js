@@ -66,7 +66,7 @@ imageViewer.init(filemeta)
 
 
 function ImageViewer() {
-  var container, photo, prev, next, caption;
+  var container, image, img_tag, prev, next, caption;
   var id,photolist,loadViewportSizePhoto;
   var default_click_handler,
       default_hide_controls_click_handler,
@@ -143,7 +143,7 @@ function ImageViewer() {
   this.watchPhoto = function(photoID) {
     clearTimeout(loadViewportSizePhoto);
     id=photoID;
-    if (photo) {
+    if (image) {
       replacePhoto(this);
     } else {
       createPhoto(this);
@@ -152,16 +152,58 @@ function ImageViewer() {
   replacePhoto = function() {
     container.classList.add('load');
 
-    if (photolist[id].suffix === '.gif')
-        photo.src = photolist[id].link;
-    else if (photolist[id].custom_icon){
-        photo.src = photolist[id].icon
+    // clear sources
+    while (image.firstChild) {
+      image.removeChild(image.lastChild);
     }
-    else
-        photo.src = '/thumbnail/webp/' +
+
+    img_tag = document.createElement("img");
+    if (photolist[id].suffix === '.gif')
+        img_tag.src = photolist[id].link;
+    else if (photolist[id].custom_icon){
+        img_tag.src = photolist[id].icon
+    }
+    else {
+      if (photolist[id].suffix === ".avif"){
+        source_2 = document.createElement("source");
+        source_2.srcset = photolist[id].link;
+        source_2.type = "image/avif";
+        image.appendChild(source_2)
+      }
+      source_1 = document.createElement("source")
+      webp_souces = []
+      scale_values = [1, 1.5, 2, 2.5, 3, 4, 6]
+      function scale_base_size(width, height, scale){
+        return '' + Math.round(width * scale) + 'x' +
+        Math.round(height * scale)
+      }
+      scale_values.forEach(
+        scale_value => webp_souces.push(
+          `/thumbnail/webp/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${photolist[id].base32path} ${scale_value}x`
+        )
+      );
+      source_1.srcset = webp_souces.join(", ")
+      source_1.type = "image/webp";
+      image.appendChild(source_1)
+      source_3 = document.createElement("source")
+      jpeg_souces = [];
+      scale_values.forEach(
+        scale_value => jpeg_souces.push(
+          `/thumbnail/jpeg/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${photolist[id].base32path}  ${scale_value}x`
+        )
+      );
+      source_3.srcset = jpeg_souces.join(", ");
+      source_3.type = "image/jpeg";
+      image.appendChild(source_3)
+      img_tag.src = '/thumbnail/jpeg/' +
         Math.round(window.innerWidth * window.devicePixelRatio) + 'x' +
         Math.round(window.innerHeight * window.devicePixelRatio) +
-        '/'+ photolist[id].base32path+"?allow_origin=1";
+        '/' + photolist[id].base32path;
+      img_tag.style.maxWidth = window.innerWidth + "px";
+      img_tag.style.maxHeight = window.innerHeight + "px";
+      image.appendChild(img_tag)
+    }
+
 
     if (photolist[id].type === "picture")
         default_click_handler = default_hide_controls_click_handler;
@@ -194,7 +236,7 @@ function ImageViewer() {
     clearTimeout(loadViewportSizePhoto);
     window.removeEventListener("resize",resize,false);
     window.onkeyup=null;
-    photo=null;
+    image=null;
     jscontainer.removeChild(container);
     document.body.style.overflow = "";
   }
@@ -222,10 +264,10 @@ function ImageViewer() {
 
     document.body.style.overflow = "hidden";
 
-    photo = document.createElement('img');
-    photo.id = 'i';
-    photo.classList.add('photo');
-    object_container.appendChild(photo);
+    image = document.createElement('picture');
+    image.id = 'i';
+    image.classList.add('photo');
+    object_container.appendChild(image);
 
     controls_container = document.createElement('div');
     controls_container.classList.add('container');
@@ -250,7 +292,7 @@ function ImageViewer() {
     caption.classList.add('imageview-text');
     controls_container.appendChild(caption);
     controls_container.onclick = function(event){
-        if (event.target == event.currentTarget){
+        if (event.target === event.currentTarget){
             default_click_handler();
         }
     }
@@ -279,27 +321,21 @@ function ImageViewer() {
       }
     }
 
-    photo.onload=function(){
+    img_tag.onload=function(){
       container.classList.remove('load');
-      alignPhoto();
     };
-    photo.onError=function(){
+    image.onError=function(){
       alert('Ошибка 404. Файл не найден '+nmb);
       close();
     }
 
-    photo.onAbort=function(){
-      alert('complete = '+photo.complete);
+    image.onAbort=function(){
+      alert('complete = '+image.complete);
     }
   }
   function resize() {
     console.log('resize '+window.innerWidth+'x'+window.innerHeight);
-    alignPhoto();
     clearTimeout(loadViewportSizePhoto);
     loadViewportSizePhoto=setTimeout(replacePhoto,2500);
-  }
-  function alignPhoto() {
-    photo.style.margin = (container.offsetHeight - photo.offsetHeight) / 2 +
-      'px auto';
   }
 }
