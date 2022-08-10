@@ -238,6 +238,24 @@ def transcode_image(format: str, pathstr):
 @app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<string:pathstr>')
 def gen_thumbnail(format: str, width, height, pathstr):
     def body(path, format, width, height):
+        db_connection = None
+        if config.thumbnail_cache_dir is not None and len(medialib_db.config.db_name):
+            MIME_TYPES = {
+                "jpeg": "image/jpeg",
+                "webp": "image/webp"
+            }
+            db_connection = medialib_db.common.make_connection()
+            thumbnail_file_path, thumbnail_format = medialib_db.get_thumbnail(path, width, height, format,
+                                                                              db_connection)
+            if thumbnail_file_path is not None:
+                print("thumbnail filepath", thumbnail_file_path)
+                return flask.send_file(
+                    config.thumbnail_cache_dir.joinpath(thumbnail_file_path),
+                    mimetype=MIME_TYPES[thumbnail_format],
+                    max_age=24 * 60 * 60,
+                    last_modified=path.stat().st_mtime,
+                )
+
         allow_origin = bool(flask.request.args.get('allow_origin', False))
         src_hash, status_code = None, None
         if path.stat().st_size < (1024 * 1024 * 1024):
@@ -276,22 +294,6 @@ def gen_thumbnail(format: str, width, height, pathstr):
             img = _img
         f = None
         def set_f(img, format):
-            db_connection = None
-            if config.thumbnail_cache_dir is not None and len(medialib_db.config.db_name):
-                MIME_TYPES = {
-                    "jpeg": "image/jpeg",
-                    "webp": "image/webp"
-                }
-                db_connection = medialib_db.common.make_connection()
-                thumbnail_file_path, thumbnail_format = medialib_db.get_thumbnail(path, width, height, format, db_connection)
-                if thumbnail_file_path is not None:
-                    print("thumbnail filepath", thumbnail_file_path)
-                    return flask.send_file(
-                        config.thumbnail_cache_dir.joinpath(thumbnail_file_path),
-                        mimetype=MIME_TYPES[thumbnail_format],
-                        max_age=24 * 60 * 60,
-                        last_modified=path.stat().st_mtime,
-                    )
             if allow_origin and img.format == "WEBP" and (img.is_animated or (img.width <= width and img.height <= height)):
                 return flask.redirect(
                     "https://{}:{}/orig/{}".format(
