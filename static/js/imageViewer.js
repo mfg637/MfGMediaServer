@@ -205,7 +205,7 @@ function ImageViewer() {
     }
 
 
-    if (photolist[id].type === "picture")
+    if ((photolist[id].type=== "picture") || (photolist[id].type=== "image"))
         default_click_handler = default_hide_controls_click_handler;
     else if (photolist[id].type === "video")
         default_click_handler = default_open_video_click_handler;
