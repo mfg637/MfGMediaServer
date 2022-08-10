@@ -456,6 +456,14 @@ def get_content_metadata(pathstr):
     return file_url_template(body, pathstr)
 
 
+@app.route('/medialib-db-drop-thumbnails/<int:content_id>', methods=['GET'])
+def drop_thumbnails(content_id):
+    connection = medialib_db.common.make_connection()
+    medialib_db.drop_thumbnails(content_id, connection)
+    connection.close()
+    return "OK"
+
+
 @app.route('/browse/<path:pathstr>')
 def browse_dir(pathstr):
     shared_code.login_validation()

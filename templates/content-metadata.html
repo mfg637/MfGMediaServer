@@ -156,5 +156,8 @@
                 {% endfor %}
                 </ul>
             {% endfor %}
+            {% if content_id %}
+                <a href="/medialib-db-drop-thumbnails/{{ content_id }}">Drop thumbnails</a>
+            {% endif %}
 </body>
 </html>
