@@ -451,6 +451,7 @@ def get_content_metadata(pathstr):
             item=filesystem.browse.get_file_info(path),
             file_name=path.name,
             tags=tags,
+            derpibooru_dl_server=config.derpibooru_dl_server,
             **template_kwargs
         )
     return file_url_template(body, pathstr)

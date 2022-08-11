@@ -21,3 +21,5 @@ thumbnail_cache_dir = None
 
 # Do not change this value
 ACLMMP_COMPATIBILITY_LEVEL = -1
+
+derpibooru_dl_server = None
