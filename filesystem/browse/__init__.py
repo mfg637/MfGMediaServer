@@ -42,14 +42,17 @@ def browse_folder(folder):
     path_dir_objects = []
     path_file_objects = []
     path_srs_objects = []
+    path_mpd_objects = []
     for entry in folder.iterdir():
         if entry.is_file() and entry.suffix.lower() == '.srs':
             path_srs_objects.append(entry)
+        elif entry.is_file() and entry.suffix.lower() == ".mpd":
+            path_mpd_objects.append(entry)
         elif entry.is_file() and entry.suffix.lower() in supported_file_extensions:
             path_file_objects.append(entry)
         elif entry.is_dir() and entry.name[0] != '.':
             path_dir_objects.append(entry)
-    return path_dir_objects, path_file_objects, path_srs_objects
+    return path_dir_objects, path_file_objects, path_srs_objects, path_mpd_objects
 
 
 def extract_mtime_key(file: pathlib.Path):
@@ -58,14 +61,14 @@ def extract_mtime_key(file: pathlib.Path):
 
 def browse(dir):
     global page_cache
-    dirlist, filelist, srs_filelist = [], [], []
+    dirlist, filelist, srs_filelist, mpd_filelist = [], [], [], []
     glob_pattern = flask.request.args.get('glob', None)
     itemslist, dirmeta_list, filemeta_list = page_cache.get_cache(dir, glob_pattern)
     if len(itemslist) == 0:
         items_count: int = 0
 
         if glob_pattern is None:
-            dirlist, filelist, srs_filelist = browse_folder(dir)
+            dirlist, filelist, srs_filelist, mpd_filelist = browse_folder(dir)
             if dir != shared_code.root_dir:
                 itemslist.append({
                     "icon": flask.url_for('static', filename='images/updir_icon.svg'),
@@ -113,6 +116,8 @@ def browse(dir):
             for file in dir.glob(glob_pattern):
                 if file.is_file() and file.suffix.lower() == ".srs":
                     srs_filelist.append(file)
+                elif file.is_file() and file.suffix.lower() == ".mpd":
+                    mpd_filelist.append(file)
                 elif file.is_file() and file.suffix.lower() in supported_file_extensions:
                     filelist.append(file)
         excluded_filelist = []
@@ -122,6 +127,11 @@ def browse(dir):
             f.close()
             excluded_filelist.extend(pyimglib.ACLMMP.srs_parser.get_files_list(srs_file, content, streams))
             filelist.append(srs_file)
+        for mpd_file in mpd_filelist:
+            files = pyimglib.transcoding.encoders.dash_encoder.DASHEncoder.get_files(mpd_file)[:-1]
+            print(files)
+            excluded_filelist.extend(files)
+            filelist.append(mpd_file)
         filelist.sort(key=extract_mtime_key, reverse=True)
 
         filemeta_list, items_count = files_processor(filelist, excluded_filelist, items_count)
@@ -254,7 +264,7 @@ def get_file_info(file: pathlib.Path, items_count=0):
         filemeta['type'] = "DASH"
         filemeta['link'] = "/{}{}".format(
             ('' if dir == shared_code.root_dir else 'browse/'),
-            str(file)
+            str(file.relative_to(shared_code.root_dir))
         )
         _icon(file, filemeta)
     elif file.suffix.lower() == '.srs':
