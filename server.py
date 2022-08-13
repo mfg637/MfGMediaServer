@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import abc
 import urllib.parse
+import xml.dom.minidom
 
 import flask
 import os
@@ -465,6 +466,45 @@ def drop_thumbnails(content_id):
     return "OK"
 
 
+def mpd_processing(mpd_file: pathlib.Path):
+    subs_file = mpd_file.with_suffix(".mpd.subs")
+    print("subs file", subs_file, subs_file.exists())
+    if subs_file.exists():
+        mpd_document: xml.dom.minidom.Document = xml.dom.minidom.parse(str(mpd_file))
+        period: xml.dom.minidom.Element = mpd_document.getElementsByTagName("Period")[0]
+        with subs_file.open() as f:
+            subs = json.load(f)
+            for subtitle in subs:
+                last_repr_id = int(mpd_document.getElementsByTagName("Representation")[-1].getAttribute("id"))
+                if "webvtt" in subtitle:
+                    _as: xml.dom.minidom.Element = mpd_document.createElement("AdaptationSet")
+                    _as.setAttribute("mimeType", "text/vtt")
+                    _as.setAttribute("lang", subtitle["lang2"])
+
+                    _repr: xml.dom.minidom.Element = mpd_document.createElement("Representation")
+                    _repr.setAttribute("id", str(last_repr_id + 1))
+                    _repr.setAttribute("bandwidth", "123")
+
+                    url: xml.dom.minidom.Element = mpd_document.createElement("BaseURL")
+                    url_text_node = mpd_document.createTextNode(subtitle["webvtt"])
+
+                    url.appendChild(url_text_node)
+                    _repr.appendChild(url)
+                    _as.appendChild(_repr)
+
+                    period.appendChild(_as)
+        return flask.Response(mpd_document.toprettyxml(), mimetype="application/dash+xml")
+    else:
+        return static_file(mpd_file)
+
+
+def file_processing(file: pathlib.Path):
+    if file.suffix == ".mpd":
+        return mpd_processing(file)
+    else:
+        return static_file(file)
+
+
 @app.route('/browse/<path:pathstr>')
 def browse_dir(pathstr):
     shared_code.login_validation()
@@ -480,7 +520,7 @@ def browse_dir(pathstr):
         else:
             flask.abort(403)
     elif pathlib.Path(path).is_file():
-        return static_file(path)
+        return file_processing(path)
     else:
         flask.abort(404)
 
