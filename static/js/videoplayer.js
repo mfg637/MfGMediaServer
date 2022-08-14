@@ -292,6 +292,16 @@ function RainbowVideoPlayer(filemeta){
         }
     }
     playButton.onclick = this.playpause;
+    this.toggleControlsShow = function (){
+        if (this.container.classList.contains("hide")){
+            this.showControls()
+        }else {
+            this.hideControls()
+        }
+    }
+    this.container.addEventListener("click", function (event){
+        this.cntxt.toggleControlsShow();
+    })
     this.container.ondblclick = this.playpause;
     this.muteToggle = function(){
         if (muted) {

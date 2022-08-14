@@ -20,7 +20,8 @@ div.videocontainer .closebtn{
     right: 7px;
     width: 32px;
     height: 32px;
-    transition: top 0.5s linear;
+    transition: opacity 0.25s linear;
+	opacity: 1;
     background-image: url('/static/images/close_btn_default.svg');
 }
 
@@ -29,7 +30,7 @@ div.videocontainer.off .closebtn{
 }
 
 div.videocontainer.hide .closebtn{
-    top: -32px;
+    opacity: 0;
 }
 
 div.videocontainer .closebtn:hover{
@@ -94,14 +95,15 @@ div.videocontainer.load div.loader {
 }
 div.videocontainer div.controls {
 	background:rgba(16,16,16,0.85);
-	transition:bottom 0.5s linear;
+	transition: opacity 0.5s linear;
+	opacity: 1;
 	position: absolute;
 	bottom: 0;
 	width: 100%;
 }
 
 div.videocontainer.hide div.controls{
-	bottom: -48px;
+	opacity: 0;
 }
 
 div.videocontainer.off div.controls {
@@ -179,7 +181,7 @@ div.videocontainer div.controls span.time {
 	display: inline-block;
 	margin: 6px 3px;
 	color: silver;
-	font-family: tahoma;
+	font-family: tahoma, sans-serif;
 	font-size: 11pt;
 }
 div.videocontainer div.controls span.time span.currentTime {
