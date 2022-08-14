@@ -445,8 +445,9 @@ function RainbowVideoPlayer(filemeta){
         }
     }
 
-    this.disable_vp8_mode = function () {
+    this.disable_live_transcoding_buttons = function () {
         this.controls.removeChild(vp8_mode_btn);
+        this.controls.removeChild(nvenc_mode_btn);
     }
 
     this.start();
@@ -606,6 +607,6 @@ function RainbowDASHVideoPlayer(filemeta) {/*
     }
     this.dash_js_player.on(dashjs.MediaPlayer.events['FRAGMENT_LOADING_STARTED'], this.init_track.bind(this), this)
     this.bind_video();
-    this.disable_vp8_mode();
+    this.disable_live_transcoding_buttons();
     console.log(this);
 }
