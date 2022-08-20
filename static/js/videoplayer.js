@@ -299,7 +299,7 @@ function RainbowVideoPlayer(filemeta){
             this.hideControls()
         }
     }
-    this.container.addEventListener("click", function (event){
+    this.videoElement.addEventListener("click", function (event){
         this.cntxt.toggleControlsShow();
     })
     this.container.ondblclick = this.playpause;
