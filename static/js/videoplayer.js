@@ -5,6 +5,8 @@ style_tag.href="/static/css/videoplayer.css";
 body_tag = document.getElementsByTagName('body')[0]
 body_tag.appendChild(style_tag);
 
+let videoPlayer = null;
+
 
 function fixEvent(e) {
     e = e || window.event;
@@ -129,13 +131,14 @@ function Scrollbar(root){
 function RainbowVideoPlayer(filemeta){
     //state variables
     this.cntxt = this;
-    var muted=false,
-        duration=0,
+    videoPlayer = this;
+    let muted = false,
+        duration = 0,
         offset = 0,
         durRefleshInt,
         vp8_active = false,
         nvenc_active = false;
-    var _filemeta = filemeta;
+    let _filemeta = filemeta;
     this.showControlsTime = 0;
 
     postersrcurl=filemeta.icon;
@@ -150,7 +153,7 @@ function RainbowVideoPlayer(filemeta){
     body_tag.style.overflow="hidden";
     this.videoElement = document.createElement('video');
     this.controls = document.createElement('div');
-    var loadBanner = document.createElement('div'),
+    let loadBanner = document.createElement('div'),
 
         scrollbar = new Scrollbar(this),
 
@@ -224,15 +227,6 @@ function RainbowVideoPlayer(filemeta){
     this.container.appendChild(close_btn);
     if (srcurl) {this.videoElement.src=srcurl}
 
-    close_btn.onclick = function(){
-        this.cntxt.videoElement.pause();
-        this.cntxt.videoElement.removeAttribute("src");
-        this.cntxt.videoElement.load();
-        window.removeEventListener('resize', this.start);
-        body_tag.removeChild(this.cntxt.container);
-        body_tag.style.overflow="auto";
-    }
-
     function formatmmss(seconds){
         var n=Math.floor(seconds%60);
         if (n<10) {return Math.floor(seconds/60)+':'+0+n;}
@@ -270,13 +264,26 @@ function RainbowVideoPlayer(filemeta){
         clearInterval(durRefleshInt);
     }
 
-    this.playpause=function(){
+    this.togglePlayPause=function(){
         if(this.cntxt.videoElement.paused){
             _play.call(this.cntxt);
         }else{
             _pause.call(this.cntxt);
         }
     }
+
+    this.keyboardControl = function(keyEvent){
+        switch (keyEvent.code) {
+            case "Space":
+                videoPlayer.togglePlayPause();
+                break;
+            case "Escape":
+                videoPlayer.closePlayer();
+                break;
+        }
+    }
+
+    window.addEventListener("keyup", this.keyboardControl)
 
     this.pause = function(){
         let paused = this.videoElement.paused;
@@ -291,7 +298,7 @@ function RainbowVideoPlayer(filemeta){
             _play.call(this);
         }
     }
-    playButton.onclick = this.playpause;
+    playButton.onclick = this.togglePlayPause;
     this.toggleControlsShow = function (){
         if (this.container.classList.contains("hide")){
             this.showControls()
@@ -302,7 +309,7 @@ function RainbowVideoPlayer(filemeta){
     this.videoElement.addEventListener("click", function (event){
         this.cntxt.toggleControlsShow();
     })
-    this.container.ondblclick = this.playpause;
+    //this.container.ondblclick = this.playpause;
     this.muteToggle = function(){
         if (muted) {
             this.cntxt.videoElement.muted = false;
@@ -372,11 +379,9 @@ function RainbowVideoPlayer(filemeta){
             this.cntxt.load_metadata.call(this.cntxt);
         }
         this.videoElement.onprogress=function() {
-            console.log("OnProgress");
             this.cntxt.buffer();
         };
         this.videoElement.oncanplaythrough=function () {
-            console.log("Can Play event");
             this.cntxt.play();
         }
     }
@@ -411,7 +416,6 @@ function RainbowVideoPlayer(filemeta){
 
     vp8_mode_btn.cntxt = this;
     vp8_mode_btn.onclick = function(){
-        console.log();
         if (!_filemeta.is_vp8){
             if (vp8_active){
                 this.cntxt.videoElement.src = _filemeta.link;
@@ -429,7 +433,6 @@ function RainbowVideoPlayer(filemeta){
 
     nvenc_mode_btn.cntxt = this;
     nvenc_mode_btn.onclick = function(){
-        console.log();
         if (!_filemeta.is_vp8){
             if (nvenc_active){
                 this.cntxt.videoElement.src = _filemeta.link;
@@ -451,8 +454,22 @@ function RainbowVideoPlayer(filemeta){
     }
 
     this.start();
-    this.playpause();
+    this.togglePlayPause();
     window.addEventListener('resize', this.start.bind(this));
+
+
+    this.closePlayer = function (){
+        this.videoElement.pause();
+        this.videoElement.removeAttribute("src");
+        this.videoElement.load();
+        window.removeEventListener('resize', this.start);
+        window.removeEventListener("keyup", this.keyboardControl)
+        body_tag.removeChild(this.container);
+        body_tag.style.overflow="auto";
+        videoPlayer = null;
+    }
+
+    close_btn.onclick = function(){this.cntxt.closePlayer()}
 
 }
 
@@ -518,7 +535,6 @@ function RainbowDASHVideoPlayer(filemeta) {/*
     this.audio_tracks = null;
     this.video_tracks = null;
     this.dash_js_player.on(dashjs.MediaPlayer.events['PLAYBACK_METADATA_LOADED'], (function () {
-        console.log("PLAYBACK_METADATA_LOADED");
         this.cntxt.video_tracks = this.cntxt.dash_js_player.getTracksFor('video');
         this.cntxt.audio_tracks = this.cntxt.dash_js_player.getTracksFor('audio');
         if ((this.cntxt.audio_tracks.length>1)||(this.cntxt.video_tracks.length>1)){
@@ -570,7 +586,6 @@ function RainbowDASHVideoPlayer(filemeta) {/*
                                     break;
                                 }
                             }
-                            console.log(this.tracks[track_num]);
                             this.cntxt.dash_js_player.setCurrentTrack(this.tracks[track_num]);
                         }
                     }
@@ -598,7 +613,6 @@ function RainbowDASHVideoPlayer(filemeta) {/*
         }
     }).bind(this));
     this.init_track = function () {
-        console.log("FRAGMENT_LOADING_STARTED");
         if (this.dash_js_player.getCurrentTrackFor('video') === this.track_60fps){
             this.mode_60fps = true;
             _60fps_mode_btn.classList.add('active');
@@ -608,5 +622,4 @@ function RainbowDASHVideoPlayer(filemeta) {/*
     this.dash_js_player.on(dashjs.MediaPlayer.events['FRAGMENT_LOADING_STARTED'], this.init_track.bind(this), this)
     this.bind_video();
     this.disable_live_transcoding_buttons();
-    console.log(this);
 }
