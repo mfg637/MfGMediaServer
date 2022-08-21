@@ -174,9 +174,15 @@
                 {% endif %}
             </div>
             </a>
+                {% if item.content_id is not none %}
+                <a class="content-info-link" href="/content_metadata/{{ item.content_id }}">
+                    Content info
+                </a>
+                {%else%}
                 <a class="content-info-link" href="/content_metadata/{{ item.base32path }}">
                     Content info
                 </a>
+                {% endif %}
         </div>
     {% endfor %}
             <div style="clear:left"></div>

@@ -342,9 +342,10 @@ def gen_thumbnail(format: str, width, height, pathstr):
     return file_url_template(body, pathstr, format=format, width=width, height=height)
 
 
-@app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'])
-def get_content_metadata(pathstr):
-    def body(path: pathlib.Path):
+@app.route('/content_metadata/<int:content_id>', methods=['GET', 'POST'], defaults={'pathstr': None})
+@app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'], defaults={'content_id': None})
+def get_content_metadata(pathstr, content_id):
+    def body(path: pathlib.Path | None, content_id=None):
         def detect_content_type(path: pathlib.Path):
             if path.suffix in filesystem.browse.image_file_extensions:
                 return "image"
@@ -373,9 +374,18 @@ def get_content_metadata(pathstr):
             "furaffinity": "https://www.furaffinity.net/view/{}/"
         }
         medialib_db.common.open_connection_if_not_opened()
-        db_query_results = medialib_db.get_file_data_by_file_path(
-            path, auto_open_connection=False
-        )
+        db_query_results = None
+        is_file = True
+        if content_id is not None:
+            is_file = False
+            db_query_results = medialib_db.get_content_metadata_by_content_id(
+                content_id, auto_open_connection=False
+            )
+            path = pathlib.Path(db_query_results[1])
+        else:
+            db_query_results = medialib_db.get_content_metadata_by_file_path(
+                path, auto_open_connection=False
+            )
         template_kwargs = {
             'content_title': "",
             'content_id': "",
@@ -385,7 +395,6 @@ def get_content_metadata(pathstr):
             'hidden': False,
             'description': '',
         }
-        content_id = None
         if db_query_results is not None:
             template_kwargs['content_id'] = db_query_results[0]
             content_id = db_query_results[0]
@@ -447,15 +456,30 @@ def get_content_metadata(pathstr):
             tags = medialib_db.get_tags_by_content_id(content_id, auto_open_connection=False)
         medialib_db.common.connection.commit()
         medialib_db.common.close_connection_if_not_closed()
-        return flask.render_template(
-            'content-metadata.html',
-            item=filesystem.browse.get_file_info(path),
-            file_name=path.name,
-            tags=tags,
-            derpibooru_dl_server=config.derpibooru_dl_server,
-            **template_kwargs
-        )
-    return file_url_template(body, pathstr)
+        if is_file:
+            return flask.render_template(
+                'content-metadata.html',
+                item=filesystem.browse.get_file_info(path),
+                file_name=path.name,
+                tags=tags,
+                derpibooru_dl_server=config.derpibooru_dl_server,
+                **template_kwargs
+            )
+        else:
+            return flask.render_template(
+                'content-metadata.html',
+                item=filesystem.browse.get_db_content_info(
+                    content_id, db_query_results[1], db_query_results[3], db_query_results[2]
+                ),
+                file_name=path.name,
+                tags=tags,
+                derpibooru_dl_server=config.derpibooru_dl_server,
+                **template_kwargs
+            )
+    if content_id is not None:
+        return body(None, content_id)
+    elif pathstr is not None:
+        return file_url_template(body, pathstr)
 
 
 @app.route('/medialib-db-drop-thumbnails/<int:content_id>', methods=['GET'])

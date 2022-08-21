@@ -211,7 +211,7 @@ def db_content_processing(content_list, initial_item_count):
     content_data_list = list()
     for file in content_list:
         print(file)
-        file_data, items_count = get_db_content_info(file[0], file[1], file[2], items_count)
+        file_data, items_count = get_db_content_info(file[0], file[1], file[2], file[3], items_count)
         content_data_list.append(file_data)
     return content_data_list
 
@@ -251,7 +251,8 @@ def get_file_info(file: pathlib.Path, items_count=0):
         "type": "audio",
         "is_vp8": False,
         "suffix": file.suffix,
-        "custom_icon": False
+        "custom_icon": False,
+        "content_id": None
     }
     icon_path = pathlib.Path("{}.icon".format(file))
     if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
@@ -297,7 +298,7 @@ def get_file_info(file: pathlib.Path, items_count=0):
     return filemeta
 
 
-def get_db_content_info(file_str: str, content_type, title, items_count=0):
+def get_db_content_info(content_id: int, file_str: str, content_type, title, items_count=0):
     file = pathlib.Path(file_str)
     base32path = shared_code.str_to_base32(str(file))
     filemeta = {
@@ -312,7 +313,8 @@ def get_db_content_info(file_str: str, content_type, title, items_count=0):
         "is_vp8": False,
         "suffix": file.suffix,
         "custom_icon": False,
-        "type": content_type
+        "type": content_type,
+        "content_id": content_id
     }
     icon_path = pathlib.Path("{}.icon".format(file))
     if content_type in ("image", "video", "video-loop"):
