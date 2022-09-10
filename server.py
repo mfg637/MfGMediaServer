@@ -373,18 +373,18 @@ def get_content_metadata(pathstr, content_id):
             "furbooru": "https://furbooru.org/images/{}",
             "furaffinity": "https://www.furaffinity.net/view/{}/"
         }
-        medialib_db.common.open_connection_if_not_opened()
+        connection = medialib_db.common.make_connection()
         db_query_results = None
         is_file = True
         if content_id is not None:
             is_file = False
             db_query_results = medialib_db.get_content_metadata_by_content_id(
-                content_id, auto_open_connection=False
+                content_id, connection
             )
             path = pathlib.Path(db_query_results[1])
         else:
             db_query_results = medialib_db.get_content_metadata_by_file_path(
-                path, auto_open_connection=False
+                path, connection
             )
         template_kwargs = {
             'content_title': "",
@@ -400,11 +400,13 @@ def get_content_metadata(pathstr, content_id):
             content_id = db_query_results[0]
             if db_query_results[2] is not None:
                 template_kwargs['content_title'] = db_query_results[2]
+            print(db_query_results[-3], db_query_results[-2])
             if db_query_results[-3] is not None:
-                template_kwargs['origin_name'] = db_query_results[-3]
-                if db_query_results[-2] is not None and db_query_results[-3] in ORIGIN_URL_TEMPLATE:
+                template_kwargs['origin_name'] = db_query_results[-3].strip()
+                if db_query_results[-2] is not None and template_kwargs['origin_name'] in ORIGIN_URL_TEMPLATE:
+                    print(template_kwargs['origin_name'], db_query_results[-2].strip())
                     template_kwargs['origin_link'] = \
-                        ORIGIN_URL_TEMPLATE[db_query_results[-3]].format(db_query_results[-2])
+                        ORIGIN_URL_TEMPLATE[template_kwargs['origin_name']].format(db_query_results[-2].strip())
             if db_query_results[-2] is not None:
                 template_kwargs['origin_id'] = db_query_results[-2]
             if db_query_results[4] is not None:
@@ -446,16 +448,15 @@ def get_content_metadata(pathstr, content_id):
             tags = list(zip(tag_names, tag_categories, tag_aliases))
             print(tags)
             if db_query_results is not None:
-                medialib_db.content_update(auto_open_connection=False, **content_new_data)
+                medialib_db.content_update(connection, **content_new_data)
             else:
-                content_id = medialib_db.content_register(**content_new_data, auto_open_connection=False)
+                content_id = medialib_db.content_register(**content_new_data, connection=connection)
             print(content_id)
-            medialib_db.add_tags_for_content(content_id, tags, auto_open_connection=False)
+            medialib_db.add_tags_for_content(content_id, tags, connection)
         tags = dict()
         if content_id is not None:
             tags = medialib_db.get_tags_by_content_id(content_id, auto_open_connection=False)
-        medialib_db.common.connection.commit()
-        medialib_db.common.close_connection_if_not_closed()
+        connection.close()
         if is_file:
             return flask.render_template(
                 'content-metadata.html',
