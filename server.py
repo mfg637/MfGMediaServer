@@ -402,11 +402,10 @@ def get_content_metadata(pathstr, content_id):
                 template_kwargs['content_title'] = db_query_results[2]
             print(db_query_results[-3], db_query_results[-2])
             if db_query_results[-3] is not None:
-                template_kwargs['origin_name'] = db_query_results[-3].strip()
+                template_kwargs['origin_name'] = db_query_results[-3]
                 if db_query_results[-2] is not None and template_kwargs['origin_name'] in ORIGIN_URL_TEMPLATE:
-                    print(template_kwargs['origin_name'], db_query_results[-2].strip())
                     template_kwargs['origin_link'] = \
-                        ORIGIN_URL_TEMPLATE[template_kwargs['origin_name']].format(db_query_results[-2].strip())
+                        ORIGIN_URL_TEMPLATE[template_kwargs['origin_name']].format(db_query_results[-2])
             if db_query_results[-2] is not None:
                 template_kwargs['origin_id'] = db_query_results[-2]
             if db_query_results[4] is not None:
@@ -448,7 +447,7 @@ def get_content_metadata(pathstr, content_id):
             tags = list(zip(tag_names, tag_categories, tag_aliases))
             print(tags)
             if db_query_results is not None:
-                medialib_db.content_update(connection, **content_new_data)
+                medialib_db.content_update(connection=connection, **content_new_data)
             else:
                 content_id = medialib_db.content_register(**content_new_data, connection=connection)
             print(content_id)
