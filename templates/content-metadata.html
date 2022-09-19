@@ -19,9 +19,9 @@
     <h1>Content metadata for «{{ file_name }}»</h1>
     <h2>Preview</h2>
     {% if item.icon is not none %}
-        <a class="item icon" href="{{ item.link }}" title="{{ item.name }}">
+        <a class="item icon" href="{{ item.link }}" title="{{ item.file_name }}">
     {% else %}
-        <a class="item" href="{{ item.link }}" title="{{ item.name }}">
+        <a class="item" href="{{ item.link }}" title="{{ item.file_name }}">
     {% endif %}
     {% if item.icon is not none %}
         {% if item.sources is not none %}
@@ -35,7 +35,7 @@
             </picture>
         {% endif %}
         <div class="title-wrapper">
-            {{ item.name }}
+            {{ item.file_name }}
         </div>
     {% endif %}
     </a>

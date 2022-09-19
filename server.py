@@ -470,7 +470,7 @@ def get_content_metadata(pathstr, content_id):
                 'content-metadata.html',
                 item=filesystem.browse.get_db_content_info(
                     content_id, db_query_results[1], db_query_results[3], db_query_results[2]
-                ),
+                )[0],
                 file_name=path.name,
                 tags=tags,
                 derpibooru_dl_server=config.derpibooru_dl_server,
