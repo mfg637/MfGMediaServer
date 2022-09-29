@@ -43,6 +43,7 @@
         form{
             margin-bottom: 1em;
         }
+        .tag_fields{display: inline}
     </style>
 </head>
 <body>
@@ -58,11 +59,14 @@
             <div class="field">
                 <input type="checkbox" name="not" value="1" id="not_1_check">
                 <input type="hidden" name="not" value="0" id="not_1_hidden">
+                <input class="counter" type="hidden" name="tags_count" value="1">
                 <label for="not_1_check">NOT</label>
-                <input type="text" name="tags"/>
+                <div class="tag_fields"><input type="text" name="tags"/></div>
+                <button class="close_field" id="ml_first_close_button" disabled>X</button>
+                <button id="ml_first_or_button">OR</button>
             </div>
         </div>
-        <button id="medialib-add-field">Type more tags</button><br>
+        <button id="medialib-add-field">AND</button><br>
         <label for="ml-sorting-order">Sort by:</label>
         <select id="ml-sorting-order" name="sorting_order">
         {% for sort in medialib_sorting %}
@@ -83,6 +87,32 @@
             not_checkbox_1.onchange = function () {
                 not_hidden_1.disabled = this.checked;
             }
+            let add_or_field_event = function (event) {
+                let counter_field = this.parentElement.getElementsByClassName("counter")[0];
+                counter_field.value = parseInt(counter_field.value) + 1;
+                let tag_fields = this.parentElement.getElementsByClassName("tag_fields")[0];
+                let tag_field = document.createElement("input");
+                tag_field.type = "text";
+                tag_field.name = "tags";
+                tag_fields.appendChild(tag_field);
+                let close_button = this.parentElement.getElementsByClassName("close_field")[0];
+                close_button.disabled = false;
+                return false;
+            }
+            let close_or_field_event = function (event) {
+                let tag_fields = this.parentElement.getElementsByClassName("tag_fields")[0];
+                let tags_count = tag_fields.childElementCount;
+                tag_fields.removeChild(tag_fields.childNodes[tags_count - 1])
+                tags_count--;
+                if (tags_count <= 1){
+                    this.disabled = true;
+                }
+                let counter_field = this.parentElement.getElementsByClassName("counter")[0];
+                counter_field.value = tags_count;
+                return false;
+            }
+            document.getElementById("ml_first_close_button").onclick = close_or_field_event;
+            document.getElementById("ml_first_or_button").onclick = add_or_field_event;
             var fields_counter = 1;
             document.getElementById("medialib-add-field").onclick = function () {
                 wrapper = document.createElement("div");
@@ -93,6 +123,12 @@
                 not_hidden.value = "0";
                 not_hidden.disabled = false;
                 wrapper.appendChild(not_hidden);
+                tag_counter = document.createElement("input");
+                tag_counter.classList.add("counter")
+                tag_counter.type = "hidden";
+                tag_counter.name = "tags_count";
+                tag_counter.value = "1";
+                wrapper.appendChild(tag_counter);
                 not_checkbox = document.createElement("input");
                 not_checkbox.type = "checkbox";
                 not_checkbox.name = "not";
@@ -113,19 +149,32 @@
                 wrapper.appendChild(not_label);
                 space_character2 = document.createTextNode(" ");
                 wrapper.appendChild(space_character2);
+                tags_wrapper = document.createElement("div");
+                tags_wrapper.classList.add("tag_fields");
                 tag_field = document.createElement("input");
                 tag_field.type = "text";
                 tag_field.name = "tags";
-                wrapper.appendChild(tag_field)
-                delete_button = document.createElement("button");
-                delete_button.innerText = "Delete field";
-                delete_button.onclick = function () {
+                tags_wrapper.appendChild(tag_field)
+                wrapper.appendChild(tags_wrapper)
+                delete_tag_button = document.createElement("button");
+                delete_tag_button.classList.add("close_field");
+                delete_tag_button.disabled = true;
+                delete_tag_button.onclick = close_or_field_event;
+                delete_tag_button.innerText = "X";
+                wrapper.appendChild(delete_tag_button)
+                tag_or_button = document.createElement("button");
+                tag_or_button.onclick = add_or_field_event;
+                tag_or_button.innerText = "OR";
+                wrapper.appendChild(tag_or_button)
+                delete_field_button = document.createElement("button");
+                delete_field_button.innerText = "Delete field";
+                delete_field_button.onclick = function () {
                     // get wrapper of this button
                     wrapper = this.parentElement;
                     wrapper.parentElement.removeChild(wrapper);
                     return false;
                 }
-                wrapper.appendChild(delete_button);
+                wrapper.appendChild(delete_field_button);
                 fields_area_wrapper = document.getElementById("fields-area");
                 fields_area_wrapper.appendChild(wrapper);
                 return false;

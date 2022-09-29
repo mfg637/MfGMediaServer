@@ -48,9 +48,15 @@ def medialib_tag_search():
     global CACHED_REQUEST
     shared_code.login_validation()
 
-    tag = flask.request.args.getlist('tags')
+    tags_count = flask.request.args.getlist('tags_count')
+    tags_list = flask.request.args.getlist('tags')
     not_tag = flask.request.args.getlist('not')
-    tags = [{"not": bool(int(not_tag[i])), "title": tag[i]} for i in range(len(tag))]
+    tags_groups = [{"not": bool(int(not_tag[i])), "tags": [], "count": int(tags_count[i])} for i in range(len(tags_count))]
+    for tag in tags_groups:
+        tags_count = tag["count"]
+        for i in range(tags_count):
+            tag["tags"].append(tags_list.pop(0))
+    print("TAGS", tags_groups)
     page = int(flask.request.args.get('page', 0))
     order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.DATE_DECREASING.value))
     hidden_filtering = int(flask.request.args.get("hidden_filtering",
@@ -72,25 +78,25 @@ def medialib_tag_search():
     max_pages = 0
     if pagination:
         raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
-            *tags,
+            *tags_groups,
             limit=filesystem.browse.items_per_page + 1,
             offset=filesystem.browse.items_per_page*page,
             order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
             filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
         )
-        if CACHED_REQUEST is not None and CACHED_REQUEST == tuple(tags):
+        if CACHED_REQUEST is not None and CACHED_REQUEST == tuple(tags_groups):
             max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
         else:
-            CACHED_REQUEST = tuple(tags)
+            CACHED_REQUEST = tuple(tags_groups)
             NUMBER_OF_ITEMS = medialib_db.files_by_tag_search.count_files_with_every_tag(
-                *tags,
+                *tags_groups,
                 filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
             )
             max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
 
     else:
         raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
-            *tags,
+            *tags_groups,
             order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
             filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
         )
@@ -108,8 +114,12 @@ def medialib_tag_search():
 
     itemslist.extend(content_list)
 
+    tags_group_str = []
+    for tags_group in tags_groups:
+        tags_group["group_str"] = " or ".join([medialib_db.get_tag_name_by_alias(tag) for tag in tags_group["tags"]])
+
     title = "Search query results for {}".format(
-        ", ".join([(("not " if tag["not"] else "") + str(medialib_db.get_tag_name_by_alias(tag["title"]))) for tag in tags])
+        (" and ".join([("not " if tags_group["not"] else "") + tags_group["group_str"] for tags_group in tags_groups]))
     )
     template_kwargs = {
         'title': title,
