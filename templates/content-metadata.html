@@ -66,14 +66,25 @@
                 >
                 <br/>
 
+                {% if origin_link is not none %}
+                    <a href="{{origin_link}}" class="origin_link">Go to origin</a><br/>
+                {% endif %}
+                {% if derpibooru_dl_server and origin_name and origin_id %}
+                    {% if content_title %}
+                    <a
+                            href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&dl_orig=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-") }}"
+                    >
+                        Download original
+                    </a>
+                    {% else %}
+                    <a href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&dl_orig=1">Download original</a>
+                    {% endif %}
+                {% endif %}
+
                 <h3>Add new tags</h3>
 
                 <div id="tags_fields_wrapper"></div>
                 <button id="add_tag_fields_btn">Add tag…</button><br/>
-
-                {% if origin_link is not none %}
-                    <a href="{{origin_link}}" class="origin_link">Go to origin</a><br/>
-                {% endif %}
 
                 <input type="submit"/>
             </form>
