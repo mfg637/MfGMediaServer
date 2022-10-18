@@ -33,8 +33,8 @@ app = flask.Flask(__name__)
 
 
 @app.route('/')
+@shared_code.login_validation
 def app_root():
-    shared_code.login_validation()
     return browse(shared_code.root_dir)
 
 
@@ -43,10 +43,10 @@ CACHED_REQUEST = None
 
 
 @app.route('/medialib-tag-search')
+@shared_code.login_validation
 def medialib_tag_search():
     global NUMBER_OF_ITEMS
     global CACHED_REQUEST
-    shared_code.login_validation()
 
     tags_count = flask.request.args.getlist('tags_count')
     tags_list = flask.request.args.getlist('tags')
@@ -144,7 +144,6 @@ def medialib_tag_search():
 
 
 def static_file(path, mimetype=None):
-    shared_code.login_validation()
     abspath = path.absolute()
     if mimetype is None:
         mimetype = magic.from_file(str(abspath), mime=True)
@@ -161,7 +160,6 @@ def static_file(path, mimetype=None):
 
 
 def file_url_template(body, pathstr, **kwargs):
-    shared_code.login_validation()
     path = pathlib.Path(shared_code.base32_to_str(pathstr))
     if path.is_file():
         return body(path, **kwargs)
@@ -170,6 +168,7 @@ def file_url_template(body, pathstr, **kwargs):
 
 
 @app.route('/orig/<string:pathstr>')
+@shared_code.login_validation
 def get_original(pathstr):
     def body(path):
         if pyimglib.decoders.avif.is_avif(path):
@@ -179,6 +178,7 @@ def get_original(pathstr):
 
 
 @app.route('/image/<string:format>/<string:pathstr>')
+@shared_code.login_validation
 def transcode_image(format: str, pathstr):
     def body(path, format):
         src_hash, status_code = shared_code.cache_check(path)
@@ -247,6 +247,7 @@ def transcode_image(format: str, pathstr):
 
 
 @app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<string:pathstr>')
+@shared_code.login_validation
 def gen_thumbnail(format: str, width, height, pathstr):
     def body(path, format, width, height):
         db_connection = None
@@ -352,8 +353,25 @@ def gen_thumbnail(format: str, width, height, pathstr):
     return file_url_template(body, pathstr, format=format, width=width, height=height)
 
 
+@app.route('/medialib-content-update/<int:content_id>', methods=['POST'])
+@shared_code.login_validation
+def ml_update_content(content_id: int):
+    raise NotImplemented()
+    if flask.request.method == 'POST':
+        medialib_db_connection = medialib_db.common.make_connection()
+        content_data = medialib_db.get_content_metadata_by_content_id(content_id, medialib_db_connection)
+        f = flask.request.files['file']
+        f.save(
+            shared_code.root_dir.joinpath("pictures").joinpath("medialib").joinpath(
+                "mlid{}.{}".format(content_id, pathlib.Path(f.filename).suffix))
+        )
+        # TODO: MEDIALIB content path update
+        return 'file uploaded successfully'
+
+
 @app.route('/content_metadata/<int:content_id>', methods=['GET', 'POST'], defaults={'pathstr': None})
 @app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'], defaults={'content_id': None})
+@shared_code.login_validation
 def get_content_metadata(pathstr, content_id):
     def body(path: pathlib.Path | None, content_id=None):
         def detect_content_type(path: pathlib.Path):
@@ -476,11 +494,16 @@ def get_content_metadata(pathstr, content_id):
                 **template_kwargs
             )
         else:
+            file_item = None
+            try:
+                file_item = filesystem.browse.get_db_content_info(
+                    content_id, db_query_results[1], db_query_results[3], db_query_results[2]
+                )[0]
+            except FileNotFoundError:
+                pass
             return flask.render_template(
                 'content-metadata.html',
-                item=filesystem.browse.get_db_content_info(
-                    content_id, db_query_results[1], db_query_results[3], db_query_results[2]
-                )[0],
+                item=file_item,
                 file_name=path.name,
                 tags=tags,
                 derpibooru_dl_server=config.derpibooru_dl_server,
@@ -493,6 +516,7 @@ def get_content_metadata(pathstr, content_id):
 
 
 @app.route('/medialib-db-drop-thumbnails/<int:content_id>', methods=['GET'])
+@shared_code.login_validation
 def drop_thumbnails(content_id):
     connection = medialib_db.common.make_connection()
     medialib_db.drop_thumbnails(content_id, connection)
@@ -540,8 +564,8 @@ def file_processing(file: pathlib.Path):
 
 
 @app.route('/browse/<path:pathstr>')
+@shared_code.login_validation
 def browse_dir(pathstr):
-    shared_code.login_validation()
     path = pathlib.Path(pathstr).absolute()
     if pathlib.Path(path).is_dir():
         in_root_dir = False
@@ -659,12 +683,14 @@ class VP9_VideoTranscoder(VP8_VideoTranscoder):
 
 
 @app.route('/vp8/<string:pathstr>')
+@shared_code.login_validation
 def ffmpeg_vp8_simplestream(pathstr):
     vp8_converter = VP8_VideoTranscoder()
     return vp8_converter.do_convert(pathstr)
 
 
 @app.route('/vp9/<string:pathstr>')
+@shared_code.login_validation
 def ffmpeg_vp9_simplestream(pathstr):
     vp9_converter = VP9_VideoTranscoder()
     return vp9_converter.do_convert(pathstr)
@@ -710,12 +736,14 @@ class NVENC_VideoTranscoder(VideoTranscoder):
 
 
 @app.route('/nvenc/<string:pathstr>')
+@shared_code.login_validation
 def ffmpeg_nvenc_filestream(pathstr):
     nvenc_converter = NVENC_VideoTranscoder()
     return nvenc_converter.do_convert(pathstr)
 
 
 @app.route('/aclmmp_webm/<string:pathstr>')
+@shared_code.login_validation
 def aclmmp_webm_muxer(pathstr):
     def body(path):
         dir = path.parent
@@ -754,8 +782,8 @@ def aclmmp_webm_muxer(pathstr):
 
 
 @app.route('/folder_icon_paint/<path:pathstr>')
+@shared_code.login_validation
 def icon_paint(pathstr):
-    shared_code.login_validation()
     import static.images.folder_icon_painter as folder_icon_painter
     scale = float(flask.request.args.get('scale', 1))
     dir = pathlib.Path(pathstr).absolute()
@@ -819,8 +847,8 @@ def icon_paint(pathstr):
 
 
 @app.route('/m3u8/<string:pathstr>.m3u8')
+@shared_code.login_validation
 def gen_m3u8(pathstr):
-    shared_code.login_validation()
     path = pathlib.Path(shared_code.base32_to_str(pathstr))
     if path.is_file():
         buffer = io.StringIO()
@@ -846,8 +874,8 @@ def gen_m3u8(pathstr):
 
 
 @app.route('/<path:pathstr>')
+@shared_code.login_validation
 def root_open_file(pathstr):
-    shared_code.login_validation()
     path = pathlib.Path(pathstr).absolute()
     if pathlib.Path(path).is_file():
         return static_file(path)
@@ -856,8 +884,8 @@ def root_open_file(pathstr):
 
 
 @app.route('/ffprobe_json/<string:pathstr>')
+@shared_code.login_validation
 def ffprobe_response(pathstr):
-    shared_code.login_validation()
     path = pathlib.Path(shared_code.base32_to_str(pathstr))
     if path.is_file():
         return flask.Response(pyimglib.decoders.ffmpeg.probe(path), mimetype="application/json")
@@ -866,8 +894,8 @@ def ffprobe_response(pathstr):
 
 
 @app.route('/webvtt/<string:pathstr>')
+@shared_code.login_validation
 def get_vtt_subs(pathstr):
-    shared_code.login_validation()
     path = pathlib.Path(shared_code.base32_to_str(pathstr) + ".vtt")
     if path.is_file():
         return static_file(path, mimetype="text/vtt")
