@@ -173,5 +173,12 @@
             {% if derpibooru_dl_server and origin_name and origin_id %}
                 <a href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&rewrite=1">Redownload content</a>
             {% endif %}
+            {% if content_id %}
+                <form action = "/medialib-content-update/{{ content_id }}" method="POST" enctype="multipart/form-data">
+                    Replace content
+                    <input type="file" name="content-update-file" />
+                    <input type="submit"/>
+                </form>
+            {% endif %}
 </body>
 </html>

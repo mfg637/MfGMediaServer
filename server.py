@@ -356,16 +356,32 @@ def gen_thumbnail(format: str, width, height, pathstr):
 @app.route('/medialib-content-update/<int:content_id>', methods=['POST'])
 @shared_code.login_validation
 def ml_update_content(content_id: int):
-    raise NotImplemented()
     if flask.request.method == 'POST':
         medialib_db_connection = medialib_db.common.make_connection()
         content_data = medialib_db.get_content_metadata_by_content_id(content_id, medialib_db_connection)
-        f = flask.request.files['file']
-        f.save(
-            shared_code.root_dir.joinpath("pictures").joinpath("medialib").joinpath(
-                "mlid{}.{}".format(content_id, pathlib.Path(f.filename).suffix))
+        if content_data is None:
+            medialib_db_connection.close()
+            return flask.abort(404)
+
+        old_file_path = medialib_db.config.relative_to.joinpath(content_data[1])
+        old_files: list[pathlib.Path] = []
+        if old_file_path.suffix == ".srs":
+            old_files.extend(pyimglib.decoders.srs.get_file_paths(old_file_path))
+        elif old_file_path.suffix == ".mpd":
+            pyimglib.transcoding.encoders.dash_encoder.DASHEncoder.delete_result(old_file_path)
+        old_files.append(old_file_path)
+        for file in old_files:
+            file.unlink(missing_ok=True)
+
+        f = flask.request.files['content-update-file']
+        file_path = shared_code.root_dir.joinpath("pictures").joinpath("medialib").joinpath(
+            "mlid{}{}".format(content_id, pathlib.Path(f.filename).suffix)
         )
-        # TODO: MEDIALIB content path update
+        f.save(file_path)
+        medialib_db.update_file_path(
+            content_id, str(file_path.relative_to(medialib_db.config.relative_to)), medialib_db_connection
+        )
+        medialib_db_connection.close()
         return 'file uploaded successfully'
 
 
