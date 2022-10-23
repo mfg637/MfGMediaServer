@@ -72,12 +72,42 @@
                 {% if derpibooru_dl_server and origin_name and origin_id %}
                     {% if content_title %}
                     <a
-                            href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&dl_orig=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-") }}"
+                            href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&dl_orig=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
                     >
                         Download original
                     </a>
                     {% else %}
                     <a href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&dl_orig=1">Download original</a>
+                    {% endif %}
+                    <br/>
+                {% endif %}
+                {% if prefix_id %}
+                    {% if content_title %}
+                        <a
+                            href="/image/png/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
+                        >
+                            Render PNG
+                        </a>
+                    {% else %}
+                        <a
+                            href="/image/png/{{ path_str }}?origin_id={{ prefix_id }}&download=1"
+                        >
+                            Render PNG
+                        </a>
+                    {% endif %}
+                {% else %}
+                    {% if content_title %}
+                        <a
+                            href="/image/png/{{ path_str }}?download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
+                        >
+                            Render PNG
+                        </a>
+                    {% else %}
+                        <a
+                            href="/image/png/{{ path_str }}?download=1"
+                        >
+                            Render PNG
+                        </a>
                     {% endif %}
                 {% endif %}
 

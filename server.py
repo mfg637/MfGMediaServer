@@ -32,6 +32,11 @@ tmp_file = tempfile.NamedTemporaryFile()
 app = flask.Flask(__name__)
 
 
+FILE_SUFFIX_LIST = [
+    ".png", ".jpg", ".gif", ".webm", ".mp4", ".svg"
+]
+
+
 @app.route('/')
 @shared_code.login_validation
 def app_root():
@@ -180,7 +185,10 @@ def get_original(pathstr):
 @app.route('/image/<string:format>/<string:pathstr>')
 @shared_code.login_validation
 def transcode_image(format: str, pathstr):
-    def body(path, format):
+    def body(path: pathlib.Path, format):
+        origin_id = flask.request.args.get("origin_id", None, str)
+        content_title = flask.request.args.get("title", None, str)
+        download: bool = flask.request.args.get("download", False, bool)
         src_hash, status_code = shared_code.cache_check(path)
         if status_code is not None:
             return status_code
@@ -205,7 +213,7 @@ def transcode_image(format: str, pathstr):
                     current_lod_format = pyimglib.decoders.get_image_format(current_lod)
                 else:
                     break
-            if current_lod_format in possible_formats:
+            if current_lod_format in possible_formats and not download:
                 print("current_lod", current_lod_format, possible_formats, LEVEL)
                 base32path = shared_code.str_to_base32(str(current_lod))
                 return flask.redirect(
@@ -241,8 +249,30 @@ def transcode_image(format: str, pathstr):
             max_age=24 * 60 * 60,
             last_modified=path.stat().st_mtime,
         )
+        #response = flask.Response(buffer, mimetype=mime, )
         f.set_etag(src_hash)
-        return f
+        response = flask.make_response(f)
+        if download:
+            print("download", download)
+            if content_title is not None:
+                if content_title is not None:
+                    for suffix in FILE_SUFFIX_LIST:
+                        if suffix in content_title:
+                            content_title = content_title.replace(suffix, "")
+                content_title = content_title.replace("-amp-", "&").replace("-eq-", "=")
+            filename = None
+            if origin_id is not None and content_title is not None:
+                filename = "{} {}.{}".format(origin_id, content_title, format.lower)
+            elif content_title is None and origin_id is not None:
+                filename = "{}.{}".format(origin_id, format.lower())
+            elif content_title is not None:
+                filename = "{}.{}".format(content_title, format.lower())
+            else:
+                filename = "{}.{}".format(path.stem, format.lower())
+            response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
+                urllib.parse.quote(filename)
+            )
+        return response
     return file_url_template(body, pathstr, format=format)
 
 
@@ -417,6 +447,14 @@ def get_content_metadata(pathstr, content_id):
             "furbooru": "https://furbooru.org/images/{}",
             "furaffinity": "https://www.furaffinity.net/view/{}/"
         }
+        ORIGIN_PREFIX = {
+            "derpibooru": "db",
+            "ponybooru": "pb",
+            "twibooru": "tb",
+            "e621": "ef",
+            "furbooru": "fb",
+            "furaffinity": "fa"
+        }
         connection = medialib_db.common.make_connection()
         db_query_results = None
         is_file = True
@@ -438,6 +476,8 @@ def get_content_metadata(pathstr, content_id):
             'origin_link': None,
             'hidden': False,
             'description': '',
+            'prefix_id': None,
+            'path_str': shared_code.str_to_base32(str(path))
         }
         if db_query_results is not None:
             template_kwargs['content_id'] = db_query_results[0]
@@ -450,6 +490,13 @@ def get_content_metadata(pathstr, content_id):
                 if db_query_results[-2] is not None and template_kwargs['origin_name'] in ORIGIN_URL_TEMPLATE:
                     template_kwargs['origin_link'] = \
                         ORIGIN_URL_TEMPLATE[template_kwargs['origin_name']].format(db_query_results[-2])
+                    template_kwargs['prefix_id'] = "{}{}".format(
+                        ORIGIN_PREFIX[template_kwargs['origin_name']], db_query_results[-2]
+                    )
+            else:
+                template_kwargs['prefix_id'] = "mlid{}".format(
+                    db_query_results[0]
+                )
             if db_query_results[-2] is not None:
                 template_kwargs['origin_id'] = db_query_results[-2]
             if db_query_results[4] is not None:
