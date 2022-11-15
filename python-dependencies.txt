@@ -1,0 +1,6 @@
+flask
+Pillow
+lxml
+python-magic
+CairoSVG
+psycopg2
