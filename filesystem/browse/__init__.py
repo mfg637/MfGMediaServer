@@ -61,6 +61,7 @@ def extract_mtime_key(file: pathlib.Path):
 
 def browse(dir):
     global page_cache
+    items_per_page = flask.session['items_per_page']
     dirlist, filelist, srs_filelist, mpd_filelist = [], [], [], []
     glob_pattern = flask.request.args.get('glob', None)
     itemslist, dirmeta_list, filemeta_list = page_cache.get_cache(dir, glob_pattern)

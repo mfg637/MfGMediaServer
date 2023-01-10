@@ -84,8 +84,8 @@ def medialib_tag_search():
     if pagination:
         raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
             *tags_groups,
-            limit=filesystem.browse.items_per_page + 1,
-            offset=filesystem.browse.items_per_page*page,
+            limit=flask.session['items_per_page'] + 1,
+            offset=flask.session['items_per_page'] * page,
             order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
             filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
         )
@@ -97,7 +97,7 @@ def medialib_tag_search():
                 *tags_groups,
                 filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
             )
-            max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
+            max_pages = math.ceil(NUMBER_OF_ITEMS / flask.session['items_per_page'])
 
     else:
         raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
@@ -970,9 +970,17 @@ def get_vtt_subs(pathstr):
 def show_login_form(event):
     f = None
     if 'redirect_to' in flask.request.form:
-        f = flask.render_template('login.html', redirect_to=str(flask.request.form['redirect_to']))
+        f = flask.render_template(
+            'login.html',
+            redirect_to=str(flask.request.form['redirect_to']),
+            items_per_page=config.items_per_page
+        )
     else:
-        f = flask.render_template('login.html', redirect_to=str(flask.request.url))
+        f = flask.render_template(
+            'login.html',
+            redirect_to=str(flask.request.url),
+            items_per_page=config.items_per_page
+        )
     return flask.Response(f, status=401)
 
 
@@ -987,6 +995,7 @@ def login_handler():
         flask.session['clevel'] = flask.request.form['clevel']
         config.ACLMMP_COMPATIBILITY_LEVEL = int(flask.request.form['clevel'])
         flask.session['audio_channels'] = flask.request.form['ac']
+        flask.session['items_per_page'] = int(flask.request.form['items_per_page'])
         return flask.redirect(flask.request.form['redirect_to'])
     else:
         flask.abort(401)
