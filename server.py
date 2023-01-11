@@ -996,7 +996,9 @@ def login_handler():
         config.ACLMMP_COMPATIBILITY_LEVEL = int(flask.request.form['clevel'])
         flask.session['audio_channels'] = flask.request.form['ac']
         flask.session['items_per_page'] = int(flask.request.form['items_per_page'])
-        return flask.redirect(flask.request.form['redirect_to'])
+        response = flask.make_response(flask.redirect(flask.request.form['redirect_to']))
+        response.set_cookie("clevel", str(int(flask.request.form['clevel'])))
+        return response
     else:
         flask.abort(401)
 

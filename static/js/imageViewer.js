@@ -144,12 +144,12 @@ function ImageViewer() {
     clearTimeout(loadViewportSizePhoto);
     id=photoID;
     if (image) {
-      replacePhoto(this);
+      replaceImage(this);
     } else {
-      createPhoto(this);
+      createImage(this);
     }
   }
-  replacePhoto = function() {
+  replaceImage = function() {
     container.classList.add('load');
 
     // clear sources
@@ -164,11 +164,13 @@ function ImageViewer() {
         img_tag.src = photolist[id].icon
     }
     else {
-      if (photolist[id].suffix === ".avif"){
-        source_2 = document.createElement("source");
-        source_2.srcset = photolist[id].link;
-        source_2.type = "image/avif";
-        image.appendChild(source_2)
+      if (typeof Cookies !== "undefined") {
+        if (photolist[id].suffix === ".avif" && Number(Cookies.get('clevel')) <= 1) {
+          source_2 = document.createElement("source");
+          source_2.srcset = photolist[id].link;
+          source_2.type = "image/avif";
+          image.appendChild(source_2)
+        }
       }
       source_1 = document.createElement("source")
       webp_souces = []
@@ -243,14 +245,14 @@ function ImageViewer() {
   previousPhoto = function() {
     clearTimeout(loadViewportSizePhoto);
     id--;
-    replacePhoto();
+    replaceImage();
   }
   nextPhoto = function() {
     clearTimeout(loadViewportSizePhoto);
     id++;
-    replacePhoto();
+    replaceImage();
   };
-  function createPhoto() {
+  function createImage() {
     container = document.createElement('div');
     container.id = 'contimgbox';
     container.classList.add('photoview-wraper');
@@ -300,7 +302,7 @@ function ImageViewer() {
         doubleclick_goto_url_click_handler();
     }
 
-    replacePhoto();
+    replaceImage();
 
     prev.onclick = previousPhoto;
 
@@ -325,7 +327,7 @@ function ImageViewer() {
       container.classList.remove('load');
     };
     image.onError=function(){
-      alert('Ошибка 404. Файл не найден '+nmb);
+      alert('Error 404 '+nmb);
       close();
     }
 
@@ -336,6 +338,6 @@ function ImageViewer() {
   function resize() {
     console.log('resize '+window.innerWidth+'x'+window.innerHeight);
     clearTimeout(loadViewportSizePhoto);
-    loadViewportSizePhoto=setTimeout(replacePhoto,2500);
+    loadViewportSizePhoto=setTimeout(replaceImage,2500);
   }
 }
