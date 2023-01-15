@@ -284,7 +284,8 @@ def gen_thumbnail(format: str, width, height, pathstr):
         if config.thumbnail_cache_dir is not None and len(medialib_db.config.db_name):
             MIME_TYPES = {
                 "jpeg": "image/jpeg",
-                "webp": "image/webp"
+                "webp": "image/webp",
+                "avif": "image/avif"
             }
             db_connection = medialib_db.common.make_connection()
             thumbnail_file_path, thumbnail_format = medialib_db.get_thumbnail(path, width, height, format,
@@ -353,6 +354,28 @@ def gen_thumbnail(format: str, width, height, pathstr):
                 img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
                 mime = "image/webp"
                 format = "webp"
+            elif format.lower() == 'avif':
+                tmp_png_file = tempfile.NamedTemporaryFile(suffix=".png")
+                tmp_avif_file = tempfile.NamedTemporaryFile(suffix="avif")
+                img.save(tmp_png_file, format="PNG")
+                commandline = [
+                    "avifenc",
+                    "-d", "10",
+                    "--min", "8",
+                    "--max", "16",
+                    "-j", "4",
+                    "-a", "end-usage=q",
+                    "-a", "cq-level=12",
+                    "-s", "8",
+                    tmp_png_file.name,
+                    tmp_avif_file.name
+                ]
+                subprocess.run(commandline)
+                tmp_png_file.close()
+                buffer.write(tmp_avif_file.read())
+                tmp_avif_file.close()
+                mime = "image/avif"
+                format = "avif"
             else:
                 img = img.convert(mode='RGB')
                 img.save(buffer, format="JPEG", quality=90)

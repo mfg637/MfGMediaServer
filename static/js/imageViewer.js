@@ -164,21 +164,34 @@ function ImageViewer() {
         img_tag.src = photolist[id].icon
     }
     else {
-      if (typeof Cookies !== "undefined") {
-        if (photolist[id].suffix === ".avif" && Number(Cookies.get('clevel')) <= 1) {
-          source_2 = document.createElement("source");
-          source_2.srcset = photolist[id].link;
-          source_2.type = "image/avif";
-          image.appendChild(source_2)
-        }
+      if (photolist[id].suffix === ".avif" && Number(Cookies.get('clevel')) <= 1) {
+        source_2 = document.createElement("source");
+        source_2.srcset = photolist[id].link;
+        source_2.type = "image/avif";
+        image.appendChild(source_2)
       }
-      source_1 = document.createElement("source")
-      webp_souces = []
+
       scale_values = [1, 1.5, 2, 2.5, 3, 4, 6]
       function scale_base_size(width, height, scale){
         return '' + Math.round(width * scale) + 'x' +
         Math.round(height * scale)
       }
+
+      if (Number(Cookies.get('clevel')) <= 2) {
+        source_4 = document.createElement("source")
+        avif_souces = []
+        scale_values.forEach(
+          scale_value => avif_souces.push(
+            `/thumbnail/avif/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${photolist[id].base32path} ${scale_value}x`
+          )
+        );
+        source_4.srcset = avif_souces.join(", ")
+        source_4.type = "image/avif";
+        image.appendChild(source_4)
+      }
+
+      source_1 = document.createElement("source")
+      webp_souces = []
       scale_values.forEach(
         scale_value => webp_souces.push(
           `/thumbnail/webp/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${photolist[id].base32path} ${scale_value}x`
