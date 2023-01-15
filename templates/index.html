@@ -257,6 +257,13 @@
         <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
         <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
     {% endif %}
+    <script type="application/javascript">
+        if(typeof Cookies === 'undefined'){
+          document.write(
+            decodeURI("%3Cscript src='/static/js-cache/js.cookie.min.js' type='text/javascript'%3E%3C/script%3E")
+          );
+        }
+    </script>
     <script src="/static/js/ajax.js"></script>
     <script src="/static/js/videoplayer.js"></script>
     <script src="/static/js/imageViewer.js"></script>
