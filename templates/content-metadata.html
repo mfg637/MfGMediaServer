@@ -87,12 +87,22 @@
                             href="/image/png/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
                         >
                             Render PNG
+                        </a><br/>
+                        <a
+                            href="/image/webp/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
+                        >
+                            Render WEBP
                         </a>
                     {% else %}
                         <a
                             href="/image/png/{{ path_str }}?origin_id={{ prefix_id }}&download=1"
                         >
                             Render PNG
+                        </a><br/>
+                        <a
+                            href="/image/webp/{{ path_str }}?origin_id={{ prefix_id }}&download=1"
+                        >
+                            Render WEBP
                         </a>
                     {% endif %}
                 {% else %}
