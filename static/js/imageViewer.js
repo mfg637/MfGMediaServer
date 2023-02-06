@@ -186,7 +186,7 @@ function ImageViewer() {
         avif_souces = []
         scale_values.forEach(
           scale_value => avif_souces.push(
-            `/thumbnail/avif/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id} ${scale_value}x`
+            `/thumbnail/avif/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id}?allow_origin=1 ${scale_value}x`
           )
         );
         source_4.srcset = avif_souces.join(", ")
@@ -198,7 +198,7 @@ function ImageViewer() {
       webp_souces = []
       scale_values.forEach(
         scale_value => webp_souces.push(
-          `/thumbnail/webp/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id} ${scale_value}x`
+          `/thumbnail/webp/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id}?allow_origin=1 ${scale_value}x`
         )
       );
       source_1.srcset = webp_souces.join(", ")
