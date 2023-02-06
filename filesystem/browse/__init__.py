@@ -301,6 +301,21 @@ def get_file_info(file: pathlib.Path, items_count=0):
 
 
 def get_db_content_info(content_id: int, file_str: str, content_type, title, items_count=0):
+    def _icon(file, filemeta):
+        filemeta["lazy_load"] = load_acceleration in {
+            shared_enums.LoadAcceleration.LAZY_LOAD,
+            shared_enums.LoadAcceleration.BOTH
+        }
+        filemeta['icon'] = "/thumbnail/jpeg/192x144/mlid{}".format(filemeta['content_id'])
+        filemeta['sources'] = (
+            "/thumbnail/webp/192x144/mlid{}".format(filemeta['content_id']) +
+            ", /thumbnail/webp/384x288/mlid{} 2x".format(filemeta['content_id']) +
+            ", /thumbnail/webp/768x576/mlid{} 4x".format(filemeta['content_id']),
+            "/thumbnail/jpeg/192x144/mlid{}".format(filemeta['content_id']) +
+            ", /thumbnail/jpeg/384x288/mlid{} 2x".format(filemeta['content_id']) +
+            ", /thumbnail/jpeg/768x576/mlid{} 4x".format(filemeta['content_id']),
+        )
+
     file = pathlib.Path(file_str)
     base32path = shared_code.str_to_base32(str(file))
     filemeta = {

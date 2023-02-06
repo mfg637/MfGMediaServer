@@ -276,52 +276,90 @@ def transcode_image(format: str, pathstr):
     return file_url_template(body, pathstr, format=format)
 
 
-@app.route('/thumbnail/<string:format>/<int:width>x<int:height>/<string:pathstr>')
+@app.route('/thumbnail/<string:_format>/<int:width>x<int:height>/mlid<int:content_id>', defaults={'pathstr': None})
+@app.route('/thumbnail/<string:_format>/<int:width>x<int:height>/<string:pathstr>', defaults={'content_id': None})
 @shared_code.login_validation
-def gen_thumbnail(format: str, width, height, pathstr):
-    def body(path, format, width, height):
-        db_connection = None
-        if config.thumbnail_cache_dir is not None and len(medialib_db.config.db_name):
-            MIME_TYPES = {
-                "jpeg": "image/jpeg",
-                "webp": "image/webp",
-                "avif": "image/avif"
-            }
-            db_connection = medialib_db.common.make_connection()
-            thumbnail_file_path, thumbnail_format = medialib_db.get_thumbnail(path, width, height, format,
-                                                                              db_connection)
-            if thumbnail_file_path is not None:
-                print("thumbnail filepath", thumbnail_file_path)
-                return flask.send_file(
-                    config.thumbnail_cache_dir.joinpath(thumbnail_file_path),
-                    mimetype=MIME_TYPES[thumbnail_format],
-                    max_age=24 * 60 * 60,
-                    last_modified=path.stat().st_mtime,
-                )
+def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, content_id: int | None):
+    MIME_TYPES_BY_FORMAT = {
+        "jpeg": "image/jpeg",
+        "webp": "image/webp",
+        "avif": "image/avif"
+    }
 
-        allow_origin = bool(flask.request.args.get('allow_origin', False))
-        src_hash, status_code = None, None
-        if path.stat().st_size < (1024 * 1024 * 1024):
-            src_hash, status_code = shared_code.cache_check(path)
-        if status_code is not None:
-            return status_code
-        img = pyimglib.decoders.open_image(shared_code.root_dir.joinpath(path))
+    def srs_image_processing(img, allow_origin) -> PIL.Image.Image | pathlib.Path:
+        lods: list[pathlib.Path] = img.progressive_lods()
+        current_lod = lods.pop(0)
+        current_lod_img = pyimglib.decoders.open_image(current_lod)
+        while len(lods):
+            if isinstance(current_lod_img, pyimglib.decoders.frames_stream.FramesStream):
+                current_lod_img = current_lod_img.next_frame()
+            if current_lod_img.width < width and current_lod_img.height < height:
+                current_lod = lods.pop()
+                print("CURRENT_LOD", current_lod)
+                current_lod_img.close()
+                current_lod_img = pyimglib.decoders.open_image(current_lod)
+            else:
+                break
+        if current_lod_img.format == "WEBP" and allow_origin:
+            return current_lod
+        else:
+            return current_lod_img
+
+    def extract_frame_from_video(img: pyimglib.decoders.frames_stream.FramesStream):
+        _img = img.next_frame()
+        img.close()
+        return _img
+
+    def check_origin_allowed(img, allow_origin):
+        return allow_origin and img.format == "WEBP" and\
+               (img.is_animated or (img.width <= width and img.height <= height))
+
+    def generate_thumbnail_image(img, _format, width, height) -> tuple[io.BytesIO, str, str]:
+        img = img.convert(mode='RGBA')
+        img.thumbnail((width, height), PIL.Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        thumbnail_file_path = None
+        mime = ''
+        if _format.lower() == 'webp':
+            img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
+            mime = "image/webp"
+            _format = "webp"
+        elif _format.lower() == 'avif':
+            tmp_png_file = tempfile.NamedTemporaryFile(suffix=".png")
+            tmp_avif_file = tempfile.NamedTemporaryFile(suffix="avif")
+            img.save(tmp_png_file, format="PNG")
+            commandline = [
+                "avifenc",
+                "-d", "10",
+                "--min", "8",
+                "--max", "16",
+                "-j", "4",
+                "-a", "end-usage=q",
+                "-a", "cq-level=12",
+                "-s", "8",
+                tmp_png_file.name,
+                tmp_avif_file.name
+            ]
+            subprocess.run(commandline)
+            tmp_png_file.close()
+            buffer.write(tmp_avif_file.read())
+            tmp_avif_file.close()
+            mime = "image/avif"
+            _format = "avif"
+        else:
+            img = img.convert(mode='RGB')
+            img.save(buffer, format="JPEG", quality=90)
+            mime = "image/jpeg"
+            _format = "jpeg"
+        img.close()
+        buffer.seek(0)
+        return buffer, mime, _format
+
+    def complex_formats_processing(img, allow_origin) -> PIL.Image.Image | flask.Response:
         if isinstance(img, pyimglib.decoders.srs.ClImage):
-            lods = img.progressive_lods()
-            current_lod = lods.pop(0)
-            current_lod_img = pyimglib.decoders.open_image(current_lod)
-            while len(lods):
-                if isinstance(current_lod_img, pyimglib.decoders.frames_stream.FramesStream):
-                    current_lod_img = current_lod_img.next_frame()
-                if current_lod_img.width < width and current_lod_img.height < height:
-                    current_lod = lods.pop()
-                    print("CURRENT_LOD", current_lod)
-                    current_lod_img.close()
-                    current_lod_img = pyimglib.decoders.open_image(current_lod)
-                else:
-                    break
-            if current_lod_img.format == "WEBP" and allow_origin:
-                base32path = shared_code.str_to_base32(str(current_lod))
+            selected_image = srs_image_processing(img, allow_origin)
+            if isinstance(selected_image, pathlib.Path):
+                base32path = shared_code.str_to_base32(str(selected_image))
                 return flask.redirect(
                     "https://{}:{}/orig/{}".format(
                         config.host_name,
@@ -330,80 +368,96 @@ def gen_thumbnail(format: str, width, height, pathstr):
                     )
                 )
             else:
-                img = current_lod_img
+                img = selected_image
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
-            _img = img.next_frame()
-            img.close()
-            img = _img
-        f = None
-        def set_f(img, format):
-            if allow_origin and img.format == "WEBP" and (img.is_animated or (img.width <= width and img.height <= height)):
-                return flask.redirect(
-                    "https://{}:{}/orig/{}".format(
-                        config.host_name,
-                        config.port,
-                        pathstr
-                    )
+            img = extract_frame_from_video(img)
+        if check_origin_allowed(img, allow_origin):
+            return flask.redirect(
+                "https://{}:{}/orig/{}".format(
+                    config.host_name,
+                    config.port,
+                    pathstr
                 )
-            img = img.convert(mode='RGBA')
-            img.thumbnail((width, height), PIL.Image.LANCZOS)
-            buffer = io.BytesIO()
-            thumbnail_file_path = None
-            mime = ''
-            if format.lower() == 'webp':
-                img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
-                mime = "image/webp"
-                format = "webp"
-            elif format.lower() == 'avif':
-                tmp_png_file = tempfile.NamedTemporaryFile(suffix=".png")
-                tmp_avif_file = tempfile.NamedTemporaryFile(suffix="avif")
-                img.save(tmp_png_file, format="PNG")
-                commandline = [
-                    "avifenc",
-                    "-d", "10",
-                    "--min", "8",
-                    "--max", "16",
-                    "-j", "4",
-                    "-a", "end-usage=q",
-                    "-a", "cq-level=12",
-                    "-s", "8",
-                    tmp_png_file.name,
-                    tmp_avif_file.name
-                ]
-                subprocess.run(commandline)
-                tmp_png_file.close()
-                buffer.write(tmp_avif_file.read())
-                tmp_avif_file.close()
-                mime = "image/avif"
-                format = "avif"
-            else:
-                img = img.convert(mode='RGB')
-                img.save(buffer, format="JPEG", quality=90)
-                mime = "image/jpeg"
-                format = "jpeg"
-            img.close()
-            buffer.seek(0)
-            if config.thumbnail_cache_dir is not None and len(medialib_db.config.db_name):
-                content_id, thumbnail_file_name = medialib_db.register_thumbnail(path, width, height, format, db_connection)
-                if thumbnail_file_name is not None:
-                    thumbnail_file_path = pathlib.Path(config.thumbnail_cache_dir).joinpath(thumbnail_file_name)
-                    f = thumbnail_file_path.open("bw")
-                    f.write(buffer.getvalue())
-                    f.close()
-                    buffer.close()
-                    buffer = thumbnail_file_path
-                db_connection.close()
-            return flask.send_file(
-                buffer,
-                mimetype=mime,
-                max_age=24 * 60 * 60,
-                last_modified=path.stat().st_mtime,
             )
-        f = set_f(img, format)
+        return img
+
+    def file_path_processing(path, _format, width, height):
+        allow_origin = bool(flask.request.args.get('allow_origin', False))
+        src_hash, status_code = None, None
+        if path.stat().st_size < (1024 * 1024 * 1024):
+            src_hash, status_code = shared_code.cache_check(path)
+        if status_code is not None:
+            return status_code
+        img = pyimglib.decoders.open_image(shared_code.root_dir.joinpath(path))
+        extracted_img = complex_formats_processing(img, allow_origin)
+        if isinstance(extracted_img, flask.Response):
+            return extracted_img
+        elif isinstance(extracted_img, PIL.Image.Image):
+            img = extracted_img
+        else:
+            raise NotImplementedError(type(extracted_img))
+        buffer, mime, _format = generate_thumbnail_image(img, _format, width, height)
+        f = flask.send_file(
+            buffer,
+            mimetype=mime,
+            max_age=24 * 60 * 60,
+            last_modified=path.stat().st_mtime,
+        )
         if src_hash is not None:
             f.set_etag(src_hash)
         return f
-    return file_url_template(body, pathstr, format=format, width=width, height=height)
+    if content_id is not None:
+        if not len(medialib_db.config.db_name):
+            flask.abort(404)
+        allow_origin = bool(flask.request.args.get('allow_origin', False))
+        content_id = int(content_id)
+        db_connection = medialib_db.common.make_connection()
+        if config.thumbnail_cache_dir is not None:
+            thumbnail_file_path, thumbnail_format = medialib_db.get_thumbnail_by_content_id(
+                content_id,
+                width, height,
+                _format,
+                db_connection
+            )
+            if thumbnail_file_path is not None:
+                print("thumbnail filepath", thumbnail_file_path)
+                db_connection.close()
+                return flask.send_file(
+                    config.thumbnail_cache_dir.joinpath(thumbnail_file_path),
+                    mimetype=MIME_TYPES_BY_FORMAT[thumbnail_format],
+                    max_age=24 * 60 * 60
+                )
+        content_metadata = medialib_db.get_content_metadata_by_content_id(content_id, db_connection)
+
+        img = pyimglib.decoders.open_image(shared_code.root_dir.joinpath(content_metadata[1]))
+        extracted_img = complex_formats_processing(img, allow_origin)
+        if isinstance(extracted_img, flask.Response):
+            db_connection.close()
+            return extracted_img
+        elif isinstance(extracted_img, PIL.Image.Image):
+            img = extracted_img
+        else:
+            raise NotImplementedError(type(extracted_img))
+        buffer, mime, _format = generate_thumbnail_image(img, _format, width, height)
+        if config.thumbnail_cache_dir is not None:
+            thumbnail_file_name = medialib_db.register_thumbnail_by_content_id(
+                content_id, width, height, _format, db_connection
+            )
+            if thumbnail_file_name is not None:
+                thumbnail_file_path = pathlib.Path(config.thumbnail_cache_dir).joinpath(thumbnail_file_name)
+                f = thumbnail_file_path.open("bw")
+                f.write(buffer.getvalue())
+                f.close()
+                buffer.close()
+                buffer = thumbnail_file_path
+        db_connection.close()
+        return flask.send_file(
+            buffer,
+            mimetype=mime,
+            max_age=24 * 60 * 60,
+        )
+    else:
+        return file_url_template(file_path_processing, pathstr, _format=_format, width=width, height=height)
 
 
 @app.route('/medialib-content-update/<int:content_id>', methods=['POST'])
@@ -438,7 +492,7 @@ def ml_update_content(content_id: int):
         return 'file uploaded successfully'
 
 
-@app.route('/content_metadata/<int:content_id>', methods=['GET', 'POST'], defaults={'pathstr': None})
+@app.route('/content_metadata/mlid<int:content_id>', methods=['GET', 'POST'], defaults={'pathstr': None})
 @app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'], defaults={'content_id': None})
 @shared_code.login_validation
 def get_content_metadata(pathstr, content_id):

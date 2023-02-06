@@ -67,7 +67,7 @@ imageViewer.init(filemeta)
 
 function ImageViewer() {
   var container, image, img_tag, prev, next, caption;
-  var id,photolist,loadViewportSizePhoto;
+  var id,imagelist,loadViewportSizePhoto;
   var default_click_handler,
       default_hide_controls_click_handler,
       default_goto_url_click_handler,
@@ -81,7 +81,7 @@ function ImageViewer() {
 
   this.init = function (list) {
     var links = document.getElementsByTagName('a'),countPhoto = 0;
-    photolist = list;
+    imagelist = list;
 
     links = document.querySelectorAll(".item")
     for (let i=0; i<filemeta.length; i++){
@@ -125,19 +125,19 @@ function ImageViewer() {
     }
 
     default_goto_url_click_handler = function(){
-        document.location.href = photolist[id].link;
+        document.location.href = imagelist[id].link;
     }
 
     doubleclick_goto_url_click_handler = function(){
-        window.open(photolist[id].link, '_blank');
+        window.open(imagelist[id].link, '_blank');
     }
 
     default_open_video_click_handler = function(){
-        new RainbowVideoPlayer(photolist[id]);
+        new RainbowVideoPlayer(imagelist[id]);
     }
 
     default_open_dash_video_click_handler = function(){
-        new RainbowDASHVideoPlayer(photolist[id]);
+        new RainbowDASHVideoPlayer(imagelist[id]);
     }
 
   this.watchPhoto = function(photoID) {
@@ -158,15 +158,19 @@ function ImageViewer() {
     }
 
     img_tag = document.createElement("img");
-    if (photolist[id].suffix === '.gif')
-        img_tag.src = photolist[id].link;
-    else if (photolist[id].custom_icon){
-        img_tag.src = photolist[id].icon
+    if (imagelist[id].suffix === '.gif')
+        img_tag.src = imagelist[id].link;
+    else if (imagelist[id].custom_icon){
+        img_tag.src = imagelist[id].icon
     }
     else {
-      if (photolist[id].suffix === ".avif" && Number(Cookies.get('clevel')) <= 1) {
+      thumbnail_id = imagelist[id].base32path
+      if (imagelist[id].content_id !== null){
+        thumbnail_id = "mlid" + imagelist[id].content_id
+      }
+      if (imagelist[id].suffix === ".avif" && Number(Cookies.get('clevel')) <= 1) {
         source_2 = document.createElement("source");
-        source_2.srcset = photolist[id].link;
+        source_2.srcset = imagelist[id].link;
         source_2.type = "image/avif";
         image.appendChild(source_2)
       }
@@ -182,7 +186,7 @@ function ImageViewer() {
         avif_souces = []
         scale_values.forEach(
           scale_value => avif_souces.push(
-            `/thumbnail/avif/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${photolist[id].base32path} ${scale_value}x`
+            `/thumbnail/avif/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id} ${scale_value}x`
           )
         );
         source_4.srcset = avif_souces.join(", ")
@@ -194,7 +198,7 @@ function ImageViewer() {
       webp_souces = []
       scale_values.forEach(
         scale_value => webp_souces.push(
-          `/thumbnail/webp/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${photolist[id].base32path} ${scale_value}x`
+          `/thumbnail/webp/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id} ${scale_value}x`
         )
       );
       source_1.srcset = webp_souces.join(", ")
@@ -204,7 +208,7 @@ function ImageViewer() {
       jpeg_souces = [];
       scale_values.forEach(
         scale_value => jpeg_souces.push(
-          `/thumbnail/jpeg/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${photolist[id].base32path}  ${scale_value}x`
+          `/thumbnail/jpeg/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id}  ${scale_value}x`
         )
       );
       source_3.srcset = jpeg_souces.join(", ");
@@ -213,18 +217,18 @@ function ImageViewer() {
       img_tag.src = '/thumbnail/jpeg/' +
         Math.round(window.innerWidth * window.devicePixelRatio) + 'x' +
         Math.round(window.innerHeight * window.devicePixelRatio) +
-        '/' + photolist[id].base32path;
+        '/' + thumbnail_id;
       img_tag.style.maxWidth = window.innerWidth + "px";
       img_tag.style.maxHeight = window.innerHeight + "px";
       image.appendChild(img_tag)
     }
 
 
-    if ((photolist[id].type=== "picture") || (photolist[id].type=== "image"))
+    if ((imagelist[id].type=== "picture") || (imagelist[id].type=== "image"))
         default_click_handler = default_hide_controls_click_handler;
-    else if (photolist[id].type === "video")
+    else if (imagelist[id].type === "video")
         default_click_handler = default_open_video_click_handler;
-    else if (photolist[id].type === "DASH")
+    else if (imagelist[id].type === "DASH")
         default_click_handler = default_open_dash_video_click_handler;
     else
         default_click_handler = default_goto_url_click_handler;
@@ -232,16 +236,16 @@ function ImageViewer() {
 
 
     caption.innerHTML = ( +id + 1) + '/' +
-                        photolist.length;
-    if (photolist[id].name !== null)
+                        imagelist.length;
+    if (imagelist[id].name !== null)
       caption.innerHTML += '<br /><span class="title">' +
-                        photolist[id].name + '</span>';
+                        imagelist[id].name + '</span>';
     if (id>0) {
       prev.style.display='block';
     }else{
       prev.style.display='none';
     }
-    if (id<photolist.length-1) {
+    if (id<imagelist.length-1) {
       next.style.display='block';
     }else{
       next.style.display='none';
@@ -330,7 +334,7 @@ function ImageViewer() {
         case 37:if (id > 0) {
           previousPhoto();
         };break;
-        case 39:if (id < photolist.length - 1) {
+        case 39:if (id < imagelist.length - 1) {
           nextPhoto();
         };break;
       }
