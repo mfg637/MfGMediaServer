@@ -346,7 +346,6 @@ def get_db_content_info(content_id: int, file_str: str, content_type, title, ite
         if icon_path.exists():
             _icon(file, filemeta)
     elif file.suffix.lower() == '.srs':
-        TYPE = pyimglib.decoders.srs.type_detect(file)
         if content_type in ("video", "video-loop"):
             filemeta['type'] = "video"
             filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
