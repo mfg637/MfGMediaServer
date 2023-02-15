@@ -288,10 +288,17 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
 
     def srs_image_processing(img, allow_origin) -> PIL.Image.Image | pathlib.Path:
         lods: list[pathlib.Path] = img.progressive_lods()
-        best_quality = int(flask.request.cookies.get("clevel")) <= 1
-        print("allow_origin and best_quality", allow_origin, best_quality)
+        compatibility_level = int(flask.request.cookies.get("clevel"))
+        best_quality = compatibility_level <= 1
         if allow_origin and best_quality:
             return lods[-1]
+        cl2_compatible = compatibility_level <= 2
+        #print("allow_origin and cl2_compatible", allow_origin, cl2_compatible)
+        if allow_origin and cl2_compatible:
+            cl2_content = img.get_content_by_level(2)
+            #print("cl2_content", cl2_content)
+            if cl2_content is not None:
+                return cl2_content
         current_lod = lods.pop(0)
         current_lod_img = pyimglib.decoders.open_image(current_lod)
         while len(lods):
