@@ -3,6 +3,7 @@
 import datetime
 import json
 import subprocess
+import sys
 import tempfile
 import abc
 import urllib.parse
@@ -15,6 +16,8 @@ import io
 import PIL.Image
 import filesystem
 import magic
+import logging
+import logging.handlers
 
 import pyimglib
 import pyimglib.decoders.ffmpeg
@@ -35,6 +38,33 @@ app = flask.Flask(__name__)
 FILE_SUFFIX_LIST = [
     ".png", ".jpg", ".gif", ".webm", ".mp4", ".svg"
 ]
+
+
+def loginit():
+    logging.getLogger().setLevel(logging.NOTSET)
+
+    console_logger = logging.StreamHandler(sys.stdout)
+    console_logger.setLevel(logging.INFO)
+    console_formater = logging.Formatter(
+        '%(asctime)s::%(levelname)s::%(name)s::%(message)s',
+        datefmt="%M:%S"
+    )
+    console_logger.setFormatter(console_formater)
+    logging.getLogger().addHandler(console_logger)
+
+    file_rotating_handler = logging.handlers.RotatingFileHandler(
+        filename='logs/server.log', maxBytes=1_000_000, backupCount=5
+    )
+    file_rotating_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s::%(process)dx%(thread)d::%(levelname)s::%(name)s::%(message)s')
+    file_rotating_handler.setFormatter(formatter)
+    logging.getLogger().addHandler(file_rotating_handler)
+
+    logging.debug("Application server.py started")
+
+
+loginit()
+logger = logging.getLogger(__name__)
 
 
 @app.route('/')
@@ -61,7 +91,6 @@ def medialib_tag_search():
         tags_count = tag["count"]
         for i in range(tags_count):
             tag["tags"].append(tags_list.pop(0))
-    print("TAGS", tags_groups)
     page = int(flask.request.args.get('page', 0))
     order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.DATE_DECREASING.value))
     hidden_filtering = int(flask.request.args.get("hidden_filtering",
@@ -206,7 +235,6 @@ def transcode_image(format: str, pathstr):
             lods = img.get_image_file_list()
             current_lod = lods.pop(0)
             current_lod_format = pyimglib.decoders.get_image_format(current_lod)
-            print("select srs lod", current_lod_format, possible_formats, LEVEL)
             while len(lods):
                 if current_lod_format not in possible_formats:
                     current_lod = lods.pop()
@@ -214,7 +242,6 @@ def transcode_image(format: str, pathstr):
                 else:
                     break
             if current_lod_format in possible_formats and not download:
-                print("current_lod", current_lod_format, possible_formats, LEVEL)
                 base32path = shared_code.str_to_base32(str(current_lod))
                 return flask.redirect(
                     "https://{}:{}/orig/{}".format(
@@ -253,7 +280,6 @@ def transcode_image(format: str, pathstr):
         f.set_etag(src_hash)
         response = flask.make_response(f)
         if download:
-            print("download", download)
             if content_title is not None:
                 if content_title is not None:
                     for suffix in FILE_SUFFIX_LIST:
@@ -287,16 +313,15 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
     }
 
     def srs_image_processing(img, allow_origin) -> PIL.Image.Image | pathlib.Path:
+        logger.info("srs image processing")
         lods: list[pathlib.Path] = img.progressive_lods()
         compatibility_level = int(flask.request.cookies.get("clevel"))
         best_quality = compatibility_level <= 1
         if allow_origin and best_quality:
             return lods[-1]
         cl2_compatible = compatibility_level <= 2
-        #print("allow_origin and cl2_compatible", allow_origin, cl2_compatible)
         if allow_origin and cl2_compatible:
             cl2_content = img.get_content_by_level(2)
-            #print("cl2_content", cl2_content)
             if cl2_content is not None:
                 return cl2_content
         current_lod = lods.pop(0)
@@ -306,7 +331,7 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
                 current_lod_img = current_lod_img.next_frame()
             if current_lod_img.width < width and current_lod_img.height < height:
                 current_lod = lods.pop()
-                print("CURRENT_LOD", current_lod)
+                logger.debug("CURRENT_LOD: {}".format(current_lod))
                 current_lod_img.close()
                 current_lod_img = pyimglib.decoders.open_image(current_lod)
             else:
@@ -317,6 +342,7 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
             return current_lod_img
 
     def extract_frame_from_video(img: pyimglib.decoders.frames_stream.FramesStream):
+        logger.info("video extraction")
         _img = img.next_frame()
         img.close()
         return _img
@@ -326,6 +352,7 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
                (img.is_animated or (img.width <= width and img.height <= height))
 
     def generate_thumbnail_image(img, _format, width, height) -> tuple[io.BytesIO, str, str]:
+        logger.info("generating thumbnail")
         img = img.convert(mode='RGBA')
         img.thumbnail((width, height), PIL.Image.Resampling.LANCZOS)
         buffer = io.BytesIO()
@@ -366,9 +393,11 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
         buffer.seek(0)
         return buffer, mime, _format
 
-    def complex_formats_processing(img, allow_origin) -> PIL.Image.Image | flask.Response:
+    def complex_formats_processing(img, file_path, allow_origin) -> PIL.Image.Image | flask.Response:
+        logger.info("complex_formats_processing")
         if isinstance(img, pyimglib.decoders.srs.ClImage):
             selected_image = srs_image_processing(img, allow_origin)
+            logger.debug("srs_image_processing: {}".format(selected_image.__repr__()))
             if isinstance(selected_image, pathlib.Path):
                 base32path = shared_code.str_to_base32(str(selected_image))
                 return flask.redirect(
@@ -382,17 +411,21 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
                 img = selected_image
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             img = extract_frame_from_video(img)
+            logger.debug("extracted frame: {}".format(img.__repr__()))
         if check_origin_allowed(img, allow_origin):
+            logger.info("origin redirect allowed")
+            base32path = shared_code.str_to_base32(str(file_path))
             return flask.redirect(
                 "https://{}:{}/orig/{}".format(
                     config.host_name,
                     config.port,
-                    pathstr
+                    base32path
                 )
             )
         return img
 
     def file_path_processing(path, _format, width, height):
+        logger.info("file_path_processing")
         allow_origin = bool(flask.request.args.get('allow_origin', False))
         src_hash, status_code = None, None
         if path.stat().st_size < (1024 * 1024 * 1024):
@@ -400,7 +433,7 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
         if status_code is not None:
             return status_code
         img = pyimglib.decoders.open_image(shared_code.root_dir.joinpath(path))
-        extracted_img = complex_formats_processing(img, allow_origin)
+        extracted_img = complex_formats_processing(img, path, allow_origin)
         if isinstance(extracted_img, flask.Response):
             return extracted_img
         elif isinstance(extracted_img, PIL.Image.Image):
@@ -417,6 +450,7 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
         if src_hash is not None:
             f.set_etag(src_hash)
         return f
+
     if content_id is not None:
         if not len(medialib_db.config.db_name):
             flask.abort(404)
@@ -447,7 +481,7 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
         if file_path.suffix == ".srs":
             representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
             if len(representations) == 0:
-                print("register representations for content id = {}".format(content_id))
+                logger.debug("register representations for content id = {}".format(content_id))
                 cursor = db_connection.cursor()
                 medialib_db.srs_indexer.srs_update_representations(content_id, file_path, cursor)
                 db_connection.commit()
@@ -465,16 +499,22 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
                                 base32path
                             )
                         )
+                logger.info("generate thumbnail from best available representation")
                 img = pyimglib.decoders.open_image(representations[0].file_path)
+                file_path = representations[0].file_path
             elif representations[-1].format == _format:
+                logger.info("generate thumbnail from worst available representation")
+                file_path = representations[-1].file_path
                 img = PIL.Image.open(representations[-1].file_path)
             else:
+                logger.info("srs file based thumbnail generation")
                 img = pyimglib.decoders.open_image(file_path)
         else:
+            logger.info("default thumbnail generation")
             img = pyimglib.decoders.open_image(file_path)
 
-
-        extracted_img = complex_formats_processing(img, allow_origin)
+        extracted_img = complex_formats_processing(img, file_path, allow_origin)
+        logger.debug("extracted_img: {}".format(extracted_img.__repr__()))
         if isinstance(extracted_img, flask.Response):
             db_connection.close()
             return extracted_img
@@ -605,7 +645,6 @@ def get_content_metadata(pathstr, content_id):
             content_id = db_query_results[0]
             if db_query_results[2] is not None:
                 template_kwargs['content_title'] = db_query_results[2]
-            print(db_query_results[-3], db_query_results[-2])
             if db_query_results[-3] is not None:
                 template_kwargs['origin_name'] = db_query_results[-3]
                 if db_query_results[-2] is not None and template_kwargs['origin_name'] in ORIGIN_URL_TEMPLATE:
@@ -646,7 +685,7 @@ def get_content_metadata(pathstr, content_id):
                     template_kwargs[key] = flask.request.form[key].strip()
             if content_new_data['hidden'] == 'on':
                 content_new_data['hidden'] = True
-            print(content_new_data)
+            logger.debug("content_new_data: {}".format(content_new_data))
             tag_names = flask.request.form.getlist('tag_name')
             tag_categories = flask.request.form.getlist('tag_category')
             tag_aliases = flask.request.form.getlist('tag_alias')
@@ -657,12 +696,11 @@ def get_content_metadata(pathstr, content_id):
                 if len(tag_alias) == 0:
                     tag_aliases[i] = tag_names[i]
             tags = list(zip(tag_names, tag_categories, tag_aliases))
-            print(tags)
+            logger.debug("tags: {}".format(tags))
             if db_query_results is not None:
                 medialib_db.content_update(connection=connection, **content_new_data)
             else:
                 content_id = medialib_db.content_register(**content_new_data, connection=connection)
-            print(content_id)
             medialib_db.add_tags_for_content(content_id, tags, connection)
         tags = dict()
         if content_id is not None:
@@ -710,7 +748,7 @@ def drop_thumbnails(content_id):
 
 def mpd_processing(mpd_file: pathlib.Path):
     subs_file = mpd_file.with_suffix(".mpd.subs")
-    print("subs file", subs_file, subs_file.exists())
+    logger.debug("subs file: {} ({})".format(subs_file, subs_file.exists()))
     if subs_file.exists():
         mpd_document: xml.dom.minidom.Document = xml.dom.minidom.parse(str(mpd_file))
         period: xml.dom.minidom.Element = mpd_document.getElementsByTagName("Period")[0]
@@ -939,7 +977,6 @@ def aclmmp_webm_muxer(pathstr):
         SRS_file.close()
         LEVEL = int(flask.session['clevel'])
         CHANNELS = int(flask.session['audio_channels'])
-        print(minimal_content_compatibility_level, LEVEL, minimal_content_compatibility_level > LEVEL)
         if minimal_content_compatibility_level < LEVEL:
             flask.abort(404)
         commandline = ['ffmpeg']

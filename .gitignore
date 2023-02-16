@@ -1,3 +1,4 @@
 *.pem
 config.py
 static/js-cache
+logs/*
