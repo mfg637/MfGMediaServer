@@ -465,6 +465,7 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
                                 base32path
                             )
                         )
+                img = pyimglib.decoders.open_image(representations[0].file_path)
             elif representations[-1].format == _format:
                 img = PIL.Image.open(representations[-1].file_path)
             else:
