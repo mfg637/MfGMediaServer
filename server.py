@@ -431,7 +431,6 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
                 db_connection
             )
             if thumbnail_file_path is not None:
-                print("thumbnail filepath", thumbnail_file_path)
                 db_connection.close()
                 return flask.send_file(
                     config.thumbnail_cache_dir.joinpath(thumbnail_file_path),
@@ -440,7 +439,40 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
                 )
         content_metadata = medialib_db.get_content_metadata_by_content_id(content_id, db_connection)
 
-        img = pyimglib.decoders.open_image(shared_code.root_dir.joinpath(content_metadata[1]))
+        file_path = shared_code.root_dir.joinpath(content_metadata[1])
+        compatibility_level = int(flask.request.cookies.get("clevel"))
+
+        img = None
+
+        if file_path.suffix == ".srs":
+            representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
+            if len(representations) == 0:
+                print("register representations for content id = {}".format(content_id))
+                cursor = db_connection.cursor()
+                medialib_db.srs_indexer.srs_update_representations(content_id, file_path, cursor)
+                db_connection.commit()
+                cursor.close()
+                representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
+            if allow_origin:
+                for representation in representations:
+                    if representation.compatibility_level >= compatibility_level and representation.format == _format:
+                        db_connection.close()
+                        base32path = shared_code.str_to_base32(str(representation.file_path))
+                        return flask.redirect(
+                            "https://{}:{}/orig/{}".format(
+                                config.host_name,
+                                config.port,
+                                base32path
+                            )
+                        )
+            elif representations[-1].format == _format:
+                img = PIL.Image.open(representations[-1].file_path)
+            else:
+                img = pyimglib.decoders.open_image(file_path)
+        else:
+            img = pyimglib.decoders.open_image(file_path)
+
+
         extracted_img = complex_formats_processing(img, allow_origin)
         if isinstance(extracted_img, flask.Response):
             db_connection.close()
