@@ -211,10 +211,35 @@ def get_original(pathstr):
     return file_url_template(body, pathstr)
 
 
-@app.route('/image/<string:format>/<string:pathstr>')
+MIME_TYPES_BY_FORMAT = {
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+    "avif": "image/avif"
+}
+
+
+@app.route('/image/<string:_format>/<string:pathstr>')
 @shared_code.login_validation
-def transcode_image(format: str, pathstr):
-    def body(path: pathlib.Path, format):
+def transcode_image(_format: str, pathstr):
+    def get_download_filename(content_title, origin_id, path) -> str:
+        if content_title is not None:
+            if content_title is not None:
+                for suffix in FILE_SUFFIX_LIST:
+                    if suffix in content_title:
+                        content_title = content_title.replace(suffix, "")
+            content_title = content_title.replace("-amp-", "&").replace("-eq-", "=")
+        filename = None
+        if origin_id is not None and content_title is not None:
+            filename = "{} {}.{}".format(origin_id, content_title, _format.lower)
+        elif content_title is None and origin_id is not None:
+            filename = "{}.{}".format(origin_id, _format.lower())
+        elif content_title is not None:
+            filename = "{}.{}".format(content_title, _format.lower())
+        else:
+            filename = "{}.{}".format(path.stem, _format.lower())
+        return filename
+
+    def body(path: pathlib.Path, _format):
         origin_id = flask.request.args.get("origin_id", None, str)
         content_title = flask.request.args.get("title", None, str)
         download: bool = flask.request.args.get("download", False, bool)
@@ -222,15 +247,15 @@ def transcode_image(format: str, pathstr):
         if status_code is not None:
             return status_code
         img = pyimglib.decoders.open_image(path)
-        possible_formats = ("webp",)
+        possible_formats = (_format,)
         LEVEL = int(flask.session['clevel'])
-        if format.lower() == "autodetect":
-            format = "webp"
+        if _format.lower() == "autodetect":
+            _format = "webp"
             if LEVEL <= 1:
                 possible_formats = ("avif", "webp")
             if LEVEL == 4:
                 possible_formats = ("jpeg", "png", "gif")
-                format = "jpeg"
+                _format = "jpeg"
         if isinstance(img, pyimglib.decoders.srs.ClImage):
             lods = img.get_image_file_list()
             current_lod = lods.pop(0)
@@ -250,6 +275,15 @@ def transcode_image(format: str, pathstr):
                         base32path
                     )
                 )
+            elif current_lod_format == _format and download:
+                absolute_path = shared_code.root_dir.joinpath(current_lod)
+                f = flask.send_file(absolute_path, mimetype=MIME_TYPES_BY_FORMAT[_format])
+                filename = get_download_filename(content_title, origin_id, path)
+                response = flask.make_response(f)
+                response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
+                    urllib.parse.quote(filename)
+                )
+                return response
             else:
                 img = pyimglib.decoders.open_image(current_lod)
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
@@ -259,10 +293,10 @@ def transcode_image(format: str, pathstr):
         img = img.convert(mode='RGBA')
         buffer = io.BytesIO()
         mime = ''
-        if format.lower() == 'webp':
+        if _format.lower() == 'webp':
             img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
             mime = "image/webp"
-        elif format.lower() == 'jpeg':
+        elif _format.lower() == 'jpeg':
             img = img.convert(mode='RGB')
             img.save(buffer, format="JPEG", quality=90)
             mime = "image/jpeg"
@@ -280,37 +314,18 @@ def transcode_image(format: str, pathstr):
         f.set_etag(src_hash)
         response = flask.make_response(f)
         if download:
-            if content_title is not None:
-                if content_title is not None:
-                    for suffix in FILE_SUFFIX_LIST:
-                        if suffix in content_title:
-                            content_title = content_title.replace(suffix, "")
-                content_title = content_title.replace("-amp-", "&").replace("-eq-", "=")
-            filename = None
-            if origin_id is not None and content_title is not None:
-                filename = "{} {}.{}".format(origin_id, content_title, format.lower)
-            elif content_title is None and origin_id is not None:
-                filename = "{}.{}".format(origin_id, format.lower())
-            elif content_title is not None:
-                filename = "{}.{}".format(content_title, format.lower())
-            else:
-                filename = "{}.{}".format(path.stem, format.lower())
+            filename = get_download_filename(content_title, origin_id, path)
             response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
                 urllib.parse.quote(filename)
             )
         return response
-    return file_url_template(body, pathstr, format=format)
+    return file_url_template(body, pathstr, _format=_format)
 
 
 @app.route('/thumbnail/<string:_format>/<int:width>x<int:height>/mlid<int:content_id>', defaults={'pathstr': None})
 @app.route('/thumbnail/<string:_format>/<int:width>x<int:height>/<string:pathstr>', defaults={'content_id': None})
 @shared_code.login_validation
 def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, content_id: int | None):
-    MIME_TYPES_BY_FORMAT = {
-        "jpeg": "image/jpeg",
-        "webp": "image/webp",
-        "avif": "image/avif"
-    }
 
     def srs_image_processing(img, allow_origin) -> PIL.Image.Image | pathlib.Path:
         logger.info("srs image processing")
