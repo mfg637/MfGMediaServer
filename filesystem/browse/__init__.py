@@ -1,6 +1,7 @@
 import flask
 import json
 import pathlib
+import math
 
 import shared_code
 import shared_code.enums as shared_enums
@@ -74,7 +75,6 @@ def browse(dir):
                 itemslist.append({
                     "icon": flask.url_for('static', filename='images/updir_icon.svg'),
                     "name": "..",
-                    "lazy_load": False,
                 })
                 if dir.parent == shared_code.root_dir:
                     itemslist[0]["link"] = "/"
@@ -88,7 +88,6 @@ def browse(dir):
                     "object_icon": False,
                     "name": shared_code.simplify_filename(_dir.name),
                     "sources": None,
-                    "lazy_load": False,
                     "item_index": items_count,
                     "type": "dir",
                 }
@@ -96,12 +95,6 @@ def browse(dir):
                     if _dir.joinpath(".imgview-dir-config.json").exists():
                         dirmeta["object_icon"] = True
                         dirmeta["icon"] = "/folder_icon_paint/{}".format(_dir.relative_to(shared_code.root_dir))
-                        if load_acceleration in {
-                            shared_enums.LoadAcceleration.LAZY_LOAD,
-                            shared_enums.LoadAcceleration.BOTH
-                        }:
-                            dirmeta["lazy_load"] = True
-                            dirmeta_list.append(dirmeta)
                 except PermissionError:
                     pass
                 itemslist.append(dirmeta)
@@ -110,7 +103,6 @@ def browse(dir):
             itemslist.append({
                 "icon": flask.url_for('static', filename='images/updir_icon.svg'),
                 "name": ".",
-                "lazy_load": False,
                 "link": flask.request.path
             })
             items_count += 1
@@ -152,38 +144,25 @@ def browse(dir):
         "medialib_sorting": shared_code.get_medialib_sorting_constants_for_template(),
         'enable_external_scripts': shared_code.enable_external_scripts
     }
-    if load_acceleration in {shared_enums.LoadAcceleration.NONE, shared_enums.LoadAcceleration.LAZY_LOAD}:
-        return flask.render_template(
-            'index.html',
-            itemslist=itemslist,
-            dirmeta=json.dumps(dirmeta_list),
-            filemeta=json.dumps(filemeta_list),
-            pagination=False,
-            page=0,
-            max_pages=0,
-            **template_kwargs
-        )
-    else:
-        import math
-        page = int(flask.request.args.get('page', 0))
-        max_pages = math.ceil(len(itemslist) / items_per_page)
-        min_index = page * items_per_page
-        max_index = min_index + items_per_page
-        final_filemeta_list = list()
-        final_dirmeta_list = list()
+    page = int(flask.request.args.get('page', 0))
+    max_pages = math.ceil(len(itemslist) / items_per_page)
+    min_index = page * items_per_page
+    max_index = min_index + items_per_page
+    final_filemeta_list = list()
+    final_dirmeta_list = list()
 
-        calc_item_page_index(dirmeta_list, final_dirmeta_list, min_index, max_index)
-        calc_item_page_index(filemeta_list, final_filemeta_list, min_index, max_index)
-        return flask.render_template(
-            'index.html',
-            itemslist=itemslist[min_index:max_index],
-            dirmeta=json.dumps(final_dirmeta_list),
-            filemeta=json.dumps(final_filemeta_list),
-            pagination=True,
-            page=page,
-            max_pages=max_pages,
-            **template_kwargs
-        )
+    calc_item_page_index(dirmeta_list, final_dirmeta_list, min_index, max_index)
+    calc_item_page_index(filemeta_list, final_filemeta_list, min_index, max_index)
+    return flask.render_template(
+        'index.html',
+        itemslist=itemslist[min_index:max_index],
+        dirmeta=json.dumps(final_dirmeta_list),
+        filemeta=json.dumps(final_filemeta_list),
+        pagination=True,
+        page=page,
+        max_pages=max_pages,
+        **template_kwargs
+    )
 
 
 def calc_item_page_index(item_list, output_list, min_index, max_index):
@@ -249,7 +228,6 @@ def get_file_info(file: pathlib.Path, items_count=0):
         "sources": None,
         "base32path": base32path,
         "item_index": items_count,
-        "lazy_load": False,
         "type": "audio",
         "is_vp8": False,
         "suffix": file.suffix,
@@ -302,10 +280,6 @@ def get_file_info(file: pathlib.Path, items_count=0):
 
 def get_db_content_info(content_id: int, file_str: str, content_type, title, items_count=0):
     def _icon(file, filemeta):
-        filemeta["lazy_load"] = load_acceleration in {
-            shared_enums.LoadAcceleration.LAZY_LOAD,
-            shared_enums.LoadAcceleration.BOTH
-        }
         filemeta['icon'] = "/thumbnail/jpeg/192x144/mlid{}".format(filemeta['content_id'])
         filemeta['sources'] = (
             "/thumbnail/webp/192x144/mlid{}".format(filemeta['content_id']) +
@@ -327,7 +301,6 @@ def get_db_content_info(content_id: int, file_str: str, content_type, title, ite
         "sources": None,
         "base32path": base32path,
         "item_index": items_count,
-        "lazy_load": False,
         "is_vp8": False,
         "suffix": file.suffix,
         "custom_icon": False,
@@ -366,7 +339,7 @@ def get_db_content_info(content_id: int, file_str: str, content_type, title, ite
     elif file.suffix.lower() in {'.jpg', '.jpeg'}:
         try:
             jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
-            if (jpg.arithmetic_coding()):
+            if jpg.arithmetic_coding():
                 filemeta['link'] = "/image/webp/{}".format(base32path)
         except Exception:
             filemeta['link'] = "/image/webp/{}".format(base32path)

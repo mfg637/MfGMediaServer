@@ -11,8 +11,7 @@ valid_login = ""
 # sha3-512
 valid_password_hash_hex = ''
 
-load_acceleration_method = shared_enums.LoadAcceleration.NONE
-items_per_page = 1
+items_per_page = 15
 
 pyimglib.config.jpeg_xl_tools_path = None
 

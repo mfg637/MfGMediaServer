@@ -192,25 +192,17 @@
         {% if item.icon is not none %}
             <div class="icon-wrapper">
             {% if item.object_icon %}
-                {% if item.lazy_load %}
-                    <img class="placeholder" src="/static/images/folder_icon.png"/>
-                {% else %}
-                    <object data="{{ item.icon }}"></object>
-                {% endif %}
+                <object data="{{ item.icon }}"></object>
             {% else %}
-                {% if item.lazy_load %}
-                    <img class="placeholder" src="/static/images/img_icon.png"/>
-                {%else%}
-                    {% if item.sources is not none %}
-                        <picture>
-                        {% for source in item.sources %}
-                            <source srcset="{{ source }}"/>
-                        {% endfor %}
-                    {% endif %}
-                    <img src="{{ item.icon }}"/>
-                    {% if item.sources is not none %}
-                        </picture>
-                    {% endif %}
+                {% if item.sources is not none %}
+                    <picture>
+                    {% for source in item.sources %}
+                        <source srcset="{{ source }}"/>
+                    {% endfor %}
+                {% endif %}
+                <img src="{{ item.icon }}" loading="lazy"/>
+                {% if item.sources is not none %}
+                    </picture>
                 {% endif %}
             {% endif %}
             </div>
@@ -236,21 +228,19 @@
     {% endfor %}
             <div style="clear:left"></div>
     </div>
-    {% if pagination %}
-        {% if _glob != None %}
-            {% if page > 0 %}
-                <a href="{{ url }}?glob={{ _glob }}&page={{ page-1 }}">Back</a>
-            {% endif %}
-            {% if page+1 < max_pages %}
-                <a href="{{ url }}?glob={{ _glob }}&page={{ page+1 }}">Next</a>
-            {% endif %}
-        {% else %}
-            {% if page > 0 %}
-                <a href="{{ url }}?page={{ page-1 }}{{ args }}">Back</a>
-            {% endif %}
-            {% if page+1 < max_pages %}
-                <a href="{{ url }}?page={{ page+1 }}{{ args }}">Next</a>
-            {% endif %}
+    {% if _glob != None %}
+        {% if page > 0 %}
+            <a href="{{ url }}?glob={{ _glob }}&page={{ page-1 }}">Back</a>
+        {% endif %}
+        {% if page+1 < max_pages %}
+            <a href="{{ url }}?glob={{ _glob }}&page={{ page+1 }}">Next</a>
+        {% endif %}
+    {% else %}
+        {% if page > 0 %}
+            <a href="{{ url }}?page={{ page-1 }}{{ args }}">Back</a>
+        {% endif %}
+        {% if page+1 < max_pages %}
+            <a href="{{ url }}?page={{ page+1 }}{{ args }}">Next</a>
         {% endif %}
     {% endif %}
     {% if enable_external_scripts %}

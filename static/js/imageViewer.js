@@ -18,48 +18,6 @@ dpi_scale_coef = window.devicePixelRatio;
 FILETYPE = 0;
 DIRTYPE = 1;
 
-var intersectionObserver = new IntersectionObserver(function(entries) {
-  // If intersectionRatio is 0, the target is out of view
-  // and we do not need to do anything.
-    for (entry_index=0; entry_index<entries.length; entry_index++){
-        if (entries[entry_index].intersectionRatio <= 0) continue;
-        fmeta = null
-        if (entries[entry_index].target.ftype === FILETYPE)
-            fmeta = filemeta[entries[entry_index].target.imageID]
-        else if (entries[entry_index].target.ftype === DIRTYPE)
-            fmeta = dirmeta[entries[entry_index].target.imageID]
-        placeholder = entries[entry_index].target.getElementsByTagName('img')[0]
-        if (((typeof fmeta)!="undefined") && (placeholder.classList.contains('placeholder'))){
-            new_elem = null
-            if (entries[entry_index].target.ftype === FILETYPE) {
-                if (fmeta.sources !== null) {
-                    picture_elem = document.createElement('picture');
-                    for (source_index = 0; source_index < fmeta.sources.length; source_index++) {
-                        source_elem = document.createElement('source');
-                        source_elem.srcset = fmeta.sources[source_index];
-                        picture_elem.appendChild(source_elem);
-                    }
-                    img_elem = document.createElement('img');
-                    img_elem.src = fmeta.icon;
-                    picture_elem.appendChild(img_elem);
-                    new_elem = picture_elem;
-                } else {
-                    img_elem = document.createElement('img');
-                    img_elem.src = fmeta.icon;
-                    new_elem = img_elem;
-                }
-            }
-            else if (entries[entry_index].target.ftype === DIRTYPE){
-                object_elem = document.createElement('object');
-                object_elem.data = fmeta.icon+"?scale=" + dpi_scale_coef;
-                new_elem = object_elem;
-            }
-            placeholder.parentNode.replaceChild(new_elem, placeholder);
-        }
-    }
-
-});
-
 
 var imageViewer = new ImageViewer();
 imageViewer.init(filemeta)
@@ -107,14 +65,10 @@ function ImageViewer() {
                 return false;
             }
         }
-        if (filemeta[i].lazy_load)
-            intersectionObserver.observe(links[filemeta[i].item_index]);
     }
     for (let i=0; i<dirmeta.length; i++){
         links[dirmeta[i].item_index].imageID = i;
         links[dirmeta[i].item_index].ftype = DIRTYPE;
-        if (dirmeta[i].lazy_load)
-            intersectionObserver.observe(links[dirmeta[i].item_index]);
     }
     console.log("init done");
 

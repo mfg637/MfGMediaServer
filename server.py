@@ -105,35 +105,25 @@ def medialib_tag_search():
     global page_cache
     itemslist, dirmeta_list, content_list = [], [], []
 
-    pagination = filesystem.browse.load_acceleration in \
-            {shared_code.enums.LoadAcceleration.PAGINATION, shared_code.enums.LoadAcceleration.BOTH}
-
 
     max_pages = 0
-    if pagination:
-        raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
-            *tags_groups,
-            limit=flask.session['items_per_page'] + 1,
-            offset=flask.session['items_per_page'] * page,
-            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
-            filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
-        )
-        if CACHED_REQUEST is not None and CACHED_REQUEST == tuple(tags_groups):
-            max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
-        else:
-            CACHED_REQUEST = tuple(tags_groups)
-            NUMBER_OF_ITEMS = medialib_db.files_by_tag_search.count_files_with_every_tag(
-                *tags_groups,
-                filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
-            )
-            max_pages = math.ceil(NUMBER_OF_ITEMS / flask.session['items_per_page'])
-
+    raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
+        *tags_groups,
+        limit=flask.session['items_per_page'] + 1,
+        offset=flask.session['items_per_page'] * page,
+        order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
+        filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
+    )
+    if CACHED_REQUEST is not None and CACHED_REQUEST == tuple(tags_groups):
+        max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
     else:
-        raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
+        CACHED_REQUEST = tuple(tags_groups)
+        NUMBER_OF_ITEMS = medialib_db.files_by_tag_search.count_files_with_every_tag(
             *tags_groups,
-            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
             filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
         )
+        max_pages = math.ceil(NUMBER_OF_ITEMS / flask.session['items_per_page'])
+
 
     items_count = 0
     itemslist.append({
@@ -170,7 +160,6 @@ def medialib_tag_search():
         itemslist=itemslist,
         dirmeta=json.dumps(dirmeta_list),
         filemeta=json.dumps(content_list),
-        pagination=pagination,
         page=page,
         max_pages=max_pages,
         **template_kwargs
@@ -1187,7 +1176,6 @@ if __name__ == '__main__':
         if os.path.exists(cert_path) and os.path.exists(key_path):
             ssl_context = (cert_path, key_path)
     port = config.port
-    filesystem.browse.load_acceleration = config.load_acceleration_method
     filesystem.browse.items_per_page = config.items_per_page
     parser = argparse.ArgumentParser()
     parser.add_argument("root_dir", default="")
