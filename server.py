@@ -196,6 +196,16 @@ def get_original(pathstr):
     def body(path):
         if pyimglib.decoders.avif.is_avif(path):
             return static_file(path, "image/avif")
+        elif pyimglib.decoders.jpeg.is_JPEG(path):
+            jpeg = pyimglib.decoders.jpeg.JPEGDecoder(path)
+            if jpeg.arithmetic_coding():
+                return flask.redirect(
+                    "https://{}:{}/image/jpeg/{}".format(
+                        config.host_name,
+                        config.port,
+                        pathstr
+                    )
+                )
         return static_file(path)
     return file_url_template(body, pathstr)
 
@@ -286,8 +296,17 @@ def transcode_image(_format: str, pathstr):
             img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
             mime = "image/webp"
         elif _format.lower() == 'jpeg':
-            img = img.convert(mode='RGB')
-            img.save(buffer, format="JPEG", quality=90)
+            if pyimglib.decoders.jpeg.is_JPEG(path):
+                jpeg_data = path.read_bytes()
+                transcoding_result = subprocess.run(
+                    ["jpegtran", "-copy", "all"],
+                    input=jpeg_data,
+                    capture_output=True
+                )
+                buffer = io.BytesIO(transcoding_result.stdout)
+            else:
+                img = img.convert(mode='RGB')
+                img.save(buffer, format="JPEG", quality=90)
             mime = "image/jpeg"
         else:
             img.save(buffer, format="PNG")

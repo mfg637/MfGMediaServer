@@ -268,13 +268,6 @@ def get_file_info(file: pathlib.Path, items_count=0):
     if file.suffix == '.mkv':
         filemeta['link'] = "/vp8/{}".format(base32path)
         filemeta["is_vp8"] = True
-    elif file.suffix.lower() in {'.jpg', '.jpeg'}:
-        try:
-            jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
-            if (jpg.arithmetic_coding()):
-                filemeta['link'] = "/image/webp/{}".format(base32path)
-        except Exception:
-            filemeta['link'] = "/image/webp/{}".format(base32path)
     return filemeta
 
 
@@ -336,12 +329,5 @@ def get_db_content_info(content_id: int, file_str: str, content_type, title, ite
     if file.suffix == '.mkv':
         filemeta['link'] = "/vp8/{}".format(base32path)
         filemeta["is_vp8"] = True
-    elif file.suffix.lower() in {'.jpg', '.jpeg'}:
-        try:
-            jpg = pyimglib.decoders.jpeg.JPEGDecoder(file)
-            if jpg.arithmetic_coding():
-                filemeta['link'] = "/image/webp/{}".format(base32path)
-        except Exception:
-            filemeta['link'] = "/image/webp/{}".format(base32path)
     return filemeta, items_count + 1
 
