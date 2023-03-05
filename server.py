@@ -474,6 +474,27 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
             f.set_etag(src_hash)
         return f
 
+    def calc_image_hash(img: PIL.Image.Image):
+        import imagehash
+        import numpy
+        hsv_image = img.convert(mode="HSV")
+        aspect_ratio = img.width / img.height
+        hue_hash_obj = imagehash.phash(hsv_image.getchannel("H"), hash_size=4)
+        saturation_hash_obj = imagehash.phash(hsv_image.getchannel("S"), hash_size=4)
+        value_hash_obj = imagehash.phash(hsv_image.getchannel("V"), hash_size=8)
+        hue_hash_array = numpy.packbits(hue_hash_obj.hash)
+        saturation_hash_array = numpy.packbits(saturation_hash_obj.hash)
+        value_hash_array = numpy.packbits(value_hash_obj.hash)
+        hue_hash_array.dtype = numpy.short
+        saturation_hash_array.dtype = numpy.short
+        value_hash_array.dtype = numpy.int64
+        hs_array = numpy.array(
+            [saturation_hash_array[0], value_hash_array[0]],
+            dtype=numpy.short
+        )
+        hs_array.dtype = numpy.int32
+        return aspect_ratio, int(value_hash_array[0]), int(hs_array[0])
+
     if content_id is not None:
         if not len(medialib_db.config.db_name):
             flask.abort(404)
@@ -500,6 +521,13 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
         compatibility_level = int(flask.request.cookies.get("clevel"))
 
         img = None
+        allow_hashing = True
+
+        if content_metadata[3] == "image":
+            if file_path.suffix == ".svg":
+                allow_hashing = False
+        else:
+            allow_hashing = False
 
         if file_path.suffix == ".srs":
             representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
@@ -527,6 +555,7 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
                 file_path = representations[0].file_path
             elif representations[-1].format == _format:
                 logger.info("generate thumbnail from worst available representation")
+                allow_hashing = False
                 file_path = representations[-1].file_path
                 img = PIL.Image.open(representations[-1].file_path)
             else:
@@ -545,6 +574,13 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
             img = extracted_img
         else:
             raise NotImplementedError(type(extracted_img))
+
+        if allow_hashing:
+            existing_image_hash = medialib_db.get_image_hash(content_id, db_connection)
+            if existing_image_hash is None:
+                image_hash = calc_image_hash(img)
+                medialib_db.set_image_hash(content_id, image_hash, db_connection)
+
         buffer, mime, _format = generate_thumbnail_image(img, _format, width, height)
         if config.thumbnail_cache_dir is not None:
             thumbnail_file_name = medialib_db.register_thumbnail_by_content_id(
