@@ -6,45 +6,7 @@
     <meta name="filemeta_json" content="{{ filemeta }}" />
     <meta name="dirmeta_json" content="{{ dirmeta }}" />
     <title>{{ title }}</title>
-    <style>
-        script{
-            display:none;
-        }
-        h1{
-            text-align: center;
-        }
-        .item{
-            display: block;
-            float: left;
-            width:192px;
-            height: 210px;
-            padding: 4px;
-            margin: 4px;
-        }
-        .item .icon-wrapper{
-            height: 144px;
-        }
-        .item img{
-            display: block;
-            margin: 0 auto;
-        }
-        .item .icon .title-wrapper{
-            max-height: 58px;
-        }
-        .item .icon .title-wrapper, a.content-info-link{
-            display: block;
-            text-align: center;
-            width:192px;
-            overflow:hidden;
-        }
-        .item object{
-            pointer-events: none;
-        }
-        form{
-            margin-bottom: 1em;
-        }
-        .tag_fields{display: inline}
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
 </head>
 <body>
     <h1>{{ title }}</h1>
