@@ -330,6 +330,28 @@ def transcode_image(_format: str, pathstr):
     return file_url_template(body, pathstr, _format=_format)
 
 
+def calc_image_hash(img: PIL.Image.Image):
+    import imagehash
+    import numpy
+    hsv_image = img.convert(mode="HSV")
+    aspect_ratio = img.width / img.height
+    hue_hash_obj = imagehash.phash(hsv_image.getchannel("H"), hash_size=4)
+    saturation_hash_obj = imagehash.phash(hsv_image.getchannel("S"), hash_size=4)
+    value_hash_obj = imagehash.phash(hsv_image.getchannel("V"), hash_size=8)
+    hue_hash_array = numpy.packbits(hue_hash_obj.hash)
+    saturation_hash_array = numpy.packbits(saturation_hash_obj.hash)
+    value_hash_array = numpy.packbits(value_hash_obj.hash)
+    hue_hash_array.dtype = numpy.short
+    saturation_hash_array.dtype = numpy.short
+    value_hash_array.dtype = numpy.int64
+    hs_array = numpy.array(
+        [saturation_hash_array[0], value_hash_array[0]],
+        dtype=numpy.short
+    )
+    hs_array.dtype = numpy.int32
+    return aspect_ratio, int(value_hash_array[0]), int(hs_array[0])
+
+
 @app.route('/thumbnail/<string:_format>/<int:width>x<int:height>/mlid<int:content_id>', defaults={'pathstr': None})
 @app.route('/thumbnail/<string:_format>/<int:width>x<int:height>/<string:pathstr>', defaults={'content_id': None})
 @shared_code.login_validation
@@ -474,27 +496,6 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None, co
             f.set_etag(src_hash)
         return f
 
-    def calc_image_hash(img: PIL.Image.Image):
-        import imagehash
-        import numpy
-        hsv_image = img.convert(mode="HSV")
-        aspect_ratio = img.width / img.height
-        hue_hash_obj = imagehash.phash(hsv_image.getchannel("H"), hash_size=4)
-        saturation_hash_obj = imagehash.phash(hsv_image.getchannel("S"), hash_size=4)
-        value_hash_obj = imagehash.phash(hsv_image.getchannel("V"), hash_size=8)
-        hue_hash_array = numpy.packbits(hue_hash_obj.hash)
-        saturation_hash_array = numpy.packbits(saturation_hash_obj.hash)
-        value_hash_array = numpy.packbits(value_hash_obj.hash)
-        hue_hash_array.dtype = numpy.short
-        saturation_hash_array.dtype = numpy.short
-        value_hash_array.dtype = numpy.int64
-        hs_array = numpy.array(
-            [saturation_hash_array[0], value_hash_array[0]],
-            dtype=numpy.short
-        )
-        hs_array.dtype = numpy.int32
-        return aspect_ratio, int(value_hash_array[0]), int(hs_array[0])
-
     if content_id is not None:
         if not len(medialib_db.config.db_name):
             flask.abort(404)
@@ -614,22 +615,31 @@ def ml_update_content(content_id: int):
             return flask.abort(404)
 
         old_file_path = medialib_db.config.relative_to.joinpath(content_data[1])
-        old_files: list[pathlib.Path] = []
-        if old_file_path.suffix == ".srs":
-            old_files.extend(pyimglib.decoders.srs.get_file_paths(old_file_path))
-        elif old_file_path.suffix == ".mpd":
-            pyimglib.transcoding.encoders.dash_encoder.DASHEncoder.delete_result(old_file_path)
-        old_files.append(old_file_path)
-        for file in old_files:
-            file.unlink(missing_ok=True)
+        if old_file_path.exists():
+            manifest_files_handler = None
+            if old_file_path.suffix == ".srs":
+                manifest_files_handler = pyimglib.transcoding.encoders.srs_image_encoder.SrsImageEncoder(1, 1, 1)
+                manifest_files_handler.set_manifest_file(old_file_path)
+            elif old_file_path.suffix == ".mpd":
+                manifest_files_handler = pyimglib.transcoding.encoders.dash_encoder.DashVideoEncoder(1)
+                manifest_files_handler.set_manifest_file(old_file_path)
+            if manifest_files_handler is not None:
+                manifest_files_handler.delete_result()
+            else:
+                old_file_path.unlink()
 
         f = flask.request.files['content-update-file']
         file_path = shared_code.root_dir.joinpath("pictures").joinpath("medialib").joinpath(
             "mlid{}{}".format(content_id, pathlib.Path(f.filename).suffix)
         )
         f.save(file_path)
+        f.close()
+        image_hash = None
+        if file_path.suffix in {".jpeg", ".jpg", ".png", ".webp", ".avif"}:
+            with PIL.Image.open(file_path) as img:
+                image_hash = calc_image_hash(img)
         medialib_db.update_file_path(
-            content_id, str(file_path.relative_to(medialib_db.config.relative_to)), medialib_db_connection
+            content_id, file_path, image_hash, medialib_db_connection
         )
         medialib_db_connection.close()
         return 'file uploaded successfully'
