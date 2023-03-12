@@ -729,6 +729,7 @@ def get_content_metadata(pathstr, content_id):
         }
         connection = medialib_db.common.make_connection()
         db_query_results = None
+        db_albums_registered = None
         is_file = True
         if content_id is not None:
             is_file = False
@@ -736,6 +737,9 @@ def get_content_metadata(pathstr, content_id):
                 content_id, connection
             )
             path = pathlib.Path(db_query_results[1])
+            db_albums_registered = medialib_db.get_content_albums(content_id, connection)
+            if db_albums_registered is not None and len(db_albums_registered) == 0:
+                db_albums_registered = None
         else:
             db_query_results = medialib_db.get_content_metadata_by_file_path(
                 path, connection
@@ -824,6 +828,7 @@ def get_content_metadata(pathstr, content_id):
                 file_name=path.name,
                 tags=tags,
                 derpibooru_dl_server=config.derpibooru_dl_server,
+                albums=None,
                 **template_kwargs
             )
         else:
@@ -840,6 +845,7 @@ def get_content_metadata(pathstr, content_id):
                 file_name=path.name,
                 tags=tags,
                 derpibooru_dl_server=config.derpibooru_dl_server,
+                albums=db_albums_registered,
                 **template_kwargs
             )
     if content_id is not None:
