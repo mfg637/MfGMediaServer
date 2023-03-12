@@ -166,6 +166,48 @@ def medialib_tag_search():
     )
 
 
+@app.route('/medialib-show-album/id<int:album_id>')
+@shared_code.login_validation
+def medialib_show_album(album_id: int):
+    db_connection = medialib_db.common.make_connection()
+
+    _album_title = medialib_db.get_album_title(album_id, connection=db_connection)
+    title = "{} by {}".format(_album_title[0], _album_title[1])
+    raw_content_list = medialib_db.get_album_content(album_id, connection=db_connection)
+
+    items_count = 0
+    itemslist = [{
+        "icon": flask.url_for('static', filename='images/updir_icon.svg'),
+        "name": "back to file browser",
+        "lazy_load": False,
+    }]
+    itemslist[0]["link"] = "/"
+    items_count += 1
+
+    content_list = filesystem.browse.db_content_processing(raw_content_list, items_count)
+    itemslist.extend(content_list)
+
+    template_kwargs = {
+        'title': title,
+        '_glob': None,
+        'url': flask.request.base_url,
+        'args': [],
+        'medialib_sorting': shared_code.get_medialib_sorting_constants_for_template(),
+        'medialib_hidden_filtering': medialib_db.files_by_tag_search.HIDDEN_FILTERING,
+        'enable_external_scripts': shared_code.enable_external_scripts
+    }
+
+    return flask.render_template(
+        'index.html',
+        itemslist=itemslist,
+        dirmeta=json.dumps([]),
+        filemeta=json.dumps(content_list),
+        page=0,
+        max_pages=0,
+        **template_kwargs
+    )
+
+
 def static_file(path, mimetype=None):
     abspath = path.absolute()
     if mimetype is None:
