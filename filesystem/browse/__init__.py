@@ -12,6 +12,9 @@ load_acceleration = shared_enums.LoadAcceleration.NONE
 
 items_per_page = 1
 
+THUMBNAIL_FORMATS = ("webp", "jpeg")
+THUMBNAIL_SCALES = (1, 1.5, 2, 3, 4)
+
 
 class PageCache:
     def __init__(self, path, cache, glob_pattern):
@@ -197,7 +200,7 @@ def db_content_processing(content_list, initial_item_count):
     return content_data_list
 
 
-def _icon(file, filemeta):
+def _icon(file, filemeta, scale=1):
     filemeta["lazy_load"] = load_acceleration in {
         shared_enums.LoadAcceleration.LAZY_LOAD,
         shared_enums.LoadAcceleration.BOTH
@@ -209,18 +212,30 @@ def _icon(file, filemeta):
         icon_base32path = shared_code.str_to_base32(str(icon_path.relative_to(shared_code.root_dir)))
     width = flask.session['thumbnail_width']
     height = flask.session['thumbnail_height']
-    filemeta['icon'] = "/thumbnail/jpeg/{}x{}/{}".format(width, height, icon_base32path)
+    filemeta['icon'] = "/thumbnail/jpeg/{}x{}/{}".format(width * scale, height * scale, icon_base32path)
+
+    filemeta['sources'] = []
+    for _format in THUMBNAIL_FORMATS:
+        source_strings = []
+        for _scale in THUMBNAIL_SCALES:
+            source_strings.append(
+                "/thumbnail/{}/{}x{}/{} {}x".format(
+                    _format, width * _scale * scale, height * _scale * scale, filemeta['content_id'], _scale
+                )
+            )
+        filemeta['sources'].append(", ".join(source_strings))
+
     filemeta['sources'] = (
-        "/thumbnail/webp/{}x{}/{}".format(width, height, icon_base32path) +
-        ", /thumbnail/webp/{}x{}/{} 1.5x".format(int(width * 1.5), int(height * 1.5), filemeta['content_id']) +
-        ", /thumbnail/webp/{}x{}/{} 2x".format(width * 2, height * 2, icon_base32path) +
-        ", /thumbnail/webp/{}x{}/{} 3x".format(width * 3, height * 3, icon_base32path) +
-        ", /thumbnail/webp/{}x{}/{} 4x".format(width * 4, height * 4, icon_base32path),
+        "/thumbnail/webp/{}x{}/{}".format(width * scale, height * scale, icon_base32path) +
+        ", /thumbnail/webp/{}x{}/{} 1.5x".format(int(width * 1.5 * scale), int(height * 1.5 * scale), filemeta['content_id']) +
+        ", /thumbnail/webp/{}x{}/{} 2x".format(width * 2 * scale, height * 2 * scale, icon_base32path) +
+        ", /thumbnail/webp/{}x{}/{} 3x".format(width * 3 * scale, height * 3 * scale, icon_base32path) +
+        ", /thumbnail/webp/{}x{}/{} 4x".format(width * 4 * scale, height * 4 * scale, icon_base32path),
         "/thumbnail/jpeg/{}x{}/{}".format(width, height, icon_base32path) +
-        ", /thumbnail/jpeg/{}x{}/{} 1.5x".format(int(width * 1.5), int(height * 1.5), filemeta['content_id']) +
-        ", /thumbnail/jpeg/{}x{}/{} 2x".format(width * 2, height * 2, icon_base32path) +
-        ", /thumbnail/jpeg/{}x{}/{} 3x".format(width * 3, height * 3, icon_base32path) +
-        ", /thumbnail/jpeg/{}x{}/{} 4x".format(width * 4, height * 4, icon_base32path),
+        ", /thumbnail/jpeg/{}x{}/{} 1.5x".format(int(width * 1.5 * scale), int(height * 1.5 * scale), filemeta['content_id']) +
+        ", /thumbnail/jpeg/{}x{}/{} 2x".format(width * 2 * scale, height * 2 * scale, icon_base32path) +
+        ", /thumbnail/jpeg/{}x{}/{} 3x".format(width * 3 * scale, height * 3 * scale, icon_base32path) +
+        ", /thumbnail/jpeg/{}x{}/{} 4x".format(width * 4 * scale, height * 4 * scale, icon_base32path),
     )
 
 
@@ -278,23 +293,21 @@ def get_file_info(file: pathlib.Path, items_count=0):
     return filemeta
 
 
-def get_db_content_info(content_id: int, file_str: str, content_type, title, items_count=0):
-    def _icon(file, filemeta):
+def get_db_content_info(content_id: int, file_str: str, content_type, title, items_count=0, icon_scale=1):
+    def _icon(file, filemeta, scale):
         width = flask.session['thumbnail_width']
         height = flask.session['thumbnail_height']
-        filemeta['icon'] = "/thumbnail/jpeg/{}x{}/mlid{}".format(width, height, filemeta['content_id'])
-        filemeta['sources'] = (
-            "/thumbnail/webp/{}x{}/mlid{}".format(width, height, filemeta['content_id']) +
-            ", /thumbnail/webp/{}x{}/mlid{} 1.5x".format(int(width * 1.5), int(height * 1.5), filemeta['content_id']) +
-            ", /thumbnail/webp/{}x{}/mlid{} 2x".format(width * 2, height * 2, filemeta['content_id']) +
-            ", /thumbnail/webp/{}x{}/mlid{} 3x".format(width * 3, height * 3, filemeta['content_id']) +
-            ", /thumbnail/webp/{}x{}/mlid{} 4x".format(width * 4, height * 4, filemeta['content_id']),
-            "/thumbnail/jpeg/{}x{}/mlid{}".format(width, height, filemeta['content_id']) +
-            ", /thumbnail/jpeg/{}x{}/mlid{} 1.5x".format(int(width * 1.5), int(height * 1.5), filemeta['content_id']) +
-            ", /thumbnail/jpeg/{}x{}/mlid{} 2x".format(width * 2, height * 2, filemeta['content_id']) +
-            ", /thumbnail/jpeg/{}x{}/mlid{} 2x".format(width * 3, height * 3, filemeta['content_id']) +
-            ", /thumbnail/jpeg/{}x{}/mlid{} 4x".format(width * 4, height * 4, filemeta['content_id']),
-        )
+        filemeta['icon'] = "/thumbnail/jpeg/{}x{}/mlid{}".format(width * scale, height * scale, filemeta['content_id'])
+        filemeta['sources'] = []
+        for _format in THUMBNAIL_FORMATS:
+            source_strings = []
+            for _scale in THUMBNAIL_SCALES:
+                source_strings.append(
+                    "/thumbnail/{}/{}x{}/mlid{} {}x".format(
+                        _format, width * _scale * scale, height * _scale * scale, filemeta['content_id'], _scale
+                    )
+                )
+            filemeta['sources'].append(", ".join(source_strings))
 
     file = pathlib.Path(file_str)
     base32path = shared_code.str_to_base32(str(file))
@@ -315,7 +328,7 @@ def get_db_content_info(content_id: int, file_str: str, content_type, title, ite
     }
     icon_path = pathlib.Path("{}.icon".format(file))
     if content_type in ("image", "video", "video-loop"):
-        _icon(file, filemeta)
+        _icon(file, filemeta, icon_scale)
     if file.suffix.lower() == '.mpd':
         filemeta['type'] = "DASH"
         filemeta['link'] = "/{}{}".format(
@@ -323,7 +336,7 @@ def get_db_content_info(content_id: int, file_str: str, content_type, title, ite
             str(file)
         )
         if icon_path.exists():
-            _icon(file, filemeta)
+            _icon(file, filemeta, icon_scale)
     elif file.suffix.lower() == '.srs':
         if content_type in ("video", "video-loop"):
             filemeta['type'] = "video"
@@ -331,14 +344,14 @@ def get_db_content_info(content_id: int, file_str: str, content_type, title, ite
         elif content_type == "image":
             filemeta['type'] = "picture"
             filemeta['link'] = "/image/autodetect/{}".format(base32path)
-        _icon(file, filemeta)
+        _icon(file, filemeta, icon_scale)
     elif file.suffix.lower() == ".m3u8":
         access_token = shared_code.gen_access_token()
         filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
         shared_code.access_tokens[filemeta['link']] = access_token
         filemeta['link'] += "?access_token={}".format(access_token)
         if icon_path.exists():
-            _icon(file, filemeta)
+            _icon(file, filemeta, icon_scale)
     if file.suffix == '.mkv':
         filemeta['link'] = "/vp8/{}".format(base32path)
         filemeta["is_vp8"] = True

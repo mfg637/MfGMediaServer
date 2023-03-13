@@ -837,7 +837,7 @@ def get_content_metadata(pathstr, content_id):
             file_item = None
             try:
                 file_item = filesystem.browse.get_db_content_info(
-                    content_id, db_query_results[1], db_query_results[3], db_query_results[2]
+                    content_id, db_query_results[1], db_query_results[3], db_query_results[2], icon_scale=2
                 )[0]
             except FileNotFoundError:
                 pass
