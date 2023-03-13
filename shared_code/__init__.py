@@ -76,4 +76,8 @@ def gen_access_token():
     return access_token
 
 
+def get_thumbnail_size():
+    return {"width": flask.session['thumbnail_width'], "height": flask.session['thumbnail_height']}
+
+
 root_dir: pathlib.Path = None

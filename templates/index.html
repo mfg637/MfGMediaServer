@@ -7,6 +7,12 @@
     <meta name="dirmeta_json" content="{{ dirmeta }}" />
     <title>{{ title }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <style>
+        :root {
+            --thumbnail-width: {{ thumbnail.width }}px;
+            --thumbnail-height: {{ thumbnail.height }}px;
+        }
+    </style>
 </head>
 <body>
     <h1>{{ title }}</h1>

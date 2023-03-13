@@ -162,6 +162,7 @@ def medialib_tag_search():
         filemeta=json.dumps(content_list),
         page=page,
         max_pages=max_pages,
+        thumbnail=shared_code.get_thumbnail_size(),
         **template_kwargs
     )
 
@@ -204,6 +205,7 @@ def medialib_show_album(album_id: int):
         filemeta=json.dumps(content_list),
         page=0,
         max_pages=0,
+        thumbnail=shared_code.get_thumbnail_size(),
         **template_kwargs
     )
 
@@ -1271,6 +1273,9 @@ def login_handler():
         config.ACLMMP_COMPATIBILITY_LEVEL = int(flask.request.form['clevel'])
         flask.session['audio_channels'] = flask.request.form['ac']
         flask.session['items_per_page'] = int(flask.request.form['items_per_page'])
+        thumbnail_size = flask.request.form['thumbnail_size'].split("x", maxsplit=1)
+        flask.session['thumbnail_width'] = int(thumbnail_size[0])
+        flask.session['thumbnail_height'] = int(thumbnail_size[1])
         response = flask.make_response(flask.redirect(flask.request.form['redirect_to']))
         response.set_cookie("clevel", str(int(flask.request.form['clevel'])))
         return response

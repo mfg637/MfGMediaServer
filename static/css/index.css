@@ -1,3 +1,10 @@
+:root {
+    --thumbnail-width: 192px;
+    --thumbnail-width-min: calc(var(--thumbnail-width) * 75%);
+    --thumbnail-height: 144px;
+    --item-height: calc(var(--thumbnail-height) + 66px);
+}
+
 script{
     display:none;
 }
@@ -14,15 +21,16 @@ h1{
 
 .item{
     display: block;
-    width:192px;
-    max-width: 192px;
-    height: 210px;
-    max-height: 210px;
+    width: var(--thumbnail-width);
+    max-width: var(--thumbnail-width);
+    min-width: var(--thumbnail-width-min);
+    height: var(--item-height);
+    max-height: var(--item-height);
     padding: 10px 0;
 }
 .item .icon-wrapper{
-    height: 144px;
-    max-height: 144px;
+    height: var(--thumbnail-height);
+    max-height: var(--thumbnail-height);
 }
 .item img{
     display: block;
@@ -34,8 +42,8 @@ h1{
 .item .icon .title-wrapper, a.content-info-link{
     display: block;
     text-align: center;
-    width:192px;
-    max-width:192px;
+    width: var(--thumbnail-width);
+    max-width: var(--thumbnail-width);
     overflow:hidden;
 }
 .item object{
@@ -46,7 +54,7 @@ form{
 }
 .tag_fields{display: inline}
 
-@media screen and (max-width: 500px) {
+/*@media screen and (max-width: 500px) {
     body{
         padding: 0;
         margin: 2%;
@@ -54,7 +62,6 @@ form{
     .item{
         margin: 1%;
         width: 48%;
-        min-width: 144px;
     }
     .item img{
         max-width: 100%;
@@ -65,4 +72,4 @@ form{
     .item .icon-wrapper{
         height: auto;
     }
-}
+}*/

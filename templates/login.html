@@ -26,6 +26,45 @@
         </select><br/>
         <label for="per_page">Items per page:</label>
         <input id="per_page" type="number" name="items_per_page" value="{{ items_per_page }}"/><br/>
+        <label for="ts_field">Thumbnail size:</label>
+        <select id="ts_field" name="thumbnail_size">
+            <option data-width="96">96x72</option>
+            <option data-width="108">108x81</option>
+            <option data-width="128">128x96</option>
+            <option data-width="144">144x108</option>
+            <option id="default-thumb-size" data-width="192">192x144</option>
+            <option id="large-default-thumb-size" data-width="256">256x192</option>
+            <option data-width="384">384x288</option>
+            <option data-width="512">512x384</option>
+        </select><br/>
+        <script>
+          let ts_field = document.getElementById("ts_field");
+          let screen_width = window.innerWidth;
+          let max_thumbnail_size = (screen_width - 32) / 2;
+          let max_available_option = null;
+          let default_option = null;
+          let possible_thumb_message = `max possible thumbnail size: ${max_thumbnail_size}`
+          console.log(possible_thumb_message)
+          for (let thumbnail_size_option of ts_field) {
+            let thumbnail_width = parseInt(thumbnail_size_option.dataset.width);
+            if (thumbnail_width <= max_thumbnail_size){
+              max_available_option = thumbnail_size_option;
+            }else if (thumbnail_width !== 96){
+              thumbnail_size_option.disabled = true;
+            }
+          }
+          if (max_available_option === null){
+            max_available_option = ts_field.firstElementChild;
+          }
+          if (screen_width > 1280){
+            default_option = document.getElementById("large-default-thumb-size");
+          }else if (max_thumbnail_size < 192){
+            default_option = max_available_option;
+          }else{
+            default_option = document.getElementById("default-thumb-size");
+          }
+          ts_field.selectedIndex = default_option.index;
+        </script>
         <input type="submit" value="SIGN IN"/>
     </form>
 </body>

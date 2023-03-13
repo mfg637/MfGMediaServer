@@ -161,6 +161,7 @@ def browse(dir):
         pagination=True,
         page=page,
         max_pages=max_pages,
+        thumbnail=shared_code.get_thumbnail_size(),
         **template_kwargs
     )
 
@@ -206,14 +207,20 @@ def _icon(file, filemeta):
     if icon_path.exists():
         filemeta["custom_icon"] = True
         icon_base32path = shared_code.str_to_base32(str(icon_path.relative_to(shared_code.root_dir)))
-    filemeta['icon'] = "/thumbnail/jpeg/192x144/{}".format(icon_base32path)
+    width = flask.session['thumbnail_width']
+    height = flask.session['thumbnail_height']
+    filemeta['icon'] = "/thumbnail/jpeg/{}x{}/{}".format(width, height, icon_base32path)
     filemeta['sources'] = (
-        "/thumbnail/webp/192x144/{}".format(icon_base32path) +
-        ", /thumbnail/webp/384x288/{} 2x".format(icon_base32path) +
-        ", /thumbnail/webp/768x576/{} 4x".format(icon_base32path),
-        "/thumbnail/jpeg/192x144/{}".format(icon_base32path) +
-        ", /thumbnail/jpeg/384x288/{} 2x".format(icon_base32path) +
-        ", /thumbnail/jpeg/768x576/{} 4x".format(icon_base32path),
+        "/thumbnail/webp/{}x{}/{}".format(width, height, icon_base32path) +
+        ", /thumbnail/webp/{}x{}/{} 1.5x".format(int(width * 1.5), int(height * 1.5), filemeta['content_id']) +
+        ", /thumbnail/webp/{}x{}/{} 2x".format(width * 2, height * 2, icon_base32path) +
+        ", /thumbnail/webp/{}x{}/{} 3x".format(width * 3, height * 3, icon_base32path) +
+        ", /thumbnail/webp/{}x{}/{} 4x".format(width * 4, height * 4, icon_base32path),
+        "/thumbnail/jpeg/{}x{}/{}".format(width, height, icon_base32path) +
+        ", /thumbnail/jpeg/{}x{}/{} 1.5x".format(int(width * 1.5), int(height * 1.5), filemeta['content_id']) +
+        ", /thumbnail/jpeg/{}x{}/{} 2x".format(width * 2, height * 2, icon_base32path) +
+        ", /thumbnail/jpeg/{}x{}/{} 3x".format(width * 3, height * 3, icon_base32path) +
+        ", /thumbnail/jpeg/{}x{}/{} 4x".format(width * 4, height * 4, icon_base32path),
     )
 
 
@@ -273,14 +280,20 @@ def get_file_info(file: pathlib.Path, items_count=0):
 
 def get_db_content_info(content_id: int, file_str: str, content_type, title, items_count=0):
     def _icon(file, filemeta):
-        filemeta['icon'] = "/thumbnail/jpeg/192x144/mlid{}".format(filemeta['content_id'])
+        width = flask.session['thumbnail_width']
+        height = flask.session['thumbnail_height']
+        filemeta['icon'] = "/thumbnail/jpeg/{}x{}/mlid{}".format(width, height, filemeta['content_id'])
         filemeta['sources'] = (
-            "/thumbnail/webp/192x144/mlid{}".format(filemeta['content_id']) +
-            ", /thumbnail/webp/384x288/mlid{} 2x".format(filemeta['content_id']) +
-            ", /thumbnail/webp/768x576/mlid{} 4x".format(filemeta['content_id']),
-            "/thumbnail/jpeg/192x144/mlid{}".format(filemeta['content_id']) +
-            ", /thumbnail/jpeg/384x288/mlid{} 2x".format(filemeta['content_id']) +
-            ", /thumbnail/jpeg/768x576/mlid{} 4x".format(filemeta['content_id']),
+            "/thumbnail/webp/{}x{}/mlid{}".format(width, height, filemeta['content_id']) +
+            ", /thumbnail/webp/{}x{}/mlid{} 1.5x".format(int(width * 1.5), int(height * 1.5), filemeta['content_id']) +
+            ", /thumbnail/webp/{}x{}/mlid{} 2x".format(width * 2, height * 2, filemeta['content_id']) +
+            ", /thumbnail/webp/{}x{}/mlid{} 3x".format(width * 3, height * 3, filemeta['content_id']) +
+            ", /thumbnail/webp/{}x{}/mlid{} 4x".format(width * 4, height * 4, filemeta['content_id']),
+            "/thumbnail/jpeg/{}x{}/mlid{}".format(width, height, filemeta['content_id']) +
+            ", /thumbnail/jpeg/{}x{}/mlid{} 1.5x".format(int(width * 1.5), int(height * 1.5), filemeta['content_id']) +
+            ", /thumbnail/jpeg/{}x{}/mlid{} 2x".format(width * 2, height * 2, filemeta['content_id']) +
+            ", /thumbnail/jpeg/{}x{}/mlid{} 2x".format(width * 3, height * 3, filemeta['content_id']) +
+            ", /thumbnail/jpeg/{}x{}/mlid{} 4x".format(width * 4, height * 4, filemeta['content_id']),
         )
 
     file = pathlib.Path(file_str)
