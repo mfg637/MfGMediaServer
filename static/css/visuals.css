@@ -54,3 +54,7 @@ body.dark-purple input, body.dark-purple textarea, body.dark-purple button, body
 body.dark-purple li{
     color: #ccc;
 }
+
+body.dark-purple div#contimgbox{
+    background-color: #191122;
+}

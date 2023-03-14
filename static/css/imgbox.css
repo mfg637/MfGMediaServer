@@ -30,13 +30,12 @@ div#contimgbox {
 }
 picture.photo {
 	display: block;
-	position:relative;
-	transition:opacity 0.7s,box-shadow 0.5s;
-	-webkit-transition:opacity 0.7s;
-	box-shadow: 0 0 7px 1px black;
+	position: relative;
 	max-width: 100%;
 	max-height: 100%;
-	
+}
+picture.photo img{
+	display: block;
 }
 div.loadAnim {
 	position: absolute;
@@ -55,7 +54,7 @@ div.loadAnim img {
 
 #btn,#plink,#nlink {
 	position:absolute;
-	background: url(./../images/controlsImgBox.svg);
+	/*background: url(./../images/controlsImgBox.svg);*/
 	width: 64px;
 	height: 32px;
 	margin: 0;

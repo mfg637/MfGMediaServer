@@ -35,6 +35,12 @@ h1{
 .item img{
     display: block;
     margin: 0 auto;
+    width: var(--thumbnail-width);
+    height: var(--thumbnail-height);
+}
+.item picture img{
+    width: auto;
+    height: auto;
 }
 .item .icon .title-wrapper{
     max-height: 58px;
