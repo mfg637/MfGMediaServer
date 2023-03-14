@@ -6,6 +6,7 @@
     <meta name="filemeta_json" content="{{ filemeta }}" />
     <meta name="dirmeta_json" content="{{ dirmeta }}" />
     <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/visuals.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
     <style>
         :root {
@@ -15,6 +16,7 @@
     </style>
 </head>
 <body>
+    {% include 'modules/theme-selector.html' %}
     <h1>{{ title }}</h1>
     <form action="{{ request.path }}" method="GET">
         <label>python3 glob pattern</label>

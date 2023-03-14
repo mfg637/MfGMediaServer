@@ -1,0 +1,31 @@
+/*** COLOR INDEPENDENT VISUALS ***/
+
+input, textarea, button, select {
+    padding: 3px 6px;
+    margin: 2px;
+}
+
+/*** DARK THEME ***/
+
+body.dark{
+    color: #aaa;
+    background-color: #2d2d2d;
+}
+
+body.dark a{
+    color: #999;
+}
+
+body.dark a:hover{
+    color: white;
+}
+
+body.dark input, body.dark textarea, body.dark button, body.dark select {
+    background-color: #222;
+    color: white;
+    border-color: #1a1a1a;
+}
+
+body.dark li{
+    color: #ccc;
+}
