@@ -58,3 +58,30 @@ body.dark-purple li{
 body.dark-purple div#contimgbox{
     background-color: #191122;
 }
+
+/*** TWILIGHT SPARKLE THEME ***/
+
+body.twilight-sparkle{
+    color: #1E093C;
+    background-color: #CC9CDF;
+    background-image: url("/static/images/ts stars bg2.svg");
+}
+
+body.twilight-sparkle a{
+    color: #243870;
+}
+
+body.twilight-sparkle a:hover{
+    color: #652D87;
+}
+
+body.twilight-sparkle input, body.twilight-sparkle textarea, body.twilight-sparkle button, body.twilight-sparkle select {
+    background-color: #BF89D1;
+    color: #1E093C;
+    border-color: #A46BBD;
+}
+
+body.twilight-sparkle li{
+    color: black;
+    font-weight: 500;
+}
