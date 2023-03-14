@@ -29,3 +29,28 @@ body.dark input, body.dark textarea, body.dark button, body.dark select {
 body.dark li{
     color: #ccc;
 }
+
+/*** DARK PURPLE THEME (Blackcurrant #2a1d39 based) ***/
+
+body.dark-purple{
+    color: #A8A2AE;
+    background-color: #2a1d39;
+}
+
+body.dark-purple a{
+    color: #999;
+}
+
+body.dark-purple a:hover{
+    color: white;
+}
+
+body.dark-purple input, body.dark-purple textarea, body.dark-purple button, body.dark-purple select {
+    background-color: #21162d;
+    color: white;
+    border-color: #331d42;
+}
+
+body.dark-purple li{
+    color: #ccc;
+}
