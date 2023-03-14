@@ -85,3 +85,28 @@ body.twilight-sparkle li{
     color: black;
     font-weight: 500;
 }
+
+/*** RARITY THEME ***/
+
+body.rarity{
+    color: #20476B;
+    background-color: #EAEEF0;
+}
+
+body.rarity a{
+    color: #3977B8;
+}
+
+body.rarity a:hover{
+    color: #4A1767;
+}
+
+body.rarity input, body.rarity textarea, body.rarity button, body.rarity select {
+    background-color: #DFE4E3;
+    color: inherit;
+    border-color: #BDC1C2;
+}
+
+body.rarity li{
+    color: inherit;
+}
