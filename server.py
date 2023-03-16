@@ -210,6 +210,47 @@ def medialib_show_album(album_id: int):
     )
 
 
+@app.route('/medialib-show-duplicates/')
+@shared_code.login_validation
+def medialib_show_duplicates():
+    db_connection = medialib_db.common.make_connection()
+
+    show_alternates = bool(int(flask.request.args.get('show_alternates', 0)))
+
+    items_count = 0
+    content_list = []
+
+    duplicated_group_items = medialib_db.find_duplicates(connection=db_connection, show_alternates=show_alternates)
+    for group in duplicated_group_items:
+        for content in group.duplicated_images:
+            content_metadata = filesystem.browse.db_content_processing(
+                [(content.content_id, content.file_path, content.content_type, content.title)], items_count
+            )
+            content.content_metadata = content_metadata[0]
+            content_list.append(content_metadata)
+            items_count += 1
+
+    itemslist = content_list
+
+    template_kwargs = {
+        'url': flask.request.base_url,
+        'args': [],
+        'enable_external_scripts': shared_code.enable_external_scripts
+    }
+
+    return flask.render_template(
+        'show_duplicates.html',
+        itemslist=itemslist,
+        duplicated_groups=duplicated_group_items,
+        dirmeta=json.dumps([]),
+        filemeta=json.dumps(content_list),
+        page=0,
+        max_pages=0,
+        thumbnail=shared_code.get_thumbnail_size(),
+        **template_kwargs
+    )
+
+
 def static_file(path, mimetype=None):
     abspath = path.absolute()
     if mimetype is None:

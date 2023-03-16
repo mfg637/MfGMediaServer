@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="filemeta_json" content="{{ filemeta }}" />
+    <meta name="dirmeta_json" content="{{ dirmeta }}" />
+    <title>Content Duplicates</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/visuals.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <style>
+        :root {
+            --thumbnail-width: {{ thumbnail.width }}px;
+            --thumbnail-height: {{ thumbnail.height }}px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'modules/theme-selector.html' %}
+    <h1>Content Duplicates</h1>
+    {% for group in duplicated_groups %}
+        <h2>[{{ group.value_hash }}]-[{{ group.hs_hash}}]</h2>
+        <div class="itemsgrid">
+        {% for item in group.duplicated_images %}
+            <div class="item">
+            {% if item.content_metadata.icon is not none %}
+                <a class="icon" href="{{ item.content_metadata.link }}" title="{{ item.content_id }}">
+            {% else %}
+                <a href="{{ item.content_metadata.link }}" title="{{ item.content_id }}">
+            {% endif %}
+            {% if item.content_metadata.icon is not none %}
+                <div class="icon-wrapper">
+                {% if item.content_metadata.object_icon %}
+                    <object data="{{ item.content_metadata.icon }}"></object>
+                {% else %}
+                    {% if item.content_metadata.sources is not none %}
+                        <picture>
+                        {% for source in item.content_metadata.sources %}
+                            <source srcset="{{ source }}"/>
+                        {% endfor %}
+                    {% endif %}
+                    <img src="{{ item.content_metadata.icon }}" loading="lazy"/>
+                    {% if item.content_metadata.sources is not none %}
+                        </picture>
+                    {% endif %}
+                {% endif %}
+                </div>
+            {% endif %}
+                <div class="title-wrapper">
+                    {{ item.content_id }}
+                    {% if item.is_alternate_version %}
+                        (alt)
+                    {% endif %}
+                </div>
+                </a>
+                    {% if item.content_id is not none %}
+                    <a class="content-info-link" href="/content_metadata/mlid{{ item.content_id }}">
+                        Content info
+                    </a>
+                    {%else%}
+                    <a class="content-info-link" href="/content_metadata/{{ item.content_metadata.base32path }}">
+                        Content info
+                    </a>
+                    {% endif %}
+            </div>
+        {% endfor %}
+                <div style="clear:left"></div>
+        </div>
+    {% endfor %}
+    {% if enable_external_scripts %}
+        <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+        <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    {% endif %}
+    <script type="application/javascript">
+        if(typeof Cookies === 'undefined'){
+          document.write(
+            decodeURI("%3Cscript src='/static/js-cache/js.cookie.min.js' type='text/javascript'%3E%3C/script%3E")
+          );
+        }
+    </script>
+    <script src="/static/js/ajax.js"></script>
+    <script src="/static/js/videoplayer.js"></script>
+    <script src="/static/js/imageViewer.js"></script>
+</body>
+</html>
