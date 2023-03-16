@@ -259,6 +259,8 @@ def get_file_info(file: pathlib.Path, items_count=0):
     icon_path = pathlib.Path("{}.icon".format(file))
     if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
         _icon(file, filemeta)
+        if file.suffix == ".jxl":
+            filemeta['link'] = "/image/png/{}".format(base32path)
     if file.suffix.lower() in image_file_extensions:
         filemeta["type"] = "picture"
     elif file.suffix.lower() in video_file_extensions:
@@ -329,6 +331,8 @@ def get_db_content_info(content_id: int, file_str: str, content_type, title, ite
     icon_path = pathlib.Path("{}.icon".format(file))
     if content_type in ("image", "video", "video-loop"):
         _icon(file, filemeta, icon_scale)
+        if file.suffix == ".jxl":
+            filemeta['link'] = "/image/png/{}".format(base32path)
     if file.suffix.lower() == '.mpd':
         filemeta['type'] = "DASH"
         filemeta['link'] = "/{}{}".format(
