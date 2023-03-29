@@ -122,58 +122,26 @@ function ImageViewer() {
       if (imagelist[id].content_id !== null){
         thumbnail_id = "mlid" + imagelist[id].content_id
       }
-      if (imagelist[id].suffix === ".avif" && Number(Cookies.get('clevel')) <= 1) {
+      let compatibility_level = Number(localStorage.getItem("clevel"));
+      if (imagelist[id].suffix === ".avif" && compatibility_level <= 1) {
         source_2 = document.createElement("source");
         source_2.srcset = imagelist[id].link;
         source_2.type = "image/avif";
         image.appendChild(source_2)
       }
-
-      scale_values = [1, 1.5, 2, 2.5, 3, 4, 6]
-      function scale_base_size(width, height, scale){
-        return '' + Math.round(width * scale) + 'x' +
-        Math.round(height * scale)
+      let format = 'avif';
+      if (compatibility_level === 3) {
+        format = 'webp';
+      } else if (compatibility_level === 4) {
+        format = 'jpeg'
       }
-
-      if (Number(Cookies.get('clevel')) <= 2) {
-        source_4 = document.createElement("source")
-        avif_souces = []
-        scale_values.forEach(
-          scale_value => avif_souces.push(
-            `/thumbnail/avif/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id}?allow_origin=1 ${scale_value}x`
-          )
-        );
-        source_4.srcset = avif_souces.join(", ")
-        source_4.type = "image/avif";
-        image.appendChild(source_4)
-      }
-
-      source_1 = document.createElement("source")
-      webp_souces = []
-      scale_values.forEach(
-        scale_value => webp_souces.push(
-          `/thumbnail/webp/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id}?allow_origin=1 ${scale_value}x`
-        )
-      );
-      source_1.srcset = webp_souces.join(", ")
-      source_1.type = "image/webp";
-      image.appendChild(source_1)
-      source_3 = document.createElement("source")
-      jpeg_souces = [];
-      scale_values.forEach(
-        scale_value => jpeg_souces.push(
-          `/thumbnail/jpeg/${scale_base_size(window.innerWidth, window.innerHeight, scale_value)}/${thumbnail_id}  ${scale_value}x`
-        )
-      );
-      source_3.srcset = jpeg_souces.join(", ");
-      source_3.type = "image/jpeg";
-      image.appendChild(source_3)
-      img_tag.src = '/thumbnail/jpeg/' +
-        Math.round(window.innerWidth * window.devicePixelRatio) + 'x' +
-        Math.round(window.innerHeight * window.devicePixelRatio) +
-        '/' + thumbnail_id;
-      img_tag.style.maxWidth = window.innerWidth + "px";
-      img_tag.style.maxHeight = window.innerHeight + "px";
+      let css_width = window.innerWidth;
+      let css_height = window.innerHeight;
+      let pixel_width = Math.round(css_width * window.devicePixelRatio);
+      let pixel_height = Math.round(css_height * window.devicePixelRatio);
+      img_tag.src = `/thumbnail/${format}/${pixel_width}x${pixel_height}/${thumbnail_id}?allow_origin=1`;
+      img_tag.style.maxWidth = `${css_width}px`;
+      img_tag.style.maxHeight = `${css_height}px`;
       image.appendChild(img_tag)
     }
 
