@@ -26,6 +26,8 @@
             let compatibility_level = localStorage.getItem("clevel");
             if (compatibility_level !== null) {
               clevel_field.value = String(compatibility_level);
+            } else {
+              localStorage.setItem("clevel", 3);
             }
             clevel_field.onchange = function (event){
               compatibility_level = parseInt(clevel_field.value);
