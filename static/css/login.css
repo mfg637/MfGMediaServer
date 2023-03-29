@@ -1,0 +1,9 @@
+form{
+    display: grid;
+    grid-template-columns: minmax(6em, 10em) minmax(90px, 1fr);
+    gap: 0.5em 1em;
+    max-width: 25em;
+}
+form label{
+    text-align: right;
+}

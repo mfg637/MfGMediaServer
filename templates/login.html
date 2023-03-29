@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/visuals.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
     <title>401 Unauthorized</title>
 </head>
 <body>
     {% include 'modules/theme-selector.html' %}
     <h1>401 Unauthorized</h1>
     <form method="post" action="/login">
-        <label for="login">login</label> <input id="login" type="text" name="login"/><br/>
-        <label for="password">password</label> <input id="password" type="password" name="password"/><br/>
+        <label for="login">login</label> <input id="login" type="text" name="login"/>
+        <label for="password">password</label> <input id="password" type="password" name="password"/>
         <input type="hidden" name="redirect_to" value="{{ redirect_to }}">
         <label for="clevel">Compatibility level:</label>
         <select id="clevel" name="clevel">
@@ -19,15 +20,15 @@
             <option value="1">Level 1: PC</option>
             <option value="2">Level 2: Smart TV & TV Box</option>
             <option value="3" selected>Level 3: Android smartphone</option>
-        </select><br/>
+        </select>
         <label for="ac">Audio Configuration:</label>
         <select id="ac" name="ac">
             <option value="2">Stereo</option>
             <option value="6">5.1</option>
             <option value="8">7.1</option>
-        </select><br/>
+        </select>
         <label for="per_page">Items per page:</label>
-        <input id="per_page" type="number" name="items_per_page" value="{{ items_per_page }}"/><br/>
+        <input id="per_page" type="number" name="items_per_page" value="{{ items_per_page }}"/>
         <label for="ts_field">Thumbnail size:</label>
         <select id="ts_field" name="thumbnail_size">
             <option data-width="96">96x72</option>
@@ -38,7 +39,7 @@
             <option id="large-default-thumb-size" data-width="256">256x192</option>
             <option data-width="384">384x288</option>
             <option data-width="512">512x384</option>
-        </select><br/>
+        </select>
         <script>
           let ts_field = document.getElementById("ts_field");
           let screen_width = window.innerWidth;
