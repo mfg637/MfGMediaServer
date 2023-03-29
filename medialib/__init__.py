@@ -309,17 +309,24 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
                             base32path
                         )
                     )
+            if representations[0].compatibility_level >= compatibility_level:
+                db_connection.close()
+                base32path = shared_code.str_to_base32(str(representations[0].file_path))
+                return flask.redirect(
+                    "https://{}:{}/orig/{}".format(
+                        config.host_name,
+                        config.port,
+                        base32path
+                    )
+                )
             logger.info("generate thumbnail from best available representation")
             img = pyimglib.decoders.open_image(representations[0].file_path)
             file_path = representations[0].file_path
-        elif representations[-1].format == _format:
+        else:
             logger.info("generate thumbnail from worst available representation")
             allow_hashing = False
             file_path = representations[-1].file_path
-            img = PIL.Image.open(representations[-1].file_path)
-        else:
-            logger.info("srs file based thumbnail generation")
-            img = pyimglib.decoders.open_image(file_path)
+            img = pyimglib.decoders.open_image(representations[-1].file_path)
     else:
         logger.info("default thumbnail generation")
         img = pyimglib.decoders.open_image(file_path)

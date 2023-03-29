@@ -118,10 +118,6 @@ function ImageViewer() {
         img_tag.src = imagelist[id].icon
     }
     else {
-      thumbnail_id = imagelist[id].base32path
-      if (imagelist[id].content_id !== null){
-        thumbnail_id = "mlid" + imagelist[id].content_id
-      }
       let compatibility_level = Number(localStorage.getItem("clevel"));
       if (imagelist[id].suffix === ".avif" && compatibility_level <= 1) {
         source_2 = document.createElement("source");
@@ -139,7 +135,15 @@ function ImageViewer() {
       let css_height = window.innerHeight;
       let pixel_width = Math.round(css_width * window.devicePixelRatio);
       let pixel_height = Math.round(css_height * window.devicePixelRatio);
-      img_tag.src = `/thumbnail/${format}/${pixel_width}x${pixel_height}/${thumbnail_id}?allow_origin=1`;
+      let base32src = imagelist[id].base32path;
+      let content_id = imagelist[id].content_id;
+      if (content_id === null){
+        img_tag.src = `/thumbnail/${format}/${pixel_width}x${pixel_height}/${base32src}?allow_origin=1`;
+        thumbnail_id = "mlid" + imagelist[id].content_id
+      } else {
+        img_tag.src = `/medialib/thumbnail/${format}/${pixel_width}x${pixel_height}/id${content_id}?allow_origin=1`;
+      }
+
       img_tag.style.maxWidth = `${css_width}px`;
       img_tag.style.maxHeight = `${css_height}px`;
       image.appendChild(img_tag)
