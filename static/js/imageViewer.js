@@ -124,6 +124,11 @@ function ImageViewer() {
         source_2.srcset = imagelist[id].link;
         source_2.type = "image/avif";
         image.appendChild(source_2)
+      } else if (imagelist[id].suffix === ".jpg" || imagelist[id].suffix === ".jpeg"){
+        source_2 = document.createElement("source");
+        source_2.srcset = imagelist[id].link;
+        source_2.type = "image/jpeg";
+        image.appendChild(source_2)
       }
       let format = 'avif';
       if (compatibility_level === 3) {
