@@ -299,13 +299,15 @@ def get_db_content_info(content_id: int, file_str: str, content_type, title, ite
     def _icon(file, filemeta, scale):
         width = flask.session['thumbnail_width']
         height = flask.session['thumbnail_height']
-        filemeta['icon'] = "/thumbnail/jpeg/{}x{}/mlid{}".format(width * scale, height * scale, filemeta['content_id'])
+        filemeta['icon'] = "/medialib/thumbnail/jpeg/{}x{}/id{}".format(
+            width * scale, height * scale, filemeta['content_id']
+        )
         filemeta['sources'] = []
         for _format in THUMBNAIL_FORMATS:
             source_strings = []
             for _scale in THUMBNAIL_SCALES:
                 source_strings.append(
-                    "/thumbnail/{}/{}x{}/mlid{} {}x".format(
+                    "/medialib/thumbnail/{}/{}x{}/id{} {}x".format(
                         _format, width * _scale * scale, height * _scale * scale, filemeta['content_id'], _scale
                     )
                 )

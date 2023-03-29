@@ -8,6 +8,14 @@ import re
 import urllib
 import medialib_db
 import flask
+import PIL.Image
+import logging
+import io
+import tempfile
+import subprocess
+import pyimglib
+
+logger = logging.getLogger(__name__)
 
 
 anonymous_forbidden = True
@@ -81,3 +89,82 @@ def get_thumbnail_size():
 
 
 root_dir: pathlib.Path = None
+
+
+def calc_image_hash(img: PIL.Image.Image):
+    import imagehash
+    import numpy
+    hsv_image = img.convert(mode="HSV")
+    aspect_ratio = img.width / img.height
+    hue_hash_obj = imagehash.phash(hsv_image.getchannel("H"), hash_size=4)
+    saturation_hash_obj = imagehash.phash(hsv_image.getchannel("S"), hash_size=4)
+    value_hash_obj = imagehash.phash(hsv_image.getchannel("V"), hash_size=8)
+    hue_hash_array = numpy.packbits(hue_hash_obj.hash)
+    saturation_hash_array = numpy.packbits(saturation_hash_obj.hash)
+    value_hash_array = numpy.packbits(value_hash_obj.hash)
+    hue_hash_array.dtype = numpy.short
+    saturation_hash_array.dtype = numpy.short
+    value_hash_array.dtype = numpy.int64
+    hs_array = numpy.array(
+        [saturation_hash_array[0], value_hash_array[0]],
+        dtype=numpy.short
+    )
+    hs_array.dtype = numpy.int32
+    return aspect_ratio, int(value_hash_array[0]), int(hs_array[0])
+
+
+MIME_TYPES_BY_FORMAT = {
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+    "avif": "image/avif"
+}
+
+
+def extract_frame_from_video(img: pyimglib.decoders.frames_stream.FramesStream):
+    logger.info("video extraction")
+    _img = img.next_frame()
+    img.close()
+    return _img
+
+
+def generate_thumbnail_image(img, _format, width, height) -> tuple[io.BytesIO, str, str]:
+    logger.info("generating thumbnail")
+    img = img.convert(mode='RGBA')
+    img.thumbnail((width, height), PIL.Image.Resampling.LANCZOS)
+    buffer = io.BytesIO()
+    thumbnail_file_path = None
+    mime = ''
+    if _format.lower() == 'webp':
+        img.save(buffer, format="WEBP", quality=90, method=4, lossless=False)
+        mime = "image/webp"
+        _format = "webp"
+    elif _format.lower() == 'avif':
+        tmp_png_file = tempfile.NamedTemporaryFile(suffix=".png")
+        tmp_avif_file = tempfile.NamedTemporaryFile(suffix="avif")
+        img.save(tmp_png_file, format="PNG")
+        commandline = [
+            "avifenc",
+            "-d", "10",
+            "--min", "8",
+            "--max", "16",
+            "-j", "4",
+            "-a", "end-usage=q",
+            "-a", "cq-level=12",
+            "-s", "8",
+            tmp_png_file.name,
+            tmp_avif_file.name
+        ]
+        subprocess.run(commandline)
+        tmp_png_file.close()
+        buffer.write(tmp_avif_file.read())
+        tmp_avif_file.close()
+        mime = "image/avif"
+        _format = "avif"
+    else:
+        img = img.convert(mode='RGB')
+        img.save(buffer, format="JPEG", quality=90)
+        mime = "image/jpeg"
+        _format = "jpeg"
+    img.close()
+    buffer.seek(0)
+    return buffer, mime, _format

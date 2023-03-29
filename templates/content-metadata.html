@@ -251,18 +251,18 @@
                 <h2>In albums</h2>
                 <ul>
                 {% for album_id, album_title, album_artist in albums %}
-                    <li><a href="/medialib-show-album/id{{ album_id }}">{{ album_title }} by {{ album_artist }}</a></li>
+                    <li><a href="/medialib/show-album/id{{ album_id }}">{{ album_title }} by {{ album_artist }}</a></li>
                 {% endfor %}
                 </ul>
             {% endif %}
             {% if content_id %}
-                <a href="/medialib-db-drop-thumbnails/{{ content_id }}">Drop thumbnails</a>
+                <a href="/medialib/db-drop-thumbnails/{{ content_id }}">Drop thumbnails</a>
             {% endif %}
             {% if derpibooru_dl_server and origin_name and origin_id %}
                 <a href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&rewrite=1">Redownload content</a>
             {% endif %}
             {% if content_id %}
-                <form action = "/medialib-content-update/{{ content_id }}" method="POST" enctype="multipart/form-data">
+                <form action = "/medialib/content-update/{{ content_id }}" method="POST" enctype="multipart/form-data">
                     Replace content
                     <input type="file" name="content-update-file" />
                     <input type="submit"/>
