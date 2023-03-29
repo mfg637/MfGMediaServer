@@ -21,6 +21,17 @@
             <option value="2">Level 2: Smart TV & TV Box</option>
             <option value="3" selected>Level 3: Android smartphone</option>
         </select>
+        <script>
+            let clevel_field = document.getElementById("clevel");
+            let compatibility_level = localStorage.getItem("clevel");
+            if (compatibility_level !== null) {
+              clevel_field.value = String(compatibility_level);
+            }
+            clevel_field.onchange = function (event){
+              compatibility_level = parseInt(clevel_field.value);
+              localStorage.setItem("clevel", compatibility_level);
+            }
+        </script>
         <label for="ac">Audio Configuration:</label>
         <select id="ac" name="ac">
             <option value="2">Stereo</option>
