@@ -19,7 +19,7 @@
     {% include 'modules/theme-selector.html' %}
     <h1>Content Duplicates</h1>
     {% for group in duplicated_groups %}
-        <h2>[{{ group.value_hash }}]-[{{ group.hs_hash}}]</h2>
+        <h2>[{{ group.value_hash }}]-[{{ group.hue_hash }}]-[{{ group.saturation_hash }}]</h2>
         <div class="itemsgrid">
         {% for item in group.duplicated_images %}
             <div class="item">

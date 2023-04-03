@@ -314,7 +314,7 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
             file_path = representations[0].file_path
         else:
             logger.info("generate thumbnail from worst available representation")
-            allow_hashing = False
+            # allow_hashing = False
             file_path = representations[-1].file_path
             img = pyimglib.decoders.open_image(representations[-1].file_path)
     else:
@@ -334,7 +334,7 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
     if allow_hashing:
         existing_image_hash = medialib_db.get_image_hash(content_id, db_connection)
         if existing_image_hash is None:
-            image_hash = shared_code.calc_image_hash(img)
+            image_hash = pyimglib.calc_image_hash(img)
             medialib_db.set_image_hash(content_id, image_hash, db_connection)
 
     buffer, mime, _format = shared_code.generate_thumbnail_image(img, _format, width, height)
