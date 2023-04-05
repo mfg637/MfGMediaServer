@@ -1,3 +1,5 @@
+import multiprocessing
+
 import flask
 import shared_code
 import medialib_db
@@ -10,12 +12,19 @@ import pathlib
 import PIL.Image
 import config
 import logging
+import multiprocessing.managers
 
 logger = logging.getLogger(__name__)
 
 
 NUMBER_OF_ITEMS = 0
 CACHED_REQUEST = None
+
+process: multiprocessing.Process | None = None
+manager = None
+shared_state: multiprocessing.managers.Namespace | None = None
+result_pipe: multiprocessing.connection.Connection | None = None
+clip_processing_content_id = None
 
 
 medialib_blueprint = flask.Blueprint('medialib', __name__, url_prefix='/medialib')
@@ -355,3 +364,103 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
         mimetype=mime,
         max_age=24 * 60 * 60,
     )
+
+
+@medialib_blueprint.route('/openCLIP/<int:content_id>', methods=['GET'])
+@shared_code.login_validation
+def start_openclip(content_id: int):
+    global process
+    global manager
+    global shared_state
+    global result_pipe
+    global clip_processing_content_id
+
+    clip_processing_content_id = content_id
+
+    db_connection = medialib_db.common.make_connection()
+
+    content_metadata = medialib_db.get_content_metadata_by_content_id(content_id, db_connection)
+
+    file_path = shared_code.root_dir.joinpath(content_metadata[1])
+
+    img = None
+
+    if file_path.suffix == ".srs":
+        representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
+        if len(representations) == 0:
+            logger.debug("register representations for content id = {}".format(content_id))
+            cursor = db_connection.cursor()
+            medialib_db.srs_indexer.srs_update_representations(content_id, file_path, cursor)
+            db_connection.commit()
+            cursor.close()
+            representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
+        img = pyimglib.decoders.open_image(representations[-1].file_path)
+    else:
+        img = pyimglib.decoders.open_image(file_path)
+
+    db_connection.close()
+
+    process, manager, shared_state, result_pipe = \
+        medialib_db.openclip_classification.start_clip_classification_process(img)
+
+    return flask.render_template('openclip_status_display.html')
+
+
+@medialib_blueprint.route('/openCLIP-status-update', methods=['GET'])
+@shared_code.login_validation
+def openclip_status():
+    # response_data = {
+    #     "status": "loading",
+    #     "done": 768,
+    #     "total": 1024
+    # }
+    # response_data = {
+    #     "status": "result",
+    #     "content_id": 86,
+    #     "tagList": [
+    #         {"dataTagName": "tag1", "category": "content", "probability": 1, "tag_id": 1, "enabled": False},
+    #         {"dataTagName": "tag2", "category": "content", "probability": 1, "tag_id": 2, "enabled": False},
+    #         {"dataTagName": "tag3", "category": "content", "probability": 1, "tag_id": 3, "enabled": False},
+    #         {"dataTagName": "Matvey fon Gryphon", "category": "me", "probability": 1, "tag_id": 637, "enabled": False}
+    #     ]
+    # }
+
+    global process
+    global manager
+    global shared_state
+    global result_pipe
+    global clip_processing_content_id
+
+    response_data = None
+    if process.is_alive():
+        response_data = {
+            "status": "loading",
+            "done": shared_state.done,
+            "total": shared_state.total
+        }
+    else:
+        result = result_pipe.recv()
+        response_data = {
+            "status": "result",
+            "content_id": clip_processing_content_id,
+            "tagList": []
+        }
+        for result_data in result:
+            response_data["tagList"].append({
+                "dataTagName": result_data[1],
+                "category": result_data[2],
+                "probability": result_data[3],
+                "tag_id": result_data[0],
+                "enabled": False
+            })
+    return flask.Response(json.dumps(response_data), mimetype="application/json")
+
+
+@medialib_blueprint.route('/post-tags', methods=['POST'])
+@shared_code.login_validation
+def post_tags():
+    data = flask.request.json
+    db_connection = medialib_db.common.make_connection()
+    medialib_db.add_tags_for_content_by_tag_ids(data["content_id"], data["tag_ids"], db_connection)
+    db_connection.close()
+    return "OK"
