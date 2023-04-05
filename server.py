@@ -108,14 +108,17 @@ def get_original(pathstr):
             return static_file(path, "image/avif")
         elif pyimglib.decoders.jpeg.is_JPEG(path):
             jpeg = pyimglib.decoders.jpeg.JPEGDecoder(path)
-            if jpeg.arithmetic_coding():
-                return flask.redirect(
-                    "https://{}:{}/image/jpeg/{}".format(
-                        config.host_name,
-                        config.port,
-                        pathstr
+            try:
+                if jpeg.arithmetic_coding():
+                    return flask.redirect(
+                        "https://{}:{}/image/jpeg/{}".format(
+                            config.host_name,
+                            config.port,
+                            pathstr
+                        )
                     )
-                )
+            except ValueError:
+                pass
         return static_file(path)
     return file_url_template(body, pathstr)
 
