@@ -35,6 +35,10 @@ tmp_file = tempfile.NamedTemporaryFile()
 app = flask.Flask(__name__)
 
 
+app.jinja_env.trim_blocks = True
+app.jinja_env.lstrip_blocks = True
+
+
 FILE_SUFFIX_LIST = [
     ".png", ".jpg", ".gif", ".webm", ".mp4", ".svg"
 ]

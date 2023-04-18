@@ -1,3 +1,6 @@
+{% macro title_filter(source_title) -%}
+{{ source_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}
+{%- endmacro %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -79,10 +82,11 @@
                 {% if origin_link is not none %}
                     <a href="{{origin_link}}" class="origin_link">Go to origin</a><br/>
                 {% endif %}
+
                 {% if derpibooru_dl_server and origin_name and origin_id %}
                     {% if content_title %}
                     <a
-                            href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&dl_orig=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
+                            href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&dl_orig=1&title={{ title_filter(content_title) }}"
                     >
                         Download original
                     </a>
@@ -91,75 +95,42 @@
                     {% endif %}
                     <br/>
                 {% endif %}
-                {% if prefix_id %}
-                    {% if content_title %}
-                        <a
-                            href="/image/png/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
-                        >
-                            Render PNG
-                        </a><br/>
-                        <a
-                            href="/image/webp/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
-                        >
-                            Render WEBP
-                        </a><br/>
-                        <a
-                            href="/image/jpeg/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
-                        >
-                            Render JPEG
-                        </a>
+
+                {% macro image_render_link(format) -%}
+                    {% if prefix_id %}
+                        {% if content_title %}
+                            <a
+                                href="/image/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ title_filter(content_title) }}"
+                            >
+                                Render {{ format|upper() }}
+                            </a><br/>
+                        {% else %}
+                            <a
+                                href="/image/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1"
+                            >
+                                Render {{ format|upper() }}
+                            </a><br/>
+                        {% endif %}
                     {% else %}
-                        <a
-                            href="/image/png/{{ path_str }}?origin_id={{ prefix_id }}&download=1"
-                        >
-                            Render PNG
-                        </a><br/>
-                        <a
-                            href="/image/webp/{{ path_str }}?origin_id={{ prefix_id }}&download=1"
-                        >
-                            Render WEBP
-                        </a><br/>
-                        <a
-                            href="/image/jpeg/{{ path_str }}?origin_id={{ prefix_id }}&download=1"
-                        >
-                            Render JPEG
-                        </a>
+                        {% if content_title %}
+                            <a
+                                href="/image/{{ format }}/{{ path_str }}?download=1&title={{ title_filter(content_title) }}"
+                            >
+                                Render {{ format|upper() }}
+                            </a><br/>
+                        {% else %}
+                            <a
+                                href="/image/{{ format }}/{{ path_str }}?download=1"
+                            >
+                                Render {{ format|upper() }}
+                            </a><br/>
+                        {% endif %}
                     {% endif %}
-                {% else %}
-                    {% if content_title %}
-                        <a
-                            href="/image/png/{{ path_str }}?download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
-                        >
-                            Render PNG
-                        </a><br/>
-                        <a
-                            href="/image/webp/{{ path_str }}?download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
-                        >
-                            Render WEBP
-                        </a><br/>
-                        <a
-                            href="/image/jpeg/{{ path_str }}?download=1&title={{ content_title|replace("?", "-qm-")|replace("&", "-amp-")|replace("=", "-eq-")|replace("#", "-hash-") }}"
-                        >
-                            Render JPEG
-                        </a>
-                    {% else %}
-                        <a
-                            href="/image/png/{{ path_str }}?download=1"
-                        >
-                            Render PNG
-                        </a><br/>
-                        <a
-                            href="/image/webp/{{ path_str }}?download=1"
-                        >
-                            Render WEBP
-                        </a><br/>
-                        <a
-                            href="/image/jpeg/{{ path_str }}?download=1"
-                        >
-                            Render JPEG
-                        </a>
-                    {% endif %}
-                {% endif %}
+                {%- endmacro %}
+
+{% for format in ('png', 'webp', 'jpeg') %}
+{{ image_render_link(format) }}
+{% endfor %}
 
                 <h3>Add new tags</h3>
 
