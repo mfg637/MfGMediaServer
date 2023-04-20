@@ -9,10 +9,6 @@
 <body>
     {% include 'modules/theme-selector.html' %}
     <div id="react-wrapper"></div>
-    <!--  «development.js»  «production.min.js». -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-    <script type="text/babel" src="{{ url_for('static', filename='js/openCLIP-indexer.js') }}"></script>
+    <script src="{{ url_for('static', filename='dist/openCLIP-indexer.bundle.js') }}"></script>
 </body>
 </html>

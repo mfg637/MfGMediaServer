@@ -2,3 +2,5 @@
 config.py
 static/js-cache
 logs/*
+/node_modules/
+/yarn.lock
