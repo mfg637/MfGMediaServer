@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Content metadata for «{{ file_name }}»</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/visuals.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/visuals.css') }}">
     <style>
         h1{
             max-width: 100%;
@@ -214,7 +214,7 @@
                 <h3>{{category}}</h3>
                 <ul>
                 {% for tag in tag_list %}
-                    <li>{{tag}}</li>
+                    <li>{{ tag[1] }}</li>
                 {% endfor %}
                 </ul>
             {% endfor %}
@@ -223,6 +223,18 @@
                 <ul>
                 {% for album_id, album_title, album_artist in albums %}
                     <li><a href="/medialib/show-album/id{{ album_id }}">{{ album_title }} by {{ album_artist }}</a></li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+            {% if 'set' in tags %}
+                <h2>Possible albums</h2>
+                <ul>
+                {% for set_tag in tags['set'] %}
+                    {% for artist_tag in tags['artist'] %}
+                        <li><a href="/medialib/album-edit?set_tag_id={{set_tag[0]}}&artist_tag_id={{artist_tag[0]}}">
+                            {{ set_tag[1] }} by {{ artist_tag[1] }}
+                        </a></li>
+                    {% endfor %}
                 {% endfor %}
                 </ul>
             {% endif %}

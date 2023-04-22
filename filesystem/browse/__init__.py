@@ -1,3 +1,5 @@
+from typing import Type
+
 import flask
 import json
 import pathlib
@@ -6,14 +8,19 @@ import math
 import shared_code
 import shared_code.enums as shared_enums
 import pyimglib
-import config
 
 load_acceleration = shared_enums.LoadAcceleration.NONE
 
-items_per_page = 1
+image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif', '.jxl'}
+video_file_extensions = {'.mkv', '.mp4', '.webm'}
+audio_file_extensions = {'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac"}
+supported_file_extensions = \
+    image_file_extensions.union(video_file_extensions).union(audio_file_extensions)\
+        .union({'.mpd', '.srs', ".m3u8"})
 
-THUMBNAIL_FORMATS = ("webp", "jpeg")
-THUMBNAIL_SCALES = (1, 1.5, 2, 3, 4)
+from . import InfoExtractor
+
+items_per_page = 1
 
 
 class PageCache:
@@ -33,13 +40,6 @@ class PageCache:
 
 
 page_cache = PageCache(None, None, None)
-
-image_file_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif', '.jxl'}
-video_file_extensions = {'.mkv', '.mp4', '.webm'}
-audio_file_extensions = {'.mp3', ".m4a", ".ogg", ".oga", ".opus", ".flac"}
-supported_file_extensions = \
-    image_file_extensions.union(video_file_extensions).union(audio_file_extensions)\
-        .union({'.mpd', '.srs', ".m3u8"})
 
 
 def browse_folder(folder):
@@ -190,165 +190,29 @@ def files_processor(filelist, excluded_filelist, initial_item_count):
     return filemeta_list, items_count
 
 
-def db_content_processing(content_list, initial_item_count):
+def db_content_processing(
+        content_list,
+        initial_item_count,
+        extractor_type: Type[InfoExtractor.MedialibDefaultExtractor] = InfoExtractor.MedialibDefaultExtractor
+):
     items_count = initial_item_count
     content_data_list = list()
     for file in content_list:
-        print(file)
-        file_data, items_count = get_db_content_info(file[0], file[1], file[2], file[3], items_count)
+        extractor = extractor_type(*file, items_count=items_count)
+        file_data = extractor.get_filemeta()
+        items_count = extractor.get_current_item_number()
         content_data_list.append(file_data)
     return content_data_list
 
 
-def _icon(file, filemeta, scale=1):
-    filemeta["lazy_load"] = load_acceleration in {
-        shared_enums.LoadAcceleration.LAZY_LOAD,
-        shared_enums.LoadAcceleration.BOTH
-    }
-    icon_base32path = filemeta['base32path']
-    icon_path = pathlib.Path("{}.icon".format(file))
-    if icon_path.exists():
-        filemeta["custom_icon"] = True
-        icon_base32path = shared_code.str_to_base32(str(icon_path.relative_to(shared_code.root_dir)))
-    width = flask.session['thumbnail_width']
-    height = flask.session['thumbnail_height']
-    filemeta['icon'] = "/thumbnail/jpeg/{}x{}/{}".format(width * scale, height * scale, icon_base32path)
-
-    filemeta['sources'] = []
-    for _format in THUMBNAIL_FORMATS:
-        source_strings = []
-        for _scale in THUMBNAIL_SCALES:
-            source_strings.append(
-                "/thumbnail/{}/{}x{}/{} {}x".format(
-                    _format, int(width * _scale * scale), int(height * _scale * scale), filemeta['content_id'], _scale
-                )
-            )
-        filemeta['sources'].append(", ".join(source_strings))
-
-
 def get_file_info(file: pathlib.Path, items_count=0):
-    base32path = shared_code.str_to_base32(str(file))
-    filemeta = {
-        "link": "/orig/{}".format(base32path),
-        "icon": None,
-        "object_icon": False,
-        "name": shared_code.simplify_filename(file.name),
-        "file_name": shared_code.simplify_filename(file.name),
-        "sources": None,
-        "base32path": base32path,
-        "item_index": items_count,
-        "type": "audio",
-        "is_vp8": False,
-        "suffix": file.suffix,
-        "custom_icon": False,
-        "content_id": None
-    }
-    icon_path = pathlib.Path("{}.icon".format(file))
-    if (file.suffix.lower() in image_file_extensions) or (file.suffix.lower() in video_file_extensions):
-        _icon(file, filemeta)
-        if file.suffix == ".jxl":
-            filemeta['link'] = "/image/png/{}".format(base32path)
-    if file.suffix.lower() in image_file_extensions:
-        filemeta["type"] = "picture"
-    elif file.suffix.lower() in video_file_extensions:
-        filemeta["type"] = "video"
-    elif file.suffix.lower() == '.mpd':
-        filemeta['type'] = "DASH"
-        filemeta['link'] = "/{}{}".format(
-            ('' if dir == shared_code.root_dir else 'browse/'),
-            str(file.relative_to(shared_code.root_dir))
-        )
-        _icon(file, filemeta)
-    elif file.suffix.lower() == '.srs':
-        TYPE = pyimglib.decoders.srs.type_detect(file)
-        if TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEO or \
-                TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEOLOOP:
-            filemeta['type'] = "video"
-            filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
-        elif TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.IMAGE:
-            filemeta['type'] = "picture"
-            filemeta['link'] = "/image/autodetect/{}".format(base32path)
-        _icon(file, filemeta)
-    elif file.suffix.lower() == ".m3u8":
-        access_token = shared_code.gen_access_token()
-        filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
-        shared_code.access_tokens[filemeta['link']] = access_token
-        filemeta['link'] += "?access_token={}".format(access_token)
-        if icon_path.exists():
-            _icon(file, filemeta)
-    if file.suffix == '.mkv':
-        filemeta['link'] = "/vp8/{}".format(base32path)
-        filemeta["is_vp8"] = True
-    return filemeta
-
-
-def medialib_make_icon(file, filemeta, scale):
-    width = flask.session['thumbnail_width']
-    height = flask.session['thumbnail_height']
-    filemeta['icon'] = "/medialib/thumbnail/jpeg/{}x{}/id{}".format(
-        width * scale, height * scale, filemeta['content_id']
-    )
-    filemeta['sources'] = []
-    for _format in THUMBNAIL_FORMATS:
-        source_strings = []
-        for _scale in THUMBNAIL_SCALES:
-            source_strings.append(
-                "/medialib/thumbnail/{}/{}x{}/id{} {}x".format(
-                    _format, int(width * _scale * scale), int(height * _scale * scale), filemeta['content_id'], _scale
-                )
-            )
-        filemeta['sources'].append(", ".join(source_strings))
+    extractor = InfoExtractor.FileExtractor(file, items_count)
+    return extractor.get_filemeta()
 
 
 def get_db_content_info(content_id: int, file_str: str, content_type, title, items_count=0, icon_scale=1):
-
-    file = pathlib.Path(file_str)
-    base32path = shared_code.str_to_base32(str(file))
-    filemeta = {
-        "link": "/orig/{}".format(base32path),
-        "icon": None,
-        "object_icon": False,
-        "name": title,
-        "file_name": shared_code.simplify_filename(file.name),
-        "sources": None,
-        "base32path": base32path,
-        "item_index": items_count,
-        "is_vp8": False,
-        "suffix": file.suffix,
-        "custom_icon": False,
-        "type": content_type,
-        "content_id": content_id
-    }
-    icon_path = pathlib.Path("{}.icon".format(file))
-    if content_type in ("image", "video", "video-loop"):
-        medialib_make_icon(file, filemeta, icon_scale)
-        if file.suffix == ".jxl":
-            filemeta['link'] = "/image/png/{}".format(base32path)
-    if file.suffix.lower() == '.mpd':
-        filemeta['type'] = "DASH"
-        filemeta['link'] = "/{}{}".format(
-            ('' if dir == shared_code.root_dir else 'browse/'),
-            str(file)
-        )
-        if icon_path.exists():
-            medialib_make_icon(file, filemeta, icon_scale)
-    elif file.suffix.lower() == '.srs':
-        if content_type in ("video", "video-loop"):
-            filemeta['type'] = "video"
-            filemeta['link'] = "/aclmmp_webm/{}".format(base32path)
-        elif content_type == "image":
-            filemeta['type'] = "picture"
-            filemeta['link'] = "/image/autodetect/{}".format(base32path)
-        medialib_make_icon(file, filemeta, icon_scale)
-    elif file.suffix.lower() == ".m3u8":
-        access_token = shared_code.gen_access_token()
-        filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
-        shared_code.access_tokens[filemeta['link']] = access_token
-        filemeta['link'] += "?access_token={}".format(access_token)
-        if icon_path.exists():
-            medialib_make_icon(file, filemeta, icon_scale)
-    if file.suffix == '.mkv':
-        filemeta['link'] = "/vp8/{}".format(base32path)
-        filemeta["is_vp8"] = True
-    return filemeta, items_count + 1
+    extractor = InfoExtractor.MedialibDefaultExtractor(
+        content_id, file_str, content_type, title, items_count, icon_scale
+    )
+    return extractor.get_filemeta(), extractor.get_current_item_number()
 

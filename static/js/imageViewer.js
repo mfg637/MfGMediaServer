@@ -43,28 +43,28 @@ function ImageViewer() {
 
     links = document.querySelectorAll(".item")
     for (let i=0; i<filemeta.length; i++){
-        link = links[filemeta[i].item_index].getElementsByTagName('a')[0];
-        links[filemeta[i].item_index].imageID = i;
-        link.imageID = i;
-        links[filemeta[i].item_index].ftype = FILETYPE;
-        link.ftype = FILETYPE;
-        if ((filemeta[i].type === "picture") || (filemeta[i].type === "image")){
-            link.onclick=function(){
-                imageViewer.watchPhoto(this.imageID);
-                return false;
-            }
-        }else if (filemeta[i].type === "video"){
-            link.onclick=function(){
-                new RainbowVideoPlayer(filemeta[this.imageID]);
-                return false;
-            }
+      link = links[filemeta[i].item_index].getElementsByTagName('a')[0];
+      links[filemeta[i].item_index].imageID = i;
+      link.imageID = i;
+      links[filemeta[i].item_index].ftype = FILETYPE;
+      link.ftype = FILETYPE;
+      if ((filemeta[i].type === "picture") || (filemeta[i].type === "image")){
+        link.onclick=function(){
+          imageViewer.watchPhoto(this.imageID);
+          return false;
         }
-        else if (filemeta[i].type === "DASH"){
-            link.onclick=function(){
-                new RainbowDASHVideoPlayer(filemeta[this.imageID]);
-                return false;
-            }
+      }else if (filemeta[i].type === "video"){
+        link.onclick=function(){
+            new RainbowVideoPlayer(filemeta[this.imageID]);
+            return false;
         }
+      }
+      else if (filemeta[i].type === "DASH"){
+        link.onclick=function(){
+            new RainbowDASHVideoPlayer(filemeta[this.imageID]);
+            return false;
+        }
+      }
     }
     for (let i=0; i<dirmeta.length; i++){
         links[dirmeta[i].item_index].imageID = i;

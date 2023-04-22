@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ title }}</title>
+  <meta name="content_list" content="{{ content_list }}" />
+  <meta name="tag_ids" content="{{ tag_ids }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/visuals.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/tag-edit.css') }}">
+    <style>
+      :root {
+          --thumbnail-width: {{ thumbnail.width }}px;
+          --thumbnail-height: {{ thumbnail.height }}px;
+      }
+  </style>
+</head>
+<body>
+  {% include 'modules/theme-selector.html' %}
+  <h1>{{ title }}</h1>
+  <div id="react-app-container"></div>
+  <script src="{{ url_for('static', filename='dist/album-edit.bundle.js') }}"></script>
+</body>
+</html>

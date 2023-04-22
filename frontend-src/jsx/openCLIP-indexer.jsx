@@ -1,8 +1,8 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom';
 
 const domContainer = document.querySelector('#react-wrapper');
-const react_root = ReactDOM.createRoot(domContainer);
+const react_root = createRoot(domContainer);
 
 
 class Loader extends React.Component {
@@ -138,23 +138,23 @@ class AppControl extends React.Component{
   }
 
   async postJSON(data) {
-  try {
-    const response = await fetch("/medialib/post-tags", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
+    try {
+      const response = await fetch("/medialib/post-tags", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
 
-    const result = await response.text();
-    console.log("Success:", result);
-    window.location.href =
-      `${window.location.protocol}//${window.location.host}/content_metadata/mlid${this.state.content_id}`;
-  } catch (error) {
-    console.error("Error:", error);
+      const result = await response.text();
+      console.log("Success:", result);
+      window.location.href =
+        `${window.location.protocol}//${window.location.host}/content_metadata/mlid${this.state.content_id}`;
+    } catch (error) {
+      console.error("Error:", error);
+    }
   }
-}
 
   render(){
     if (this.state.tagList !== null){

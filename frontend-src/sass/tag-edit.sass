@@ -1,0 +1,49 @@
+$thumbnail-width: 192px
+$thumbnail-height: 144px
+
+\:root
+  --thumbnail-width: #{$thumbnail-width}
+  --thumbnail-height: #{$thumbnail-height}
+
+.content-item
+  display: flex
+  margin: 1em
+  padding: 0.75em
+  border-radius: 1em
+
+.thumbnail-wrapper
+  width: var(--thumbnail-width)
+  text-align: center
+  flex-shrink: 0
+  margin-right: 1em
+
+  img
+    display: block
+    margin: 0 auto
+
+.content-info
+  display: grid
+  grid-template-columns: 7em 1fr
+
+.source-id
+
+  span::before
+    display: inline-block
+    width: 16px
+    height: 16px
+    margin-right: 0.5em
+
+  .derpibooru::before
+    content: url("https://derpibooru.org/favicon.svg")
+
+  .twibooru::before
+    content: url("../resources/favicon-twibooru-min.svg")
+
+  .ponybooru::before
+    content: url("../resources/favicon-ponybooru-min.svg")
+
+  .furbooru::before
+    content: url("../resources/favicon-furbooru-min.svg")
+
+  .e621::before
+    content: url("https://e621.net/favicon-16x16.png")
