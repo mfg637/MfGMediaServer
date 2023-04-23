@@ -225,3 +225,10 @@ class MedialibAlbumExtractor(MedialibExtendedExtractor):
         self.filemeta |= {
             "album_order": album_order,
         }
+
+class MedialibAlbumGalleryExtractor(MedialibDefaultExtractor):
+    def __init__(self, content_id: int, file_str: str, content_type, title, album_id, items_count=0, icon_scale=2):
+        super().__init__(content_id, file_str, content_type, title, items_count, icon_scale)
+        self.filemeta |= {
+            "link": "/medialib/album/show/id{}".format(album_id),
+        }

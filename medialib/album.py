@@ -55,6 +55,52 @@ def show_album(album_id: int):
     )
 
 
+@album_blueprint.route('/show')
+@shared_code.login_validation
+def show_album_gallery():
+    db_connection = medialib_db.common.make_connection()
+
+    title = "Album Gallery"
+    raw_content_list = medialib_db.get_album_covers(db_connection)
+
+    items_count = 0
+    itemslist = [{
+        "icon": flask.url_for('static', filename='images/updir_icon.svg'),
+        "name": "back to file browser",
+        "lazy_load": False,
+    }]
+    itemslist[0]["link"] = "/"
+    items_count += 1
+
+    content_list = filesystem.browse.db_content_processing(
+        raw_content_list,
+        items_count,
+        filesystem.browse.InfoExtractor.MedialibAlbumGalleryExtractor
+    )
+    itemslist.extend(content_list)
+
+    template_kwargs = {
+        'title': title,
+        '_glob': None,
+        'url': flask.request.base_url,
+        'args': [],
+        'medialib_sorting': shared_code.get_medialib_sorting_constants_for_template(),
+        'medialib_hidden_filtering': medialib_db.files_by_tag_search.HIDDEN_FILTERING,
+        'enable_external_scripts': shared_code.enable_external_scripts
+    }
+
+    return flask.render_template(
+        'index.html',
+        itemslist=itemslist,
+        dirmeta=json.dumps([]),
+        filemeta=json.dumps([]),
+        page=0,
+        max_pages=0,
+        thumbnail=shared_code.get_thumbnail_size(scale=2),
+        **template_kwargs
+    )
+
+
 @album_blueprint.route('/get-album.json', defaults={"album_id": None})
 @album_blueprint.route('/get-album/id<int:album_id>.json')
 @shared_code.login_validation
