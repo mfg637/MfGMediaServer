@@ -130,7 +130,7 @@ class Application extends React.Component{
       content_order_changes: changes_to_commit
     }
     console.log(post_data);
-    postJSON(post_data, "/medialib/update_album", function (){alert("Successful commit!");});
+    postJSON(post_data, "/medialib/album/update", function (){alert("Successful commit!");});
   }
   updateOrder(content_id, order){
     let new_order = [...this.state.content_order];

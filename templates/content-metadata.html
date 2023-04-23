@@ -222,7 +222,7 @@
                 <h2>In albums</h2>
                 <ul>
                 {% for album_id, album_title, album_artist in albums %}
-                    <li><a href="/medialib/show-album/id{{ album_id }}">{{ album_title }} by {{ album_artist }}</a></li>
+                    <li><a href="/medialib/album/show/id{{ album_id }}">{{ album_title }} by {{ album_artist }}</a></li>
                 {% endfor %}
                 </ul>
             {% endif %}
@@ -231,7 +231,7 @@
                 <ul>
                 {% for set_tag in tags['set'] %}
                     {% for artist_tag in tags['artist'] %}
-                        <li><a href="/medialib/album-edit?set_tag_id={{set_tag[0]}}&artist_tag_id={{artist_tag[0]}}">
+                        <li><a href="/medialib/album/edit?set_tag_id={{set_tag[0]}}&artist_tag_id={{artist_tag[0]}}">
                             {{ set_tag[1] }} by {{ artist_tag[1] }}
                         </a></li>
                     {% endfor %}
