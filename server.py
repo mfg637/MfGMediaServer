@@ -122,7 +122,13 @@ def get_original(pathstr):
                         )
                     )
             except ValueError:
-                pass
+                return flask.redirect(
+                    "https://{}:{}/image/jpeg/{}".format(
+                        config.host_name,
+                        config.port,
+                        pathstr
+                    )
+                )
         return static_file(path)
     return file_url_template(body, pathstr)
 
