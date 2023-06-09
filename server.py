@@ -175,32 +175,35 @@ def transcode_image(_format: str, pathstr):
             lods = img.get_image_file_list()
             current_lod = lods.pop(0)
             current_lod_format = pyimglib.decoders.get_image_format(current_lod)
-            while len(lods):
-                if current_lod_format not in possible_formats:
-                    current_lod = lods.pop()
-                    current_lod_format = pyimglib.decoders.get_image_format(current_lod)
-                else:
-                    break
-            if current_lod_format in possible_formats and not download:
-                base32path = shared_code.str_to_base32(str(current_lod))
-                return flask.redirect(
-                    "https://{}:{}/orig/{}".format(
-                        config.host_name,
-                        config.port,
-                        base32path
-                    )
-                )
-            elif current_lod_format == _format and download:
-                absolute_path = shared_code.root_dir.joinpath(current_lod)
-                f = flask.send_file(absolute_path, mimetype=shared_code.MIME_TYPES_BY_FORMAT[_format])
-                filename = get_download_filename(content_title, origin_id, path)
-                response = flask.make_response(f)
-                response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
-                    urllib.parse.quote(filename)
-                )
-                return response
-            else:
+            if _format == "png":
                 img = pyimglib.decoders.open_image(current_lod)
+            else:
+                while len(lods):
+                    if current_lod_format not in possible_formats:
+                        current_lod = lods.pop()
+                        current_lod_format = pyimglib.decoders.get_image_format(current_lod)
+                    else:
+                        break
+                if current_lod_format in possible_formats and not download:
+                    base32path = shared_code.str_to_base32(str(current_lod))
+                    return flask.redirect(
+                        "https://{}:{}/orig/{}".format(
+                            config.host_name,
+                            config.port,
+                            base32path
+                        )
+                    )
+                elif current_lod_format == _format and download:
+                    absolute_path = shared_code.root_dir.joinpath(current_lod)
+                    f = flask.send_file(absolute_path, mimetype=shared_code.MIME_TYPES_BY_FORMAT[_format])
+                    filename = get_download_filename(content_title, origin_id, path)
+                    response = flask.make_response(f)
+                    response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
+                        urllib.parse.quote(filename)
+                    )
+                    return response
+                else:
+                    img = pyimglib.decoders.open_image(current_lod)
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
