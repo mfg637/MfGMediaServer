@@ -269,7 +269,7 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
             representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
         if allow_origin:
             for representation in representations:
-                if representation.compatibility_level >= compatibility_level:
+                if representation.compatibility_level >= compatibility_level and representation.format == _format:
                     db_connection.close()
                     base32path = shared_code.str_to_base32(str(representation.file_path))
                     return flask.redirect(
@@ -279,6 +279,16 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
                             base32path
                         )
                     )
+            if representations[-1].format in {"webp", "jpeg", "png"}:
+                db_connection.close()
+                base32path = shared_code.str_to_base32(str(representations[-1].file_path))
+                return flask.redirect(
+                    "https://{}:{}/orig/{}".format(
+                        config.host_name,
+                        config.port,
+                        base32path
+                    )
+                )
             logger.info("generate thumbnail from best available representation")
             img = pyimglib.decoders.open_image(representations[0].file_path)
             file_path = representations[0].file_path
