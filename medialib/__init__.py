@@ -47,7 +47,11 @@ def medialib_tag_search():
     for tag in tags_groups:
         tags_count = tag["count"]
         for i in range(tags_count):
-            tag["tags"].append(tags_list.pop(0))
+            value = tags_list.pop(0)
+            print(value, value.isdigit())
+            if value.isdigit():
+                value = int(value)
+            tag["tags"].append(value)
     page = int(flask.request.args.get('page', 0))
     order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.DATE_DECREASING.value))
     hidden_filtering = int(flask.request.args.get("hidden_filtering",
@@ -97,7 +101,13 @@ def medialib_tag_search():
 
     tags_group_str = []
     for tags_group in tags_groups:
-        tags_group["group_str"] = " or ".join([medialib_db.get_tag_name_by_alias(tag) for tag in tags_group["tags"]])
+        group_list = []
+        for tag in tags_group["tags"]:
+            if type(tag) is int:
+                group_list.append(medialib_db.get_tag_name_by_id(tag))
+            else:
+                group_list.append(medialib_db.get_tag_name_by_alias(tag))
+        tags_group["group_str"] = " or ".join([medialib_db.get_tag_name_by_alias(tag) for tag in group_list])
 
     title = "Search query results for {}".format(
         (" and ".join([("not " if tags_group["not"] else "") + tags_group["group_str"] for tags_group in tags_groups]))
