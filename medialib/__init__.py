@@ -48,7 +48,6 @@ def medialib_tag_search():
         tags_count = tag["count"]
         for i in range(tags_count):
             value = tags_list.pop(0)
-            print(value, value.isdigit())
             if value.isdigit():
                 value = int(value)
             tag["tags"].append(value)
@@ -107,7 +106,7 @@ def medialib_tag_search():
                 group_list.append(medialib_db.get_tag_name_by_id(tag))
             else:
                 group_list.append(medialib_db.get_tag_name_by_alias(tag))
-        tags_group["group_str"] = " or ".join([medialib_db.get_tag_name_by_alias(tag) for tag in group_list])
+        tags_group["group_str"] = " or ".join([tag for tag in group_list])
 
     title = "Search query results for {}".format(
         (" and ".join([("not " if tags_group["not"] else "") + tags_group["group_str"] for tags_group in tags_groups]))

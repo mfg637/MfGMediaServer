@@ -214,7 +214,7 @@
                 <h3>{{category}}</h3>
                 <ul>
                 {% for tag in tag_list %}
-                    <li>{{ tag[1] }}</li>
+                    <li><a href="/medialib/tag-search?not=0&tags_count=1&tags={{ tag[0] }}&sorting_order=4">{{ tag[1] }}</a></li>
                 {% endfor %}
                 </ul>
             {% endfor %}
