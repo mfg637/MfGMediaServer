@@ -30,7 +30,7 @@ function Image(props) {
   const compatibilityLevel = Number(localStorage.getItem("clevel"));
   let sources = [];
 
-  if (props.filemeta.suffix === ".avif" && compatibility_level <= 1) {
+  if (props.filemeta.suffix === ".avif" && compatibilityLevel <= 1) {
     sources.push({src: props.filemeta.link, type: "image/avif"})
   } else if (props.filemeta.suffix === ".jpg" || props.filemeta.suffix === ".jpeg"){
     sources.push({src: props.filemeta.link, type: "image/jpeg"})
