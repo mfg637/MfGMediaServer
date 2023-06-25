@@ -12,6 +12,12 @@ div#imageViewer
       justify-content: center
       align-items: center
 
+  &.fill-mode .image-container
+    overflow: auto
+
+  &.fill-mode .controls-container
+    display: none
+
   #loadingTitle
     position: relative
     top: 0
@@ -56,7 +62,7 @@ div#imageViewer
       background: rgba(0,0,0,0.95)
 
 
-  #close-button,#previous-image-button,#next-image-button
+  .button
     position: absolute
     /*background: url(./../images/controlsImgBox.svg);*/
     width: 64px
@@ -74,6 +80,9 @@ div#imageViewer
     -webkit-transition: opacity 0.3s
     box-shadow: none
 
+  .square-button
+    width: 48px
+
 
   .imageview-text
     position: fixed
@@ -88,12 +97,18 @@ div#imageViewer
   #close-button
     top: 12px
     right: 12px
-    text-shadow: none
     background: url(../resources/close_btn_default.svg)
-    width: 48px
 
     &:hover
       background: url(../resources/close_btn_active.svg)
+
+  #expand-button
+    bottom: 40px
+    left: 12px
+    background: url(../resources/expand_btn_default.svg)
+
+    &:hover
+      background: url(../resources/expand_btn_active.svg)
 
   #previous-image-button
     left: 12px
@@ -121,5 +136,5 @@ div#imageViewer
   &.photo_load #close-button, &.photo_load #previous-image-button, &.photo_load #next-image-button
     visibility: visible
 
-  &.hideControls #close-button, &.hideControls #previous-image-button, &.hideControls #next-image-button, &.hideControls .imageview-text
+  &.hideControls .button, &.hideControls .imageview-text
     visibility: hidden

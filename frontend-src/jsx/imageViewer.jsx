@@ -25,6 +25,20 @@ const DIRTYPE = 1;
 let viewImage = function () {}
 
 function Image(props) {
+  const [isLoaded, setLoaded] = useState(false);
+  const [naturalWidth, setWidth] = useState(-1);
+  const [naturalHeight, setHeight] = useState(-1);
+
+  function loaded(event){
+    console.log("loaded");
+    setLoaded(true);
+    const imgTag = event.target;
+    setWidth(imgTag.naturalWidth);
+    setHeight(imgTag.naturalHeight);
+    const content_aspect_ratio = imgTag.naturalWidth / imgTag.naturalHeight;
+    console.log("content aspect ratio", content_aspect_ratio)
+  }
+
   let imgTag = null;
 
   const compatibilityLevel = Number(localStorage.getItem("clevel"));
@@ -43,12 +57,25 @@ function Image(props) {
   const base32src = props.filemeta.base32path;
   const content_id = props.filemeta.content_id;
 
-  const cssSizeLimit = {maxWidth: `${css_width}px`, maxHeight: `${css_height}px`};
+  let cssSizeLimit = {}
+  if ((props.viewMode === "fit") || !isLoaded)
+    cssSizeLimit = {maxWidth: `${css_width}px`, maxHeight: `${css_height}px`};
+  else if (props.viewMode === "fill"){
+    const css_width = window.innerWidth;
+    const css_height = window.innerHeight;
+    const content_aspect_ratio = naturalWidth / naturalHeight;
+    const screen_aspect_ratio = css_width / css_height;
+    if (content_aspect_ratio > screen_aspect_ratio){
+      cssSizeLimit = {maxHeight: `${css_height}px`};
+    }else{
+      cssSizeLimit = {maxWidth: `${css_width}px`};
+    }
+  }
 
   if (props.filemeta.suffix === '.gif')
-    imgTag = <img src={props.filemeta.link} style={cssSizeLimit} onLoad={props.contentLoaded} />
+    imgTag = <img src={props.filemeta.link} style={cssSizeLimit} onLoad={loaded} />
   else if (props.filemeta.custom_icon){
-    imgTag = <img src={props.filemeta.icon} style={cssSizeLimit} onLoad={props.contentLoaded}/>
+    imgTag = <img src={props.filemeta.icon} style={cssSizeLimit} onLoad={loaded}/>
   }else {
     let format = 'avif';
     if (compatibilityLevel === 3) {
@@ -61,13 +88,13 @@ function Image(props) {
       imgTag = (<img
         src={`/thumbnail/${format}/${pixel_width}x${pixel_height}/${base32src}?allow_origin=1`}
         style={cssSizeLimit}
-        onLoad={props.contentLoaded}
+        onLoad={loaded}
       />)
     } else {
       imgTag = (<img
         src={`/medialib/thumbnail/${format}/${pixel_width}x${pixel_height}/id${content_id}?allow_origin=1`}
         style={cssSizeLimit}
-        onLoad={props.contentLoaded}
+        onLoad={loaded}
       />)
     }
   }
@@ -101,6 +128,11 @@ function ImageView(props){
     document.body.style.overflow = "auto";
   }
 
+  function expandButtonClick(e){
+    e.stopPropagation();
+    props.doSpecialAction();
+  }
+
   useEffect(() => {
     applySideEffects()
     return () => {
@@ -112,19 +144,21 @@ function ImageView(props){
     <div
       id="imageViewer"
       className=
-        {(props.isLoading? "load " : "") + (props.controllsHidden ? "hideControls " : "") + "photoview-wraper container"}
+        {(props.isLoading? "load " : "") + (props.controllsHidden ? "hideControls " : "") +
+          (props.viewMode !== "fit" ? "fill-mode " : "") + "photoview-wraper container"}
     >
-      <div className="container">
+      <div className="container image-container" onClick={props.doSpecialAction}>
         <Image {...props} />
       </div>
-      <div className="container" onClick={props.doAction} onDoubleClick={props.doSpecialAction}>
-        <div id="close-button" onClick={props.closeViewer}></div>
+      <div className="container controls-container" onClick={props.doAction} onDoubleClick={props.doSpecialAction}>
+        <div id="close-button" className="button square-button" onClick={props.closeViewer}></div>
         { props.currentImageID > 0 ? (
-          <div id="previous-image-button" onClick={props.prevImage}></div>
+          <div id="previous-image-button" className="button" onClick={props.prevImage}></div>
         ) : null }
         { props.currentImageID < (props.imageCount - 1) ? (
-          <div id="next-image-button" onClick={props.nextImage}></div>
+          <div id="next-image-button" className="button" onClick={props.nextImage}></div>
         ) : null }
+        <div id="expand-button" className="button square-button" onClick={expandButtonClick}></div>
         <Caption {...props} />
       </div>
     </div>
@@ -135,6 +169,7 @@ export function ImageViewer(props){
   const [currentImageID, setCurrentImageID] = useState(-1);
   const [isLoaded, setLoaded] = useState(false);
   const [isControlsHidden, setControlsHidden] = useState(false);
+  const [viewMode, setViewMode]= useState("fit");
 
   viewImage = function (imageID){
     setCurrentImageID(imageID);
@@ -242,7 +277,17 @@ export function ImageViewer(props){
 
   function doSpecialAction(){
     const currentFileMeta = props.filemeta[currentImageID];
-    document.location.href = currentFileMeta.link;
+    if ((currentFileMeta.type=== "picture") || (currentFileMeta.type=== "image")) {
+      if (viewMode === "fit"){
+        setViewMode("fill");
+      } else if (viewMode === "fill"){
+        setViewMode("native");
+      } else if (viewMode === "native"){
+        setViewMode("fit");
+      }
+    }else {
+      document.location.href = currentFileMeta.link;
+    }
   }
 
   return (
@@ -260,6 +305,7 @@ export function ImageViewer(props){
           controllsHidden={isControlsHidden}
           doAction={doAction}
           doSpecialAction={doSpecialAction}
+          viewMode={viewMode}
         />
       ) : null}
     </>
