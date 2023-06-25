@@ -46,9 +46,9 @@ function Image(props) {
   const cssSizeLimit = {maxWidth: `${css_width}px`, maxHeight: `${css_height}px`};
 
   if (props.filemeta.suffix === '.gif')
-    imgTag = <img src={props.filemeta.link} style={cssSizeLimit}/>
+    imgTag = <img src={props.filemeta.link} style={cssSizeLimit} onLoad={props.contentLoaded} />
   else if (props.filemeta.custom_icon){
-    imgTag = <img src={props.filemeta.icon} style={cssSizeLimit}/>
+    imgTag = <img src={props.filemeta.icon} style={cssSizeLimit} onLoad={props.contentLoaded}/>
   }else {
     let format = 'avif';
     if (compatibilityLevel === 3) {
@@ -61,11 +61,13 @@ function Image(props) {
       imgTag = (<img
         src={`/thumbnail/${format}/${pixel_width}x${pixel_height}/${base32src}?allow_origin=1`}
         style={cssSizeLimit}
+        onLoad={props.contentLoaded}
       />)
     } else {
       imgTag = (<img
         src={`/medialib/thumbnail/${format}/${pixel_width}x${pixel_height}/id${content_id}?allow_origin=1`}
         style={cssSizeLimit}
+        onLoad={props.contentLoaded}
       />)
     }
   }
@@ -115,16 +117,15 @@ function ImageView(props){
       <div className="container">
         <Image {...props} />
       </div>
-      <div className="container">
-        <div id="close-button" >{/* TODO: close event handler */}</div>
+      <div className="container" onClick={props.doAction} onDoubleClick={props.doSpecialAction}>
+        <div id="close-button" onClick={props.closeViewer}></div>
         { props.currentImageID > 0 ? (
-          <div id="previous-image-button">{/* TODO: close event handler */}</div>
+          <div id="previous-image-button" onClick={props.prevImage}></div>
         ) : null }
         { props.currentImageID < (props.imageCount - 1) ? (
-          <div id="next-image-button">{/* TODO: close event handler */}</div>
+          <div id="next-image-button" onClick={props.nextImage}></div>
         ) : null }
         <Caption {...props} />
-        {/* TODO: EmptySpaceClickEventHandlers */}
       </div>
     </div>
   )
@@ -132,6 +133,8 @@ function ImageView(props){
 
 export function ImageViewer(props){
   const [currentImageID, setCurrentImageID] = useState(-1);
+  const [isLoaded, setLoaded] = useState(false);
+  const [isControlsHidden, setControlsHidden] = useState(false);
 
   viewImage = function (imageID){
     setCurrentImageID(imageID);
@@ -174,7 +177,73 @@ export function ImageViewer(props){
     console.log("init done");
   }
 
-  useEffect(() => {page_init()}, []);
+  function closeViewer(e){
+    e.stopPropagation();
+    setCurrentImageID(-1);
+  }
+
+  function nextImage(e){
+    e.stopPropagation();
+    if ((currentImageID > -1) && ((currentImageID + 1) < props.filemeta.length)){
+      setCurrentImageID(currentImageID + 1);
+    }
+  }
+
+  function prevImage(e){
+    e.stopPropagation();
+    if (currentImageID > 0){
+      setCurrentImageID(currentImageID - 1);
+    }
+  }
+
+  const keyControl = function (event) {
+    console.log(event);
+    const ESCAPE_KEYCODE= 27;
+    const LEFT_ARROW_KEYCODE = 37;
+    const RIGHT_ARROW_KEYCODE = 39;
+    switch (event.keyCode) {
+      case ESCAPE_KEYCODE:
+        closeViewer(event);
+        break;
+      case LEFT_ARROW_KEYCODE:
+        prevImage(event);
+        break;
+      case RIGHT_ARROW_KEYCODE:
+        nextImage(event);
+        break;
+    }
+  }
+
+  useEffect(() => {
+    page_init();
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("keyup", keyControl);
+    return () => window.removeEventListener("keyup", keyControl);
+  })
+
+  function contentLoaded(){
+    setLoaded(true)
+  }
+
+  function doAction(){
+    const currentFileMeta = props.filemeta[currentImageID];
+    if ((currentFileMeta.type=== "picture") || (currentFileMeta.type=== "image")) {
+      setControlsHidden(!isControlsHidden)
+    }else if (currentFileMeta.type === "video") {
+      new RainbowVideoPlayer(currentFileMeta);
+    }else if (imagelist[id].type === "DASH") {
+      new RainbowDASHVideoPlayer(currentFileMeta);
+    }else{
+      document.location.href = currentFileMeta.link;
+    }
+  }
+
+  function doSpecialAction(){
+    const currentFileMeta = props.filemeta[currentImageID];
+    document.location.href = currentFileMeta.link;
+  }
 
   return (
     <>
@@ -183,6 +252,14 @@ export function ImageViewer(props){
           filemeta={props.filemeta[currentImageID]}
           currentImageID={currentImageID}
           imageCount={props.filemeta.length}
+          closeViewer={closeViewer}
+          nextImage={nextImage}
+          prevImage={prevImage}
+          isLoading={!isLoaded}
+          contentLoaded={contentLoaded}
+          controllsHidden={isControlsHidden}
+          doAction={doAction}
+          doSpecialAction={doSpecialAction}
         />
       ) : null}
     </>
