@@ -9,6 +9,7 @@ module.exports = {
         "album-edit": "./frontend-src/jsx/album-edit.jsx",
         "visuals": "./frontend-src/sass/visuals.sass",
         "tag-edit": "./frontend-src/sass/tag-edit.sass",
+        "imageViewer": "./frontend-src/jsx/imageViewer.jsx",
     },
     module: {
         rules: [
