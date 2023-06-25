@@ -1,10 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="32" viewBox="0 0 64 32">
-  <g>
-    <rect width="64" height="32" rx="8" transform="translate(64 32) rotate(-180)" style="opacity: 0.12"/>
-    <rect x="0.5" y="0.5" width="63" height="31" rx="8" transform="translate(64 32) rotate(-180)" style="fill: none;stroke: #fff;stroke-miterlimit: 10;opacity: 0.25"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="64"
+   height="48"
+   viewBox="0 0 64 48"
+   version="1.1"
+   id="svg14"
+   sodipodi:docname="arrow_left_default.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs18" />
+  <sodipodi:namedview
+     id="namedview16"
+     pagecolor="#ffffff"
+     bordercolor="#111111"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="7.375"
+     inkscape:cx="28.610169"
+     inkscape:cy="16"
+     inkscape:window-width="1440"
+     inkscape:window-height="831"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg14" />
+  <g
+     id="g6">
+    <rect
+       width="64"
+       height="48"
+       rx="8"
+       transform="scale(-1)"
+       style="opacity:0.12;stroke-width:1.22474"
+       id="rect2"
+       x="-64"
+       y="-48" />
+    <rect
+       x="-63.5"
+       y="-47.25"
+       width="63"
+       height="46.5"
+       rx="8"
+       transform="scale(-1)"
+       style="opacity:0.25;fill:none;stroke:#ffffff;stroke-width:1.22474;stroke-miterlimit:10"
+       id="rect4" />
   </g>
-  <g>
-    <polygon points="22.83 16.08 26.99 23.11 35.16 23.03 39.17 15.92 35.01 8.89 26.84 8.97 22.83 16.08" style="fill: none"/>
-    <polygon points="23.45 15.9 38.88 23.91 38.88 7.91 23.45 15.9" style="fill: #fff;opacity: 0.5"/>
+  <g
+     id="g12">
+    <polygon
+       points="26.99,23.11 35.16,23.03 39.17,15.92 35.01,8.89 26.84,8.97 22.83,16.08 "
+       style="fill:none"
+       id="polygon8"
+       transform="matrix(2,0,0,2,-29.66,-7.82)" />
+    <polygon
+       points="38.88,23.91 38.88,7.91 23.45,15.9 "
+       style="opacity:0.5;fill:#ffffff"
+       id="polygon10"
+       transform="matrix(2,0,0,2,-29.66,-7.82)" />
   </g>
 </svg>

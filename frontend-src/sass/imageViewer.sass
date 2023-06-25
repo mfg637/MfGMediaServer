@@ -60,7 +60,7 @@ div#imageViewer
     position: absolute
     /*background: url(./../images/controlsImgBox.svg);*/
     width: 64px
-    height: 32px
+    height: 48px
     margin: 0
     opacity: 1
     color: black
@@ -86,28 +86,26 @@ div#imageViewer
 
 
   #close-button
-    top: 10px
-    right: 7px
+    top: 12px
+    right: 12px
     text-shadow: none
     background: url(../resources/close_btn_default.svg)
-    width: 32px
+    width: 48px
 
     &:hover
       background: url(../resources/close_btn_active.svg)
 
   #previous-image-button
-    left: 7px
-    top: 50%
-    margin-top: -16px
+    left: 12px
+    top: calc(50% - 16px)
     background: url(../resources/arrow_left_default.svg)
 
     &:hover
       background: url(../resources/arrow_active_left.svg)
 
   #next-image-button
-    right: 7px
-    top: 50%
-    margin-top: -16px
+    right: 12px
+    top: calc(50% - 16px)
     background: url(../resources/arrow_right_default.svg)
 
     &:hover
