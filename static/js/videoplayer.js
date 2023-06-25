@@ -1,10 +1,4 @@
-style_tag = document.createElement('link');
-style_tag.type = 'text/css';
-style_tag.rel = 'stylesheet';
-style_tag.href="/static/css/videoplayer.css";
 body_tag = document.getElementsByTagName('body')[0]
-body_tag.appendChild(style_tag);
-
 let videoPlayer = null;
 
 

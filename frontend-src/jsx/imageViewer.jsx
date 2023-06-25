@@ -274,7 +274,7 @@ let imageViewer = <ImageViewer filemeta={filemeta} dirmeta={dirmeta} />
 let ImageViewerWrapper = (
   <div>
     {imageViewer}
-    <link rel="stylesheet" type="text/css" href="/static/dist/imageViewVisuals.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/dist/indexHTMLVisuals.css"/>
   </div>
 );
 mounting_root.render(ImageViewerWrapper)
