@@ -24,8 +24,113 @@ const DIRTYPE = 1;
 
 let viewImage = function () {}
 
+function Image(props) {
+  let imgTag = null;
+
+  const compatibilityLevel = Number(localStorage.getItem("clevel"));
+  let sources = [];
+
+  if (props.filemeta.suffix === ".avif" && compatibility_level <= 1) {
+    sources.push(<source srcSet={props.filemeta.link} type="image/avif"/>)
+  } else if (props.filemeta.suffix === ".jpg" || props.filemeta.suffix === ".jpeg"){
+    sources.push(<source srcSet={props.filemeta.link} type="image/jpeg"/>)
+  }
+
+  const css_width = window.innerWidth;
+  const css_height = window.innerHeight;
+  const pixel_width = Math.round(css_width * window.devicePixelRatio);
+  const pixel_height = Math.round(css_height * window.devicePixelRatio);
+  const base32src = props.filemeta.base32path;
+  const content_id = props.filemeta.content_id;
+
+  const cssSizeLimit = {maxWidth: `${css_width}px`, maxHeight: `${css_height}px`};
+
+  if (props.filemeta.suffix === '.gif')
+    imgTag = <img src={props.filemeta.link} style={cssSizeLimit}/>
+  else if (props.filemeta.custom_icon){
+    imgTag = <img src={props.filemeta.icon} style={cssSizeLimit}/>
+  }else {
+    let format = 'avif';
+    if (compatibilityLevel === 3) {
+      format = 'webp';
+    } else if (compatibilityLevel === 4) {
+      format = 'jpeg'
+    }
+
+    if (content_id === null){
+      imgTag = (<img
+        src={`/thumbnail/${format}/${pixel_width}x${pixel_height}/${base32src}?allow_origin=1`}
+        style={cssSizeLimit}
+      />)
+    } else {
+      imgTag = (<img
+        src={`/medialib/thumbnail/${format}/${pixel_width}x${pixel_height}/id${content_id}?allow_origin=1`}
+        style={cssSizeLimit}
+      />)
+    }
+  }
+
+  return (
+    <picture id="i" className="photo">
+      {sources.map((value) => value)}
+      {imgTag}
+    </picture>
+  )
+}
+
+function Caption(props){
+  let captionText = null;
+  if (props.filemeta.name !== null){
+    captionText = <div className="title">{props.filemeta.name}</div>;
+  }
+  return (
+    <div className="imageview-text">
+      { props.currentImageID } / {props.imageCount}
+      { captionText }
+    </div>
+  );
+}
+
+function ImageView(props){
+  function applySideEffects(){
+    document.body.style.overflow = "hidden";
+  }
+  function cancelSideEffects(){
+    document.body.style.overflow = "auto";
+  }
+
+  useEffect(() => {
+    applySideEffects()
+    return () => {
+      cancelSideEffects()
+    };
+  }, []);
+
+  return (
+    <div
+      id="contimgbox"
+      className=
+        {(props.isLoading? "load " : "") + (props.controllsHidden ? "hideControls " : "") + "photoview-wraper container"}
+    >
+      <div className="container">
+        <Image {...props} />
+      </div>
+      <div className="container">
+        <div id="btn" >{/* TODO: close event handler */}</div>
+        { props.currentImageID > 0 ? (
+          <div id="plink" className="photoview-left-plink-bar">{/* TODO: close event handler */}</div>
+        ) : null }
+        { props.currentImageID < (props.imageCount - 1) ? (
+          <div id="nlink" className="photoview-right-plink-bar">{/* TODO: close event handler */}</div>
+        ) : null }
+        <Caption {...props} />
+        {/* TODO: EmptySpaceClickEventHandlers */}
+      </div>
+    </div>
+  )
+}
+
 export function ImageViewer(props){
-  let imageList = [];
   const [currentImageID, setCurrentImageID] = useState(-1);
 
   viewImage = function (imageID){
@@ -33,9 +138,7 @@ export function ImageViewer(props){
   }
 
   function page_init(){
-    console.log("page_init called")
     const links = document.getElementsByTagName('a'),countPhoto = 0;
-    imageList = props.filemeta;
 
     const itemLinks = document.querySelectorAll(".item")
     for (let i=0; i<props.filemeta.length; i++){
@@ -75,14 +178,26 @@ export function ImageViewer(props){
 
   return (
     <>
-      {currentImageID > -1? <img src={props.filemeta[currentImageID].link}/> : null}
+      {currentImageID > -1? (
+        <ImageView
+          filemeta={props.filemeta[currentImageID]}
+          currentImageID={currentImageID}
+          imageCount={props.filemeta.length}
+        />
+      ) : null}
     </>
   )
 }
 
-let mounting_root_element = document.createElement('div')
+let mounting_root_element = document.createElement('div');
+mounting_root_element.id = 'writeCodeJS'
 document.getElementsByTagName('body')[0].appendChild(mounting_root_element);
 const mounting_root = createRoot(mounting_root_element)
 let imageViewer = <ImageViewer filemeta={filemeta} dirmeta={dirmeta} />
-
-mounting_root.render(imageViewer)
+let ImageViewerWrapper = (
+  <div>
+    {imageViewer}
+    <link rel="stylesheet" type="text/css" href="/static/css/imgbox.css"/>
+  </div>
+);
+mounting_root.render(ImageViewerWrapper)
