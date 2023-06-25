@@ -1,0 +1,127 @@
+div#imageViewer
+  background-color: black
+
+  &.container, .container
+    position: fixed
+    top: 0
+    left: 0
+    width: 100%
+    height: 100%
+    &:nth-child(1)
+      display: flex
+      justify-content: center
+      align-items: center
+
+  #loadingTitle
+    position: relative
+    top: 0
+    left: 0
+    max-width: 100%
+    padding: 13px
+    border-bottom: 1px solid #0078c4
+    text-align: center
+    /* background:white url(./../images/line-menu-anim.gif) repeat;*/
+
+    input
+      position: absolute
+      top: 0
+      right: 0
+      margin: 9px
+
+  picture.photo
+    display: block
+    position: relative
+    max-width: 100%
+    max-height: 100%
+
+    img
+      display: block
+
+  div.loadAnim
+    position: absolute
+    top: 50%
+    left: 50%
+    margin: -32px
+    width: 64px
+    height: 64px
+    background: white
+    box-shadow: 0 0 7px white
+    border-radius: 7px
+
+    img
+      margin: 8px
+
+    & #dBg
+      overflow: hidden
+      background: rgba(0,0,0,0.95)
+
+
+  #close-button,#previous-image-button,#next-image-button
+    position: absolute
+    /*background: url(./../images/controlsImgBox.svg);*/
+    width: 64px
+    height: 32px
+    margin: 0
+    opacity: 1
+    color: black
+    border-width: 0
+    cursor: pointer
+    font-family: inherit
+    font-size: 18px
+    border-radius: unset
+    text-decoration: none
+    transition: opacity 0.3s
+    -webkit-transition: opacity 0.3s
+    box-shadow: none
+
+
+  .imageview-text
+    position: fixed
+    bottom: 7px
+    margin: 0 auto
+    width: 100%
+    color: white
+    text-align: center
+    text-shadow: 1px 1px 2px black
+
+
+  #close-button
+    top: 10px
+    right: 7px
+    text-shadow: none
+    background: url(../resources/close_btn_default.svg)
+    width: 32px
+
+    &:hover
+      background: url(../resources/close_btn_active.svg)
+
+  #previous-image-button
+    left: 7px
+    top: 50%
+    margin-top: -16px
+    background: url(../resources/arrow_left_default.svg)
+
+    &:hover
+      background: url(../resources/arrow_active_left.svg)
+
+  #next-image-button
+    right: 7px
+    top: 50%
+    margin-top: -16px
+    background: url(../resources/arrow_right_default.svg)
+
+    &:hover
+      background: url(../resources/arrow_active_right.svg)
+
+  &.photo_load #loadingTitle
+    display: none
+  &.photo_load img.photo
+    visibility: visible
+    opacity: 1
+  &.photo_load div.loadAnim
+    display: none
+  &.photo_load #close-button, &.photo_load #previous-image-button, &.photo_load #next-image-button
+    visibility: visible
+
+  &.hideControls #close-button, &.hideControls #previous-image-button, &.hideControls #next-image-button, &.hideControls .imageview-text
+    visibility: hidden

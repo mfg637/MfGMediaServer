@@ -31,9 +31,9 @@ function Image(props) {
   let sources = [];
 
   if (props.filemeta.suffix === ".avif" && compatibility_level <= 1) {
-    sources.push(<source srcSet={props.filemeta.link} type="image/avif"/>)
+    sources.push({src: props.filemeta.link, type: "image/avif"})
   } else if (props.filemeta.suffix === ".jpg" || props.filemeta.suffix === ".jpeg"){
-    sources.push(<source srcSet={props.filemeta.link} type="image/jpeg"/>)
+    sources.push({src: props.filemeta.link, type: "image/jpeg"})
   }
 
   const css_width = window.innerWidth;
@@ -72,7 +72,7 @@ function Image(props) {
 
   return (
     <picture id="i" className="photo">
-      {sources.map((value) => value)}
+      {sources.map((value, index) => <source src={value.src} type={value.type} key={index}/>)}
       {imgTag}
     </picture>
   )
@@ -108,7 +108,7 @@ function ImageView(props){
 
   return (
     <div
-      id="contimgbox"
+      id="imageViewer"
       className=
         {(props.isLoading? "load " : "") + (props.controllsHidden ? "hideControls " : "") + "photoview-wraper container"}
     >
@@ -116,12 +116,12 @@ function ImageView(props){
         <Image {...props} />
       </div>
       <div className="container">
-        <div id="btn" >{/* TODO: close event handler */}</div>
+        <div id="close-button" >{/* TODO: close event handler */}</div>
         { props.currentImageID > 0 ? (
-          <div id="plink" className="photoview-left-plink-bar">{/* TODO: close event handler */}</div>
+          <div id="previous-image-button">{/* TODO: close event handler */}</div>
         ) : null }
         { props.currentImageID < (props.imageCount - 1) ? (
-          <div id="nlink" className="photoview-right-plink-bar">{/* TODO: close event handler */}</div>
+          <div id="next-image-button">{/* TODO: close event handler */}</div>
         ) : null }
         <Caption {...props} />
         {/* TODO: EmptySpaceClickEventHandlers */}
@@ -197,7 +197,7 @@ let imageViewer = <ImageViewer filemeta={filemeta} dirmeta={dirmeta} />
 let ImageViewerWrapper = (
   <div>
     {imageViewer}
-    <link rel="stylesheet" type="text/css" href="/static/css/imgbox.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/dist/imageViewVisuals.css"/>
   </div>
 );
 mounting_root.render(ImageViewerWrapper)

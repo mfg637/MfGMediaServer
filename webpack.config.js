@@ -9,6 +9,7 @@ module.exports = {
         "album-edit": "./frontend-src/jsx/album-edit.jsx",
         "visuals": "./frontend-src/sass/visuals.sass",
         "tag-edit": "./frontend-src/sass/tag-edit.sass",
+        "imageViewVisuals": "./frontend-src/sass/imageViewer.sass",
         "imageViewer": "./frontend-src/jsx/imageViewer.jsx",
     },
     module: {
@@ -20,8 +21,6 @@ module.exports = {
             {
                 test: /\.s[ac]ss$/i,
                 use: [
-                  // Creates `style` nodes from JS strings
-                  //"style-loader",
                   MiniCssExtractPlugin.loader,
                   // Translates CSS into CommonJS
                   "css-loader",

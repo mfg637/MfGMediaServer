@@ -52,7 +52,7 @@ div.loadAnim img {
 	margin: 8px;
 }
 
-#btn,#plink,#nlink {
+#close-button,#previous-image-button,#next-image-button {
 	position:absolute;
 	/*background: url(./../images/controlsImgBox.svg);*/
 	width: 64px;
@@ -81,34 +81,34 @@ div.loadAnim img {
     text-shadow: 1px 1px 2px black;
 }
 
-#btn /* Cloze button */ {
+#close-button /* Cloze button */ {
 	top: 10px;
 	right: 7px;
 	text-shadow:none;
 	background: url(/static/images/close_btn_default.svg);
 	width: 32px;
 }
-#plink /* back image link */{
+#previous-image-button /* back image link */{
 	left: 7px;
 	top: 50%;
 	margin-top:-16px;
 	display: none;
 	background: url(/static/images/arrow_left_default.svg);
 }
-#nlink /* back image link */{
+#next-image-button /* back image link */{
 	right: 7px;
 	top: 50%;
 	margin-top:-16px;
 	display: none;
 	background: url(/static/images/arrow_right_default.svg);
 }
-#btn:hover{
+#close-button:hover{
 	background: url(/static/images/close_btn_active.svg);
 }
-#plink:hover {
+#previous-image-button:hover {
 	background: url(/static/images/arrow_active_left.svg);
 }
-#nlink:hover {
+#next-image-button:hover {
 	background: url(/static/images/arrow_active_right.svg);
 }
 div.photo_load #dBg {overflow: hidden;background: rgba(0,0,0,0.95);}
@@ -118,12 +118,12 @@ div.photo_load #clzone,
 	div.photo_load #pzone {display: block;}
 div.photo_load img.photo {visibility: visible;opacity: 1;}
 div.photo_load div.loadAnim {display: none;}
-div.photo_load #btn,
-	div.photo_load #plink,
-	div.photo_load #nlink 
+div.photo_load #close-button,
+	div.photo_load #previous-image-button,
+	div.photo_load #next-image-button
 	{
 			visibility: visible;
 }
-#contimgbox.hideControls #btn, #contimgbox.hideControls #plink,#contimgbox.hideControls #nlink,#contimgbox.hideControls .imageview-text{
+#contimgbox.hideControls #close-button, #contimgbox.hideControls #previous-image-button,#contimgbox.hideControls #next-image-button,#contimgbox.hideControls .imageview-text{
     visibility: hidden;
 }
