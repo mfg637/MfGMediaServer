@@ -1,3 +1,5 @@
+@use 'widgets/loading-spinner'
+
 div#imageViewer
   background-color: black
 
@@ -43,24 +45,20 @@ div#imageViewer
     img
       display: block
 
-  div.loadAnim
+  div.loading-animation-wrapper
+    display: none
     position: absolute
-    top: 50%
-    left: 50%
-    margin: -32px
-    width: 64px
-    height: 64px
-    background: white
-    box-shadow: 0 0 7px white
+    top: calc(50% - 32px)
+    left: calc(50% - 32px)
+    width: 72px
+    height: 72px
+    padding: 4px
+    background: #0004
     border-radius: 7px
+    box-sizing: border-box
 
-    img
-      margin: 8px
-
-    & #dBg
-      overflow: hidden
-      background: rgba(0,0,0,0.95)
-
+  &.load div.loading-animation-wrapper
+    display: block
 
   .button
     position: absolute
@@ -131,7 +129,7 @@ div#imageViewer
   &.photo_load img.photo
     visibility: visible
     opacity: 1
-  &.photo_load div.loadAnim
+  &.photo_load div.loading-animation-wrapper
     display: none
   &.photo_load #close-button, &.photo_load #previous-image-button, &.photo_load #next-image-button
     visibility: visible

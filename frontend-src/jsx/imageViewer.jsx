@@ -144,6 +144,18 @@ function ImageView(props){
     >
       <div className="container image-container" onClick={props.doSpecialAction}>
         <Image {...props} />
+        <div className="loading-animation-wrapper">
+          <div className="loading-spinner-x64">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+        </div>
       </div>
       <div className="container controls-container" onClick={props.doAction} onDoubleClick={props.doSpecialAction}>
         <div id="close-button" className="button square-button" onClick={props.closeViewer}></div>

@@ -1,6 +1,188 @@
 /*!************************************************************************************************************************************!*\
   !*** css ./node_modules/css-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./frontend-src/sass/index_html-visuals.sass ***!
   \************************************************************************************************************************************/
+@keyframes loading {
+  from {
+    background-color: rgba(255, 255, 255, 0.2666666667);
+  }
+  to {
+    background-color: white;
+  }
+}
+.loading-spinner-x16 {
+  display: block;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+  position: relative;
+  float: none;
+}
+.loading-spinner-x16 div {
+  float: none;
+  background: rgba(255, 255, 255, 0.2666666667);
+  width: 3.0000000002px;
+  height: 3.0000000002px;
+  position: absolute;
+  border-radius: 50%;
+  animation: 1s ease-in 1s infinite alternate loading;
+}
+.loading-spinner-x16 div:nth-child(8n+1) {
+  left: 12px;
+  top: 6px;
+  animation-delay: 0s;
+}
+.loading-spinner-x16 div:nth-child(8n+2) {
+  left: 10.2426406871px;
+  top: 10.2426406871px;
+  animation-delay: 0.25s;
+}
+.loading-spinner-x16 div:nth-child(8n+3) {
+  left: 6px;
+  top: 12px;
+  animation-delay: 0.5s;
+}
+.loading-spinner-x16 div:nth-child(8n+4) {
+  left: 1.7573593129px;
+  top: 10.2426406871px;
+  animation-delay: 0.75s;
+}
+.loading-spinner-x16 div:nth-child(8n+5) {
+  left: 0px;
+  top: 6px;
+  animation-delay: 1s;
+}
+.loading-spinner-x16 div:nth-child(8n+6) {
+  left: 1.7573593129px;
+  top: 1.7573593129px;
+  animation-delay: 1.25s;
+}
+.loading-spinner-x16 div:nth-child(8n+7) {
+  left: 6px;
+  top: 0px;
+  animation-delay: 1.5s;
+}
+.loading-spinner-x16 div:nth-child(8n+8) {
+  left: 10.2426406871px;
+  top: 1.7573593129px;
+  animation-delay: 1.75s;
+}
+
+.loading-spinner-x32 {
+  display: block;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  position: relative;
+  float: none;
+}
+.loading-spinner-x32 div {
+  float: none;
+  background: rgba(255, 255, 255, 0.2666666667);
+  width: 6.0000000004px;
+  height: 6.0000000004px;
+  position: absolute;
+  border-radius: 50%;
+  animation: 1s ease-in 1s infinite alternate loading;
+}
+.loading-spinner-x32 div:nth-child(8n+1) {
+  left: 24px;
+  top: 12px;
+  animation-delay: 0s;
+}
+.loading-spinner-x32 div:nth-child(8n+2) {
+  left: 20.4852813742px;
+  top: 20.4852813742px;
+  animation-delay: 0.25s;
+}
+.loading-spinner-x32 div:nth-child(8n+3) {
+  left: 12px;
+  top: 24px;
+  animation-delay: 0.5s;
+}
+.loading-spinner-x32 div:nth-child(8n+4) {
+  left: 3.5147186258px;
+  top: 20.4852813742px;
+  animation-delay: 0.75s;
+}
+.loading-spinner-x32 div:nth-child(8n+5) {
+  left: 0px;
+  top: 12px;
+  animation-delay: 1s;
+}
+.loading-spinner-x32 div:nth-child(8n+6) {
+  left: 3.5147186258px;
+  top: 3.5147186258px;
+  animation-delay: 1.25s;
+}
+.loading-spinner-x32 div:nth-child(8n+7) {
+  left: 12px;
+  top: 0px;
+  animation-delay: 1.5s;
+}
+.loading-spinner-x32 div:nth-child(8n+8) {
+  left: 20.4852813742px;
+  top: 3.5147186258px;
+  animation-delay: 1.75s;
+}
+
+.loading-spinner-x64 {
+  display: block;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  position: relative;
+  float: none;
+}
+.loading-spinner-x64 div {
+  float: none;
+  background: rgba(255, 255, 255, 0.2666666667);
+  width: 12.0000000008px;
+  height: 12.0000000008px;
+  position: absolute;
+  border-radius: 50%;
+  animation: 1s ease-in 1s infinite alternate loading;
+}
+.loading-spinner-x64 div:nth-child(8n+1) {
+  left: 52px;
+  top: 26px;
+  animation-delay: 0s;
+}
+.loading-spinner-x64 div:nth-child(8n+2) {
+  left: 44.3847763109px;
+  top: 44.3847763109px;
+  animation-delay: 0.25s;
+}
+.loading-spinner-x64 div:nth-child(8n+3) {
+  left: 26px;
+  top: 52px;
+  animation-delay: 0.5s;
+}
+.loading-spinner-x64 div:nth-child(8n+4) {
+  left: 7.6152236891px;
+  top: 44.3847763109px;
+  animation-delay: 0.75s;
+}
+.loading-spinner-x64 div:nth-child(8n+5) {
+  left: 0px;
+  top: 26px;
+  animation-delay: 1s;
+}
+.loading-spinner-x64 div:nth-child(8n+6) {
+  left: 7.6152236891px;
+  top: 7.6152236891px;
+  animation-delay: 1.25s;
+}
+.loading-spinner-x64 div:nth-child(8n+7) {
+  left: 26px;
+  top: 0px;
+  animation-delay: 1.5s;
+}
+.loading-spinner-x64 div:nth-child(8n+8) {
+  left: 44.3847763109px;
+  top: 7.6152236891px;
+  animation-delay: 1.75s;
+}
+
 div#imageViewer {
   background-color: black;
 }
@@ -47,23 +229,20 @@ div#imageViewer picture.photo {
 div#imageViewer picture.photo img {
   display: block;
 }
-div#imageViewer div.loadAnim {
+div#imageViewer div.loading-animation-wrapper {
+  display: none;
   position: absolute;
-  top: 50%;
-  left: 50%;
-  margin: -32px;
-  width: 64px;
-  height: 64px;
-  background: white;
-  box-shadow: 0 0 7px white;
+  top: calc(50% - 32px);
+  left: calc(50% - 32px);
+  width: 72px;
+  height: 72px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.2666666667);
   border-radius: 7px;
+  box-sizing: border-box;
 }
-div#imageViewer div.loadAnim img {
-  margin: 8px;
-}
-div#imageViewer div.loadAnim #dBg {
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.95);
+div#imageViewer.load div.loading-animation-wrapper {
+  display: block;
 }
 div#imageViewer .button {
   position: absolute;
@@ -134,7 +313,7 @@ div#imageViewer.photo_load img.photo {
   visibility: visible;
   opacity: 1;
 }
-div#imageViewer.photo_load div.loadAnim {
+div#imageViewer.photo_load div.loading-animation-wrapper {
   display: none;
 }
 div#imageViewer.photo_load #close-button, div#imageViewer.photo_load #previous-image-button, div#imageViewer.photo_load #next-image-button {

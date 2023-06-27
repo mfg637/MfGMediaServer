@@ -37,7 +37,7 @@ picture.photo {
 picture.photo img{
 	display: block;
 }
-div.loadAnim {
+div.loading-animation-wrapper {
 	position: absolute;
 	top: 50%;
 	left: 50%;
@@ -48,7 +48,7 @@ div.loadAnim {
 	box-shadow: 0 0 7px white;
 	border-radius: 7px;
 }
-div.loadAnim img {
+div.loading-animation-wrapper img {
 	margin: 8px;
 }
 
@@ -117,7 +117,7 @@ div.photo_load #loadingTitle {display: none;}
 div.photo_load #clzone,
 	div.photo_load #pzone {display: block;}
 div.photo_load img.photo {visibility: visible;opacity: 1;}
-div.photo_load div.loadAnim {display: none;}
+div.photo_load div.loading-animation-wrapper {display: none;}
 div.photo_load #close-button,
 	div.photo_load #previous-image-button,
 	div.photo_load #next-image-button

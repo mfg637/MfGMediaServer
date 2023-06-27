@@ -1,0 +1,40 @@
+@use "sass:math"
+
+$bg-color: #fff4
+$fg-color: white
+
+@keyframes loading
+  from
+    background-color: $bg-color
+  to
+    background-color: $fg-color
+
+@mixin loading-spinner($size: 16px, $radius: $size / 2 - $size / 8, $offset: $radius, $elem_size: $size / 5.333333333, $delay: 0.25s, $float-value: none)
+  display: block
+  width: $size
+  height: $size
+  overflow: hidden
+  position: relative
+  float: $float-value
+
+  div
+    float: none
+    background: $bg-color
+    width: $elem_size
+    height: $elem_size
+    position: absolute
+    border-radius: 50%
+    animation: 1s ease-in 1s infinite alternate loading
+
+  @for $i from 0 to 8
+    div:nth-child(8n + #{$i + 1})
+      left: math.cos(45deg * $i) * $radius + $offset
+      top: math.sin(45deg * $i)* $radius + $offset
+      animation-delay: $delay * $i
+
+.loading-spinner-x16
+  @include loading-spinner()
+.loading-spinner-x32
+  @include loading-spinner($size: 32px)
+.loading-spinner-x64
+  @include loading-spinner($size: 64px, $radius: 32px - 6px)
