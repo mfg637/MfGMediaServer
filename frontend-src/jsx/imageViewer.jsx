@@ -123,9 +123,11 @@ function Caption(props){
 function ImageView(props){
   function applySideEffects(){
     document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
   }
   function cancelSideEffects(){
     document.body.style.overflow = "auto";
+    document.body.style.touchAction = "auto";
   }
 
   function expandButtonClick(e){
