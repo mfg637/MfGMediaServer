@@ -39,7 +39,7 @@ function Image(props) {
     console.log("content aspect ratio", content_aspect_ratio)
   }
 
-  let imgTag = null;
+  let imgTagSource = null;
 
   const compatibilityLevel = Number(localStorage.getItem("clevel"));
   let sources = [];
@@ -73,9 +73,9 @@ function Image(props) {
   }
 
   if (props.filemeta.suffix === '.gif')
-    imgTag = <img src={props.filemeta.link} style={cssSizeLimit} onLoad={loaded} />
+    imgTagSource = props.filemeta.link;
   else if (props.filemeta.custom_icon){
-    imgTag = <img src={props.filemeta.icon} style={cssSizeLimit} onLoad={loaded}/>
+    imgTagSource = props.filemeta.icon;
   }else {
     let format = 'avif';
     if (compatibilityLevel === 3) {
@@ -85,24 +85,16 @@ function Image(props) {
     }
 
     if (content_id === null){
-      imgTag = (<img
-        src={`/thumbnail/${format}/${pixel_width}x${pixel_height}/${base32src}?allow_origin=1`}
-        style={cssSizeLimit}
-        onLoad={loaded}
-      />)
+      imgTagSource = `/thumbnail/${format}/${pixel_width}x${pixel_height}/${base32src}?allow_origin=1`;
     } else {
-      imgTag = (<img
-        src={`/medialib/thumbnail/${format}/${pixel_width}x${pixel_height}/id${content_id}?allow_origin=1`}
-        style={cssSizeLimit}
-        onLoad={loaded}
-      />)
+      imgTagSource = `/medialib/thumbnail/${format}/${pixel_width}x${pixel_height}/id${content_id}?allow_origin=1`;
     }
   }
 
   return (
     <picture id="i" className="photo">
       {sources.map((value, index) => <source src={value.src} type={value.type} key={index}/>)}
-      {imgTag}
+      <img src={imgTagSource} style={cssSizeLimit} onLoad={loaded} alt={props.filemeta.name}/>
     </picture>
   )
 }
