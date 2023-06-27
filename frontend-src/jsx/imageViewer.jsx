@@ -37,6 +37,7 @@ function Image(props) {
     setHeight(imgTag.naturalHeight);
     const content_aspect_ratio = imgTag.naturalWidth / imgTag.naturalHeight;
     console.log("content aspect ratio", content_aspect_ratio)
+    props.contentLoaded()
   }
 
   let imgTagSource = null;
@@ -214,6 +215,7 @@ export function ImageViewer(props){
   function nextImage(e){
     e.stopPropagation();
     if ((currentImageID > -1) && ((currentImageID + 1) < props.filemeta.length)){
+      setLoaded(false);
       setCurrentImageID(currentImageID + 1);
     }
   }
@@ -221,6 +223,7 @@ export function ImageViewer(props){
   function prevImage(e){
     e.stopPropagation();
     if (currentImageID > 0){
+      setLoaded(false);
       setCurrentImageID(currentImageID - 1);
     }
   }
@@ -253,6 +256,7 @@ export function ImageViewer(props){
   })
 
   function contentLoaded(){
+    console.log("content loaded")
     setLoaded(true)
   }
 
