@@ -9,7 +9,7 @@ $fg-color: white
   to
     background-color: $fg-color
 
-@mixin loading-spinner($size: 16px, $radius: $size / 2 - $size / 8, $offset: $radius, $elem_size: $size / 5.333333333, $delay: 0.25s, $float-value: none)
+@mixin loading-spinner($size: 16px, $radius: math.div($size, 2) - math.div($size, 8), $offset: $radius, $elem_size: math.div($size, 5.333333333), $delay: 0.25s, $float-value: none)
   display: block
   width: $size
   height: $size

@@ -58,19 +58,21 @@ function Image(props) {
   const base32src = props.filemeta.base32path;
   const content_id = props.filemeta.content_id;
 
-  let cssSizeLimit = {}
+  let imageStyles = {}
   if ((props.viewMode === "fit") || !isLoaded)
-    cssSizeLimit = {maxWidth: `${css_width}px`, maxHeight: `${css_height}px`};
+    imageStyles = {maxWidth: `${css_width}px`, maxHeight: `${css_height}px`};
   else if (props.viewMode === "fill"){
-    const css_width = window.innerWidth;
-    const css_height = window.innerHeight;
     const content_aspect_ratio = naturalWidth / naturalHeight;
     const screen_aspect_ratio = css_width / css_height;
     if (content_aspect_ratio > screen_aspect_ratio){
-      cssSizeLimit = {maxHeight: `${css_height}px`};
+      imageStyles = {maxHeight: `${css_height}px`};
     }else{
-      cssSizeLimit = {maxWidth: `${css_width}px`};
+      imageStyles = {maxWidth: `${css_width}px`};
     }
+  }
+  if (props.xOffset !== null){
+    imageStyles.position = "relative";
+    imageStyles.left = props.xOffset;
   }
 
   if (props.filemeta.suffix === '.gif')
@@ -95,7 +97,7 @@ function Image(props) {
   return (
     <picture id="i" className="photo">
       {sources.map((value, index) => <source src={value.src} type={value.type} key={index}/>)}
-      <img src={imgTagSource} style={cssSizeLimit} onLoad={loaded} alt={props.filemeta.name}/>
+      <img src={imgTagSource} style={imageStyles} onLoad={loaded} alt={props.filemeta.name}/>
     </picture>
   )
 }
@@ -114,18 +116,58 @@ function Caption(props){
 }
 
 function ImageView(props){
+  const [xTouchPoint, setXTouchPoint] = useState(null);
+  const [xOffset, setXOffset] = useState(null);
   function applySideEffects(){
     document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "none";
+    document.body.style.touchAction = "pan-x";
+    document.body.style.overscrollBehavior = "none";
   }
   function cancelSideEffects(){
     document.body.style.overflow = "auto";
     document.body.style.touchAction = "auto";
+    document.body.style.overscrollBehavior = "unset";
   }
 
   function expandButtonClick(e){
     e.stopPropagation();
     props.doSpecialAction();
+  }
+
+  function closeButtonClick(e){
+    e.stopPropagation();
+    props.closeViewer();
+  }
+
+  function prevButtonClick(e){
+    e.stopPropagation();
+    props.prevImage();
+  }
+
+  function nextButtonClick(e){
+    e.stopPropagation();
+    props.nextImage();
+  }
+
+  function touchStart(e){
+    setXTouchPoint(e.touches[0].clientX);
+  }
+
+  function touchEnd(e){
+    const css_width = window.innerWidth;
+    const min_scroll_distanse = (css_width / 2)
+    if (xOffset > min_scroll_distanse){
+      props.prevImage();
+    } else if (xOffset < -min_scroll_distanse){
+      props.nextImage();
+    }
+    setXTouchPoint(null);
+    setXOffset(null);
+  }
+
+  function touchMove(e){
+    e.preventDefault();
+    setXOffset(e.touches[0].clientX - xTouchPoint);
   }
 
   useEffect(() => {
@@ -143,7 +185,7 @@ function ImageView(props){
           (props.viewMode !== "fit" ? "fill-mode " : "") + "photoview-wraper container"}
     >
       <div className="container image-container" onClick={props.doSpecialAction}>
-        <Image {...props} />
+        <Image {...props} xOffset={xOffset} />
         <div className="loading-animation-wrapper">
           <div className="loading-spinner-x64">
             <div></div>
@@ -157,13 +199,21 @@ function ImageView(props){
           </div>
         </div>
       </div>
-      <div className="container controls-container" onClick={props.doAction} onDoubleClick={props.doSpecialAction}>
-        <div id="close-button" className="button square-button" onClick={props.closeViewer}></div>
+      <div
+        className="container controls-container"
+        onTouchStart={touchStart}
+        onTouchEnd={touchEnd}
+        onTouchCancel={touchEnd}
+        onTouchMove={touchMove}
+        onClick={props.doAction}
+        onDoubleClick={props.doSpecialAction}
+      >
+        <div id="close-button" className="button square-button" onClick={closeButtonClick}></div>
         { props.currentImageID > 0 ? (
-          <div id="previous-image-button" className="button" onClick={props.prevImage}></div>
+          <div id="previous-image-button" className="button" onClick={prevButtonClick}></div>
         ) : null }
         { props.currentImageID < (props.imageCount - 1) ? (
-          <div id="next-image-button" className="button" onClick={props.nextImage}></div>
+          <div id="next-image-button" className="button" onClick={nextButtonClick}></div>
         ) : null }
         <div id="expand-button" className="button square-button" onClick={expandButtonClick}></div>
         <Caption {...props} />
@@ -219,21 +269,18 @@ export function ImageViewer(props){
     console.log("init done");
   }
 
-  function closeViewer(e){
-    e.stopPropagation();
+  function closeViewer(){
     setCurrentImageID(-1);
   }
 
-  function nextImage(e){
-    e.stopPropagation();
+  function nextImage(){
     if ((currentImageID > -1) && ((currentImageID + 1) < props.filemeta.length)){
       setLoaded(false);
       setCurrentImageID(currentImageID + 1);
     }
   }
 
-  function prevImage(e){
-    e.stopPropagation();
+  function prevImage(){
     if (currentImageID > 0){
       setLoaded(false);
       setCurrentImageID(currentImageID - 1);
@@ -241,19 +288,18 @@ export function ImageViewer(props){
   }
 
   const keyControl = function (event) {
-    console.log(event);
     const ESCAPE_KEYCODE= 27;
     const LEFT_ARROW_KEYCODE = 37;
     const RIGHT_ARROW_KEYCODE = 39;
     switch (event.keyCode) {
       case ESCAPE_KEYCODE:
-        closeViewer(event);
+        closeViewer();
         break;
       case LEFT_ARROW_KEYCODE:
-        prevImage(event);
+        prevImage();
         break;
       case RIGHT_ARROW_KEYCODE:
-        nextImage(event);
+        nextImage();
         break;
     }
   }
