@@ -120,13 +120,15 @@ function ImageView(props){
   const [xOffset, setXOffset] = useState(null);
   function applySideEffects(){
     document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "pan-x";
+    document.body.style.touchAction = "pan-x pan-y";
     document.body.style.overscrollBehavior = "none";
+    document.documentElement.requestFullscreen();
   }
   function cancelSideEffects(){
     document.body.style.overflow = "auto";
     document.body.style.touchAction = "auto";
     document.body.style.overscrollBehavior = "unset";
+    document.exitFullscreen();
   }
 
   function expandButtonClick(e){
@@ -155,7 +157,7 @@ function ImageView(props){
 
   function touchEnd(e){
     const css_width = window.innerWidth;
-    const min_scroll_distanse = (css_width / 2)
+    const min_scroll_distanse = (css_width / 4)
     if (xOffset > min_scroll_distanse){
       props.prevImage();
     } else if (xOffset < -min_scroll_distanse){
