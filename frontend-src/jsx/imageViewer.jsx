@@ -152,24 +152,30 @@ function ImageView(props){
   }
 
   function touchStart(e){
-    setXTouchPoint(e.touches[0].clientX);
+    if (!props.isLoading)
+      setXTouchPoint(e.touches[0].clientX);
+    else
+      setXTouchPoint(null);
   }
 
   function touchEnd(e){
     const css_width = window.innerWidth;
-    const min_scroll_distanse = (css_width / 4)
-    if (xOffset > min_scroll_distanse){
-      props.prevImage();
-    } else if (xOffset < -min_scroll_distanse){
-      props.nextImage();
+    const min_scroll_distanse = (css_width / 4);
+    if (xTouchPoint !== null){
+      if (xOffset > min_scroll_distanse){
+        props.prevImage();
+      } else if (xOffset < -min_scroll_distanse){
+        props.nextImage();
+      }
+      setXTouchPoint(null);
+      setXOffset(null);
     }
-    setXTouchPoint(null);
-    setXOffset(null);
   }
 
   function touchMove(e){
     e.preventDefault();
-    setXOffset(e.touches[0].clientX - xTouchPoint);
+    if (xTouchPoint !== null)
+      setXOffset(e.touches[0].clientX - xTouchPoint);
   }
 
   useEffect(() => {
