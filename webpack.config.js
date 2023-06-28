@@ -9,7 +9,7 @@ module.exports = {
         "album-edit": "./frontend-src/jsx/album-edit.jsx",
         "visuals": "./frontend-src/sass/visuals.sass",
         "tag-edit": "./frontend-src/sass/tag-edit.sass",
-        "indexHTMLVisuals": "./frontend-src/sass/index_html-visuals.sass",
+        "index": "./frontend-src/sass/index_html-visuals.sass",
         "imageViewer": "./frontend-src/jsx/imageViewer.jsx",
     },
     module: {

@@ -381,10 +381,5 @@ mounting_root_element.id = 'writeCodeJS'
 document.getElementsByTagName('body')[0].appendChild(mounting_root_element);
 const mounting_root = createRoot(mounting_root_element)
 let imageViewer = <ImageViewer filemeta={filemeta} dirmeta={dirmeta} />
-let ImageViewerWrapper = (
-  <div>
-    {imageViewer}
-    <link rel="stylesheet" type="text/css" href="/static/dist/indexHTMLVisuals.css"/>
-  </div>
-);
-mounting_root.render(ImageViewerWrapper)
+
+mounting_root.render(imageViewer)

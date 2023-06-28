@@ -7,7 +7,7 @@
     <meta name="dirmeta_json" content="{{ dirmeta }}" />
     <title>Content Duplicates</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/visuals.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/index.css') }}">
     <style>
         :root {
             --thumbnail-width: {{ thumbnail.width }}px;
@@ -80,6 +80,6 @@
     </script>
     <script src="/static/js/ajax.js"></script>
     <script src="/static/js/videoplayer.js"></script>
-    <script src="/static/js/imageViewer.js"></script>
+    <script src="/dist/js/imageViewer.bundle.js"></script>
 </body>
 </html>
