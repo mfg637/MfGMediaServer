@@ -118,12 +118,15 @@ function Caption(props){
 function ImageView(props){
   const [xTouchPoint, setXTouchPoint] = useState(null);
   const [xOffset, setXOffset] = useState(null);
+  const [cursorHidden, setCursorHidden] = useState(false)
+  const [hideTimeout, setHideTimeout] = useState(null)
   function applySideEffects(){
     document.body.style.overflow = "hidden";
     document.body.style.touchAction = "pan-x pan-y";
     document.body.style.overscrollBehavior = "none";
     document.documentElement.requestFullscreen();
   }
+
   function cancelSideEffects(){
     document.body.style.overflow = "auto";
     document.body.style.touchAction = "auto";
@@ -178,6 +181,16 @@ function ImageView(props){
       setXOffset(e.touches[0].clientX - xTouchPoint);
   }
 
+  function hideCursor(){
+    setCursorHidden(true);
+  }
+
+  function mousemove(){
+    clearTimeout(hideTimeout);
+    setCursorHidden(false);
+    setHideTimeout(setTimeout(hideCursor, 5000));
+  }
+
   useEffect(() => {
     applySideEffects()
     return () => {
@@ -190,7 +203,8 @@ function ImageView(props){
       id="imageViewer"
       className=
         {(props.isLoading? "load " : "") + (props.controllsHidden ? "hideControls " : "") +
-          (props.viewMode !== "fit" ? "fill-mode " : "") + "photoview-wraper container"}
+          (props.viewMode !== "fit" ? "fill-mode " : "") + (cursorHidden ? "hide-cursor " : "")
+          + "photoview-wraper container"}
     >
       <div className="container image-container" onClick={props.doSpecialAction}>
         <Image {...props} xOffset={xOffset} />
@@ -215,6 +229,7 @@ function ImageView(props){
         onTouchMove={touchMove}
         onClick={props.doAction}
         onDoubleClick={props.doSpecialAction}
+        onMouseMove={mousemove}
       >
         <div id="close-button" className="button square-button" onClick={closeButtonClick}></div>
         { props.currentImageID > 0 ? (

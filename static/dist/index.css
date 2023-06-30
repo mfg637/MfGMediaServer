@@ -322,6 +322,9 @@ div#imageViewer.photo_load #close-button, div#imageViewer.photo_load #previous-i
 div#imageViewer.hideControls .button, div#imageViewer.hideControls .imageview-text {
   visibility: hidden;
 }
+div#imageViewer.hideControls.hide-cursor {
+  cursor: none;
+}
 
 div.videocontainer {
   width: 100%;
