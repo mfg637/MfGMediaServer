@@ -347,7 +347,7 @@ export function ImageViewer(props){
       setControlsHidden(!isControlsHidden)
     }else if (currentFileMeta.type === "video") {
       new RainbowVideoPlayer(currentFileMeta);
-    }else if (imagelist[id].type === "DASH") {
+    }else if (currentFileMeta.type === "DASH") {
       new RainbowDASHVideoPlayer(currentFileMeta);
     }else{
       document.location.href = currentFileMeta.link;
