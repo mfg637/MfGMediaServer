@@ -109,7 +109,7 @@ function Caption(props){
   }
   return (
     <div className="imageview-text">
-      { props.currentImageID } / {props.imageCount}
+      { props.currentImageID + 1 } / {props.imageCount}
       { captionText }
     </div>
   );
