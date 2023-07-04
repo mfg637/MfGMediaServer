@@ -47,8 +47,6 @@ function Image(props) {
 
   if (props.filemeta.suffix === ".avif" && compatibilityLevel <= 1) {
     sources.push({src: props.filemeta.link, type: "image/avif"})
-  } else if (props.filemeta.suffix === ".jpg" || props.filemeta.suffix === ".jpeg"){
-    sources.push({src: props.filemeta.link, type: "image/jpeg"})
   }
 
   const css_width = window.innerWidth;
@@ -87,7 +85,9 @@ function Image(props) {
       format = 'jpeg'
     }
 
-    if (content_id === null){
+    if ((props.filemeta.suffix === ".jpg" || props.filemeta.suffix === ".jpeg") && (compatibilityLevel < 3)){
+      imgTagSource = props.filemeta.link;
+    } else if (content_id === null){
       imgTagSource = `/thumbnail/${format}/${pixel_width}x${pixel_height}/${base32src}?allow_origin=1`;
     } else {
       imgTagSource = `/medialib/thumbnail/${format}/${pixel_width}x${pixel_height}/id${content_id}?allow_origin=1`;
