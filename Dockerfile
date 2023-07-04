@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
 COPY python-dependencies.txt .
 RUN pip install --no-cache-dir -r python-dependencies.txt
 
+COPY config-blank.py /app/config.py
 COPY . /app
 
 RUN bash ./init-create-react-babel-project.sh
