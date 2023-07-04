@@ -15,10 +15,12 @@ import tempfile
 import subprocess
 import pyimglib
 
+import config
+
 logger = logging.getLogger(__name__)
 
 
-anonymous_forbidden = True
+anonymous_forbidden = not config.allow_anonymous
 access_tokens = dict()
 # key - URL, value - token
 enable_external_scripts = True
