@@ -7,10 +7,11 @@ port = 3709
 certificate_file = ''
 private_key_file = ''
 
-allow_anonymous = True
-valid_login = ""
+allow_anonymous = False
+valid_login = "admin"
 # sha3-512
-valid_password_hash_hex = ''
+# default password is admin. You should change it.
+valid_password_hash_hex = '5a38afb1a18d408e6cd367f9db91e2ab9bce834cdad3da24183cc174956c20ce35dd39c2bd36aae907111ae3d6ada353f7697a5f1a8fc567aae9e4ca41a9d19d'
 
 items_per_page = 15
 

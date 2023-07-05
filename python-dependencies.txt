@@ -4,3 +4,4 @@ lxml
 python-magic
 CairoSVG
 psycopg2
+pypng

@@ -323,4 +323,4 @@ cython_debug/
 .idea/
 
 config.py
-!*/config.py
+!pyimglib/config.py

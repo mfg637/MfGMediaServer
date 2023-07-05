@@ -23,8 +23,9 @@ RUN pip install --no-cache-dir -r python-dependencies.txt
 
 COPY --from=frontend-build /app/static/dist /app/static/dist
 COPY config-blank.py /app/config.py
+COPY medialib_db/config-example.py /app/medialib-db/config.py
 COPY . /app
 
-#RUN bash ./init-create-react-babel-project.sh
+RUN mkdir "/app/logs"
 
 CMD ["python", "./server.py", "/mnt"]
