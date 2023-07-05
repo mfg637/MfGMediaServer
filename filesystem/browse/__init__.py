@@ -124,8 +124,9 @@ def browse(dir):
             excluded_filelist.extend(pyimglib.ACLMMP.srs_parser.get_files_list(srs_file, content, streams))
             filelist.append(srs_file)
         for mpd_file in mpd_filelist:
-            files = pyimglib.transcoding.encoders.dash_encoder.DASHEncoder.get_files(mpd_file)[:-1]
-            print(files)
+            dash_handler = pyimglib.transcoding.encoders.dash_encoder.DashVideoEncoder(1)
+            dash_handler.set_manifest_file(mpd_file)
+            files = dash_handler.get_files()[:-1]
             excluded_filelist.extend(files)
             filelist.append(mpd_file)
         filelist.sort(key=extract_mtime_key, reverse=True)
