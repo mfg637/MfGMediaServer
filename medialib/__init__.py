@@ -1,4 +1,7 @@
+import io
 import multiprocessing
+import subprocess
+import tempfile
 
 import flask
 import shared_code
@@ -227,6 +230,17 @@ def drop_thumbnails(content_id):
 @medialib_blueprint.route('/thumbnail/<string:_format>/<int:width>x<int:height>/id<int:content_id>')
 @shared_code.login_validation
 def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None):
+
+    def jpeg_xl_fast_decode(file_path: pathlib.Path) -> bytes:
+        commandline = [
+            "djxl",
+            file_path,
+            "jpeg:-"
+        ]
+        proc = subprocess.run(commandline, capture_output=True)
+        logger.debug(proc.stderr.decode("utf-8"))
+        return proc.stdout
+
     def complex_formats_processing(img, file_path, allow_origin) -> PIL.Image.Image | flask.Response:
         logger.info("complex_formats_processing")
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
@@ -298,6 +312,9 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
                         base32path
                     )
                 )
+            if representations[-1].format == "jxl":
+                jpeg_buffer = io.BytesIO(jpeg_xl_fast_decode(representations[-1].file_path))
+                return flask.send_file(jpeg_buffer, mimetype="image/jpeg")
             logger.info("generate thumbnail from best available representation")
             img = pyimglib.decoders.open_image(representations[0].file_path)
             file_path = representations[0].file_path
@@ -305,9 +322,13 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
             logger.info("generate thumbnail from worst available representation")
             # allow_hashing = False
             file_path = representations[-1].file_path
-            img = pyimglib.decoders.open_image(representations[-1].file_path)
     else:
         logger.info("default thumbnail generation")
+
+    if file_path.suffix == ".jxl":
+        jpeg_buffer = io.BytesIO(jpeg_xl_fast_decode(file_path))
+        img = PIL.Image.open(jpeg_buffer)
+    else:
         img = pyimglib.decoders.open_image(file_path)
 
     extracted_img = complex_formats_processing(img, file_path, allow_origin)
