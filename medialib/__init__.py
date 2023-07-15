@@ -1,7 +1,4 @@
 import io
-import multiprocessing
-import subprocess
-import tempfile
 
 import flask
 import shared_code
@@ -17,6 +14,7 @@ import config
 import logging
 import multiprocessing.managers
 
+from shared_code import jpeg_xl_fast_decode
 from . import album
 
 logger = logging.getLogger(__name__)
@@ -230,16 +228,6 @@ def drop_thumbnails(content_id):
 @medialib_blueprint.route('/thumbnail/<string:_format>/<int:width>x<int:height>/id<int:content_id>')
 @shared_code.login_validation
 def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None):
-
-    def jpeg_xl_fast_decode(file_path: pathlib.Path) -> bytes:
-        commandline = [
-            "djxl",
-            file_path,
-            "jpeg:-"
-        ]
-        proc = subprocess.run(commandline, capture_output=True)
-        logger.debug(proc.stderr.decode("utf-8"))
-        return proc.stdout
 
     def complex_formats_processing(img, file_path, allow_origin) -> PIL.Image.Image | flask.Response:
         logger.info("complex_formats_processing")

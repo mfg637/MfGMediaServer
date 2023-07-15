@@ -1,6 +1,5 @@
 import functools
 import pathlib
-
 from . import enums
 import base64
 import hashlib
@@ -151,3 +150,13 @@ def generate_thumbnail_image(img, _format, width, height) -> tuple[io.BytesIO, s
     img.close()
     buffer.seek(0)
     return buffer, mime, _format
+
+def jpeg_xl_fast_decode(file_path: pathlib.Path) -> bytes:
+    commandline = [
+        "djxl",
+        file_path,
+        "jpeg:-"
+    ]
+    proc = subprocess.run(commandline, capture_output=True)
+    logger.debug(proc.stderr.decode("utf-8"))
+    return proc.stdout

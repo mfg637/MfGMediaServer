@@ -155,6 +155,7 @@ def transcode_image(_format: str, pathstr):
         return filename
 
     def body(path: pathlib.Path, _format):
+        logger.debug("TRANSCODE path = {}, format = {}".format(path.__repr__(), _format))
         origin_id = flask.request.args.get("origin_id", None, str)
         content_title = flask.request.args.get("title", None, str)
         download: bool = flask.request.args.get("download", False, bool)
@@ -173,8 +174,10 @@ def transcode_image(_format: str, pathstr):
                 _format = "jpeg"
         if isinstance(img, pyimglib.decoders.srs.ClImage):
             lods = img.get_image_file_list()
+            logger.debug("lods: {}".format(lods.__repr__()))
             current_lod = lods.pop(0)
             current_lod_format = pyimglib.decoders.get_image_format(current_lod)
+            logger.debug("current_lod {}: {}".format(current_lod.__repr__(), current_lod_format))
             if _format == "png":
                 img = pyimglib.decoders.open_image(current_lod)
             else:
@@ -182,6 +185,7 @@ def transcode_image(_format: str, pathstr):
                     if current_lod_format not in possible_formats:
                         current_lod = lods.pop()
                         current_lod_format = pyimglib.decoders.get_image_format(current_lod)
+                        logger.debug("current_lod {}: {}".format(current_lod.__repr__(), current_lod_format))
                     else:
                         break
                 if current_lod_format in possible_formats and not download:
@@ -203,7 +207,19 @@ def transcode_image(_format: str, pathstr):
                     )
                     return response
                 else:
-                    img = pyimglib.decoders.open_image(current_lod)
+                    if current_lod_format == "jpeg xl" and _format == "jpeg":
+                        logger.info("decoding JPEG XL to JPEG")
+                        jpeg_buffer = io.BytesIO(shared_code.jpeg_xl_fast_decode(current_lod))
+                        f = flask.send_file(jpeg_buffer, mimetype="image/jpeg")
+                        response = flask.make_response(f)
+                        if download:
+                            filename = get_download_filename(content_title, origin_id, path)
+                            response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
+                                urllib.parse.quote(filename)
+                            )
+                        return response
+                    else:
+                        img = pyimglib.decoders.open_image(current_lod)
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
             _img = img.next_frame()
             img.close()
