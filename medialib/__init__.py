@@ -327,6 +327,8 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
 
     if file_path.suffix == ".jxl":
         jpeg_buffer = io.BytesIO(jpeg_xl_fast_decode(file_path))
+        if allow_origin:
+            return flask.send_file(jpeg_buffer, mimetype="image/jpeg")
         img = PIL.Image.open(jpeg_buffer)
     else:
         img = pyimglib.decoders.open_image(file_path)
