@@ -496,8 +496,10 @@ def get_content_metadata(pathstr, content_id):
                 content_id = medialib_db.content_register(**content_new_data, connection=connection)
             medialib_db.add_tags_for_content(content_id, tags, connection)
         tags = dict()
+        representations = None
         if content_id is not None:
             tags = medialib_db.get_tags_by_content_id(content_id, auto_open_connection=False)
+            representations = medialib_db.get_representation_by_content_id(content_id, connection)
         connection.close()
         if is_file:
             return flask.render_template(
@@ -507,6 +509,7 @@ def get_content_metadata(pathstr, content_id):
                 tags=tags,
                 derpibooru_dl_server=config.derpibooru_dl_server,
                 albums=None,
+                representations=None,
                 **template_kwargs
             )
         else:
@@ -524,6 +527,7 @@ def get_content_metadata(pathstr, content_id):
                 tags=tags,
                 derpibooru_dl_server=config.derpibooru_dl_server,
                 albums=db_albums_registered,
+                representations=representations,
                 **template_kwargs
             )
     if content_id is not None:
