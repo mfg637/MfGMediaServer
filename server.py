@@ -154,6 +154,18 @@ def transcode_image(_format: str, pathstr):
             filename = "{}.{}".format(path.stem, _format.lower())
         return filename
 
+    def jxl_jpeg_decode(file_path, download, content_title, origin_id, path):
+        logger.info("decoding JPEG XL to JPEG")
+        jpeg_buffer = io.BytesIO(shared_code.jpeg_xl_fast_decode(file_path))
+        f = flask.send_file(jpeg_buffer, mimetype="image/jpeg")
+        response = flask.make_response(f)
+        if download:
+            filename = get_download_filename(content_title, origin_id, path)
+            response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
+                urllib.parse.quote(filename)
+            )
+        return response
+
     def body(path: pathlib.Path, _format):
         logger.debug("TRANSCODE path = {}, format = {}".format(path.__repr__(), _format))
         origin_id = flask.request.args.get("origin_id", None, str)
@@ -162,6 +174,8 @@ def transcode_image(_format: str, pathstr):
         src_hash, status_code = shared_code.cache_check(path)
         if status_code is not None:
             return status_code
+        if path.suffix == ".jxl" and _format == 'jpeg':
+            return jxl_jpeg_decode(path, download, content_title, origin_id, path)
         img = pyimglib.decoders.open_image(path)
         possible_formats = (_format,)
         LEVEL = int(flask.session['clevel'])
@@ -208,16 +222,7 @@ def transcode_image(_format: str, pathstr):
                     return response
                 else:
                     if current_lod_format == "jpeg xl" and _format == "jpeg":
-                        logger.info("decoding JPEG XL to JPEG")
-                        jpeg_buffer = io.BytesIO(shared_code.jpeg_xl_fast_decode(current_lod))
-                        f = flask.send_file(jpeg_buffer, mimetype="image/jpeg")
-                        response = flask.make_response(f)
-                        if download:
-                            filename = get_download_filename(content_title, origin_id, path)
-                            response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
-                                urllib.parse.quote(filename)
-                            )
-                        return response
+                        return jxl_jpeg_decode(current_lod, download, content_title, origin_id, path)
                     else:
                         img = pyimglib.decoders.open_image(current_lod)
         if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
