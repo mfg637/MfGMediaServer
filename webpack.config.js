@@ -11,9 +11,15 @@ module.exports = {
         "tag-edit": "./frontend-src/sass/tag-edit.sass",
         "index": "./frontend-src/sass/index_html-visuals.sass",
         "imageViewer": "./frontend-src/jsx/imageViewer.jsx",
+        "tagQueryForm": "./frontend-src/jsx/tag_query_form.tsx"
     },
     module: {
         rules: [
+            {
+                test: /\.tsx?$/,
+                use: 'ts-loader',
+                exclude: /node_modules/,
+            },
             {
                 test: /\.jsx$/,
                 use: "babel-loader",

@@ -10,3 +10,5 @@ yarn add -D @babel/core @babel/preset-env @babel/preset-react babel-loader file-
 yarn add -D style-loader css-loader
 yarn add -D sass-loader sass
 yarn add -D mini-css-extract-plugin
+yarn add -D typescript ts-loader
+yarn add -D @types/react @types/react-dom
