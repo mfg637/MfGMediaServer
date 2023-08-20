@@ -74,7 +74,7 @@ interface TagGroupFormProps{
 function TagGroupForm(props: TagGroupFormProps){
     function notFieldChangeEvent(e: React.ChangeEvent<HTMLInputElement>) {
         let newTagGroup = {...props.tagGroup};
-        newTagGroup.not = e.target.checked;
+        newTagGroup.not = !props.tagGroup.not;
         props.notifyChange(newTagGroup, props.groupIndex);
     }
 
@@ -87,7 +87,14 @@ function TagGroupForm(props: TagGroupFormProps){
 
     return (
         <div className="field">
-            <input type="checkbox" name="not" value="1" id="not_1_check" onChange={notFieldChangeEvent}/>
+            <input
+                type="checkbox"
+                name="not"
+                value="1"
+                id="not_1_check"
+                defaultChecked={props.tagGroup.not}
+                onChange={notFieldChangeEvent}
+            />
             <input type="hidden" name="not" value="0" id="not_1_hidden" disabled={props.tagGroup.not}/>
             <input className="counter" type="hidden" name="tags_count" value={props.tagGroup.tags.length} />
             <label htmlFor="not_1_check">NOT</label>
