@@ -24,6 +24,11 @@ access_tokens = dict()
 # key - URL, value - token
 enable_external_scripts = True
 
+tag_query_placeholder = {
+    "tags_groups": [{"not": False, "tags": [""], "count": 1}],
+    "order_by": medialib_db.files_by_tag_search.ORDERING_BY.RANDOM.value,
+    "hidden_filtering": medialib_db.files_by_tag_search.HIDDEN_FILTERING.FILTER.value
+}
 
 def base32_to_str(base32code: str):
     return base64.b32decode(base32code.encode("utf-8")).decode("utf-8")

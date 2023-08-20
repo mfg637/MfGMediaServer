@@ -56,6 +56,11 @@ def medialib_tag_search():
     order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.DATE_DECREASING.value))
     hidden_filtering = int(flask.request.args.get("hidden_filtering",
                                                   medialib_db.files_by_tag_search.HIDDEN_FILTERING.FILTER.value))
+    query_data = {
+        "tags_groups": tags_groups,
+        "order_by": order_by,
+        "hidden_filtering": hidden_filtering
+    }
 
     _args = ""
     for key in flask.request.args:
@@ -117,8 +122,6 @@ def medialib_tag_search():
         '_glob': None,
         'url': flask.request.base_url,
         'args': _args,
-        'medialib_sorting': shared_code.get_medialib_sorting_constants_for_template(),
-        'medialib_hidden_filtering': medialib_db.files_by_tag_search.HIDDEN_FILTERING,
         'enable_external_scripts': shared_code.enable_external_scripts
     }
 
@@ -127,6 +130,7 @@ def medialib_tag_search():
         itemslist=itemslist,
         dirmeta=json.dumps(dirmeta_list),
         filemeta=json.dumps(content_list),
+        query_data=json.dumps(query_data),
         page=page,
         max_pages=max_pages,
         thumbnail=shared_code.get_thumbnail_size(),
@@ -168,6 +172,7 @@ def medialib_show_duplicates():
         duplicated_groups=duplicated_group_items,
         dirmeta=json.dumps([]),
         filemeta=json.dumps(content_list),
+        query_data=json.dumps(shared_code.tag_query_placeholder),
         page=0,
         max_pages=0,
         thumbnail=shared_code.get_thumbnail_size(),

@@ -145,7 +145,6 @@ def browse(dir):
         '_glob': glob_pattern,
         'url': flask.request.base_url,
         "args": "",
-        "medialib_sorting": shared_code.get_medialib_sorting_constants_for_template(),
         'enable_external_scripts': shared_code.enable_external_scripts
     }
     page = int(flask.request.args.get('page', 0))
@@ -162,6 +161,7 @@ def browse(dir):
         itemslist=itemslist[min_index:max_index],
         dirmeta=json.dumps(final_dirmeta_list),
         filemeta=json.dumps(final_filemeta_list),
+        query_data=json.dumps(shared_code.tag_query_placeholder),
         pagination=True,
         page=page,
         max_pages=max_pages,

@@ -79,7 +79,6 @@ function TagGroupForm(props: TagGroupFormProps){
     }
 
     function tagFieldChangeEvent(tags: string[]) {
-        console.log("change event", tags);
         let newTagGroup = {...props.tagGroup};
         newTagGroup.tags = tags;
         newTagGroup.tags_count = tags.length;
@@ -90,7 +89,7 @@ function TagGroupForm(props: TagGroupFormProps){
         <div className="field">
             <input type="checkbox" name="not" value="1" id="not_1_check" onChange={notFieldChangeEvent}/>
             <input type="hidden" name="not" value="0" id="not_1_hidden" disabled={props.tagGroup.not}/>
-            <input className="counter" type="hidden" name="tags_count" value={props.tagGroup.tags_count} />
+            <input className="counter" type="hidden" name="tags_count" value={props.tagGroup.tags.length} />
             <label htmlFor="not_1_check">NOT</label>
             <TagFields tags={props.tagGroup.tags} notifyChange={tagFieldChangeEvent}/>
         </div>
@@ -145,7 +144,6 @@ function TagQueryForm(props: TagQueryFormProps) {
     function groupChange(tagGroup: TagGroup, groupIndex: number) {
         let newTagGroups = [...tagGroups];
         newTagGroups[groupIndex] = tagGroup;
-        console.log("group change", tagGroups, newTagGroups);
         setTagGroups(newTagGroups);
     }
 
@@ -205,15 +203,30 @@ function TagQueryForm(props: TagQueryFormProps) {
                     )
                 }
             </select>
-            <input type="submit" value="Search in Medialib database" />
+            <input type="submit" value="Search in Medialib database"/>
         </form>
     )
 }
 
+interface QueryDataSerialised{
+    "tags_groups": TagGroup[],
+    "order_by": MedialibSortingMode,
+    "hidden_filtering": MedialibFilteringMode
+}
+
+let queryData: QueryDataSerialised | null = null;
+const meta_elems = document.getElementsByTagName("meta");
+for (let i = 0; i < meta_elems.length; i++) {
+    const metaElement = meta_elems[i];
+    const dataName = metaElement.getAttribute("name")
+    if (dataName === "query_data_json")
+        queryData = JSON.parse(metaElement.getAttribute("content"));
+}
+
 const tagQueryForm =
-    <TagQueryForm tagGroups={[]}
-                  sortingMode={MedialibSortingMode.RANDOM}
-                  filteringMode={MedialibFilteringMode.FILTER}
+    <TagQueryForm tagGroups={queryData.tags_groups}
+                  sortingMode={queryData.order_by}
+                  filteringMode={queryData.hidden_filtering}
     />;
 const tqf_mounting_root_element = document.getElementById("medialib-tag-query-form-placeholder");
 const tqf_mounting_root = createRoot(tqf_mounting_root_element);
