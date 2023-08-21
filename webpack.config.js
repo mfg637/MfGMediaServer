@@ -11,7 +11,9 @@ module.exports = {
         "tag-edit": "./frontend-src/sass/tag-edit.sass",
         "index": "./frontend-src/sass/index_html-visuals.sass",
         "imageViewer": "./frontend-src/jsx/imageViewer.jsx",
-        "tagQueryForm": "./frontend-src/jsx/tag_query_form.tsx"
+        "tagQueryForm": "./frontend-src/jsx/tag_query_form.tsx",
+        "imageCompare": "./frontend-src/jsx/image_compare.tsx",
+        "imageCompareVisuals": "./frontend-src/sass/image-compare.sass",
     },
     module: {
         rules: [

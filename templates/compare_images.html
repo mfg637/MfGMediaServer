@@ -6,9 +6,12 @@
     <meta name="compare_data" content="{{ compare_data_json }}" />
     <title>{{ title }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/visuals.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/imageCompareVisuals.css') }}">
 </head>
 <body>
     {% include 'modules/theme-selector.html' %}
     <h1>{{ title }}</h1>
+    <div id="application-wrapper"></div>
+    <script src="{{ url_for('static', filename='dist/imageCompare.bundle.js') }}"></script>
 </body>
 </html>

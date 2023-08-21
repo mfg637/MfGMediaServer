@@ -1,0 +1,19 @@
+/*!*******************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./frontend-src/sass/image-compare.sass ***!
+  \*******************************************************************************************************************************/
+.image-data, .comparison-block {
+  float: left;
+  width: 33%;
+}
+
+.status-good {
+  background-color: greenyellow;
+}
+
+.status-warning {
+  background-color: yellow;
+}
+
+.status-important {
+  background-color: red;
+}

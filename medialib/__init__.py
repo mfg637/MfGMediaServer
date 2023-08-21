@@ -556,4 +556,9 @@ def compare_image():
         "image_data": image_data_list,
         "compare_results": compare_results
     }
-    return flask.Response(json.dumps(result, default=custom_dumper), mimetype="application/json")
+    #return flask.Response(json.dumps(result, default=custom_dumper), mimetype="application/json")
+    return flask.render_template(
+        "compare_images.html",
+        title="Compare images",
+        compare_data_json=json.dumps(result, default=custom_dumper)
+    )
