@@ -53,18 +53,16 @@
                     {% endif %}
                 </div>
                 </a>
-                    {% if item.content_id is not none %}
                     <a class="content-info-link" href="/content_metadata/mlid{{ item.content_id }}">
                         Content info
                     </a>
-                    {%else%}
-                    <a class="content-info-link" href="/content_metadata/{{ item.content_metadata.base32path }}">
-                        Content info
-                    </a>
-                    {% endif %}
             </div>
         {% endfor %}
-                <div style="clear:left"></div>
+                <div style="clear:left"></div><br />
+            <a href="/medialib/compare-by-hash?vhash={{group.value_hash}}&hhash={{group.hue_hash}}&shash={{group.saturation_hash}}">
+                COMPARE
+            </a><br />
+
         </div>
     {% endfor %}
     {% if enable_external_scripts %}

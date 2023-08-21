@@ -1,3 +1,5 @@
+import dataclasses
+import datetime
 import io
 
 import flask
@@ -230,17 +232,27 @@ def drop_thumbnails(content_id):
     return "OK"
 
 
+def load_representations(content_id: int, file_path: pathlib.Path, db_connection) -> list[medialib_db.srs_indexer.ContentRepresentationUnit]:
+    representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
+    if len(representations) == 0:
+        logger.debug("register representations for content id = {}".format(content_id))
+        cursor = db_connection.cursor()
+        medialib_db.srs_indexer.srs_update_representations(content_id, file_path, cursor)
+        db_connection.commit()
+        cursor.close()
+        representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
+    return representations
+
+def complex_formats_processing(img, file_path = None, allow_origin = None) -> PIL.Image.Image:
+    logger.info("complex_formats_processing")
+    if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
+        img = shared_code.extract_frame_from_video(img)
+        logger.debug("extracted frame: {}".format(img.__repr__()))
+    return img
+
 @medialib_blueprint.route('/thumbnail/<string:_format>/<int:width>x<int:height>/id<int:content_id>')
 @shared_code.login_validation
 def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None):
-
-    def complex_formats_processing(img, file_path, allow_origin) -> PIL.Image.Image | flask.Response:
-        logger.info("complex_formats_processing")
-        if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
-            img = shared_code.extract_frame_from_video(img)
-            logger.debug("extracted frame: {}".format(img.__repr__()))
-        return img
-
     if not len(medialib_db.config.db_name):
         flask.abort(404)
     allow_origin = bool(flask.request.args.get('allow_origin', False))
@@ -275,14 +287,7 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
         allow_hashing = False
 
     if file_path.suffix == ".srs":
-        representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
-        if len(representations) == 0:
-            logger.debug("register representations for content id = {}".format(content_id))
-            cursor = db_connection.cursor()
-            medialib_db.srs_indexer.srs_update_representations(content_id, file_path, cursor)
-            db_connection.commit()
-            cursor.close()
-            representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
+        representations = load_representations(content_id, file_path, db_connection)
         if allow_origin:
             for representation in representations:
                 if representation.compatibility_level >= compatibility_level and representation.format == _format:
@@ -382,14 +387,7 @@ def start_openclip(content_id: int):
     img = None
 
     if file_path.suffix == ".srs":
-        representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
-        if len(representations) == 0:
-            logger.debug("register representations for content id = {}".format(content_id))
-            cursor = db_connection.cursor()
-            medialib_db.srs_indexer.srs_update_representations(content_id, file_path, cursor)
-            db_connection.commit()
-            cursor.close()
-            representations = medialib_db.get_representation_by_content_id(content_id, db_connection)
+        representations = load_representations(content_id, file_path, db_connection)
         img = pyimglib.decoders.open_image(representations[-1].file_path)
     else:
         img = pyimglib.decoders.open_image(file_path)
@@ -444,3 +442,112 @@ def post_tags():
     medialib_db.add_tags_for_content_by_tag_ids(data["content_id"], data["tag_ids"], db_connection)
     db_connection.close()
     return "OK"
+
+@dataclasses.dataclass(frozen=True)
+class ImageData:
+    content_id: int
+    pathstr: str
+    file_suffix: str
+    width: int
+    height: int
+    representations: list[medialib_db.srs_indexer.ContentRepresentationUnit]
+    source: str
+    source_id: str
+    download_date: datetime.datetime
+
+    def calc_size(self) -> int:
+        return self.width * self.height
+
+    def calc_aspect_ratio(self) -> float:
+        return self.width / self.height
+
+@dataclasses.dataclass(frozen=True)
+class CompareResult:
+    first_content_id: int
+    second_content_id: int
+    is_size_equal: bool
+    is_aspect_ratio_equal: bool
+    is_first_larger: bool
+    is_first_newer: bool
+    is_origin_equal: bool
+
+def custom_dumper(obj):
+    if isinstance(obj, pathlib.PurePath):
+        return str(obj)
+    elif isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    elif dataclasses.is_dataclass(obj):
+        return dataclasses.asdict(obj)
+    else:
+        raise TypeError("Unknown type {}".format(type(obj)))
+
+@medialib_blueprint.route('/compare-by-hash')
+@shared_code.login_validation
+def compare_image():
+    value_hash = flask.request.args.get('vhash')
+    hue_hash = flask.request.args.get('hhash', type=int)
+    saturation_hash = flask.request.args.get('shash', type=int)
+    if value_hash is None or hue_hash is None or saturation_hash is None:
+        flask.abort(404)
+
+    db_connection = medialib_db.common.make_connection()
+    content_id_list = medialib_db.find_content_by_hash(value_hash, hue_hash, saturation_hash, db_connection)
+    image_data_list: list[ImageData] = list()
+
+    for content_id in content_id_list:
+        raw_content_data = medialib_db.get_content_metadata_by_content_id(content_id, db_connection)
+        representations: list[medialib_db.srs_indexer.ContentRepresentationUnit] = list()
+
+        file_path = shared_code.root_dir.joinpath(raw_content_data[1])
+
+        if file_path.suffix == ".srs":
+            representations = load_representations(content_id, file_path, db_connection)
+
+        img: PIL.Image.Image | None = None
+        if len(representations):
+            img = pyimglib.decoders.open_image(representations[0].file_path)
+        else:
+            img = pyimglib.decoders.open_image(file_path)
+
+        if not isinstance(img, PIL.Image.Image):
+            img = complex_formats_processing(img)
+
+        if not isinstance(img, PIL.Image.Image):
+            raise TypeError("Unidentified image type: {}".format(type(img)))
+
+        image_data = ImageData(
+            content_id,
+            shared_code.str_to_base32(str(raw_content_data[1])),
+            file_path.suffix,
+            img.width,
+            img.height,
+            representations,
+            raw_content_data[6],
+            raw_content_data[7],
+            raw_content_data[5]
+        )
+
+        image_data_list.append(image_data)
+
+    compare_results: list[CompareResult] = []
+
+    for first_index in range(len(image_data_list)):
+        for second_index in range(first_index + 1, len(image_data_list)):
+            first_image_data = image_data_list[first_index]
+            second_image_data = image_data_list[second_index]
+            compare_result = CompareResult(
+                first_image_data.content_id,
+                second_image_data.content_id,
+                first_image_data.calc_size() == second_image_data.calc_size(),
+                first_image_data.calc_aspect_ratio() == second_image_data.calc_aspect_ratio(),
+                first_image_data.calc_size() > second_image_data.calc_size(),
+                first_image_data.download_date > second_image_data.download_date,
+                first_image_data.source == second_image_data.source
+            )
+            compare_results.append(compare_result)
+
+    result = {
+        "image_data": image_data_list,
+        "compare_results": compare_results
+    }
+    return flask.Response(json.dumps(result, default=custom_dumper), mimetype="application/json")
