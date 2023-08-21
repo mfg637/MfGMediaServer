@@ -13,6 +13,10 @@
             --thumbnail-width: {{ thumbnail.width }}px;
             --thumbnail-height: {{ thumbnail.height }}px;
         }
+        .group-action{
+            display: block;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -59,7 +63,7 @@
             </div>
         {% endfor %}
                 <div style="clear:left"></div><br />
-            <a href="/medialib/compare-by-hash?vhash={{group.value_hash}}&hhash={{group.hue_hash}}&shash={{group.saturation_hash}}">
+            <a class="group-action" href="/medialib/compare-by-hash?vhash={{group.value_hash}}&hhash={{group.hue_hash}}&shash={{group.saturation_hash}}">
                 COMPARE
             </a><br />
 

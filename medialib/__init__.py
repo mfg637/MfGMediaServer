@@ -447,6 +447,7 @@ def post_tags():
 class ImageData:
     content_id: int
     pathstr: str
+    content_type: str
     file_suffix: str
     width: int
     height: int
@@ -454,6 +455,7 @@ class ImageData:
     source: str
     source_id: str
     download_date: datetime.datetime
+    alternate_version: bool
 
     def calc_size(self) -> int:
         return self.width * self.height
@@ -470,6 +472,7 @@ class CompareResult:
     is_first_larger: bool
     is_first_newer: bool
     is_origin_equal: bool
+    both_alternate_version: bool
 
 def custom_dumper(obj):
     if isinstance(obj, pathlib.PurePath):
@@ -494,7 +497,7 @@ def compare_image():
     content_id_list = medialib_db.find_content_by_hash(value_hash, hue_hash, saturation_hash, db_connection)
     image_data_list: list[ImageData] = list()
 
-    for content_id in content_id_list:
+    for content_id, alternate_version in content_id_list:
         raw_content_data = medialib_db.get_content_metadata_by_content_id(content_id, db_connection)
         representations: list[medialib_db.srs_indexer.ContentRepresentationUnit] = list()
 
@@ -518,13 +521,15 @@ def compare_image():
         image_data = ImageData(
             content_id,
             shared_code.str_to_base32(str(raw_content_data[1])),
+            raw_content_data[3],
             file_path.suffix,
             img.width,
             img.height,
             representations,
             raw_content_data[6],
             raw_content_data[7],
-            raw_content_data[5]
+            raw_content_data[5],
+            alternate_version
         )
 
         image_data_list.append(image_data)
@@ -542,7 +547,8 @@ def compare_image():
                 first_image_data.calc_aspect_ratio() == second_image_data.calc_aspect_ratio(),
                 first_image_data.calc_size() > second_image_data.calc_size(),
                 first_image_data.download_date > second_image_data.download_date,
-                first_image_data.source == second_image_data.source
+                first_image_data.source == second_image_data.source,
+                first_image_data.alternate_version == True and second_image_data.alternate_version == True
             )
             compare_results.append(compare_result)
 
