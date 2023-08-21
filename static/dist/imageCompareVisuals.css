@@ -17,3 +17,21 @@
 .status-important {
   background-color: red;
 }
+
+.image-view .image-wrapper {
+  width: 100%;
+  height: 75vh;
+  overflow: scroll;
+  position: relative;
+}
+.image-view .image-wrapper.fit-image {
+  overflow-x: hidden;
+}
+.image-view .image-wrapper.fit-image img {
+  max-width: 100%;
+}
+.image-view .image-wrapper img {
+  position: absolute;
+  left: 0;
+  top: 0;
+}

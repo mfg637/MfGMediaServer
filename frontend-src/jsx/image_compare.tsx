@@ -128,13 +128,59 @@ function ComprassionBlock(results: CompareResult) {
     )
 }
 
+enum ViewMode{
+    FIT_WIDTH,
+    ORIGINAL_SIZE
+}
+
+interface ImageComparisonViewProps{
+    first_image: ImageData,
+    second_image: ImageData
+}
+
+function ImageComparisonView(props: ImageComparisonViewProps) {
+    const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.FIT_WIDTH);
+    const [opacityLevel, setOpacityLevel] = useState<number>(0.0);
+
+    const MAX_OPACITY = 100;
+
+    function modeChangeEvent(e: React.MouseEvent<HTMLButtonElement>) {
+        const currentState: boolean = viewMode == 1;
+        const newState: boolean = !currentState;
+        setViewMode(+newState);
+    }
+
+    function changeOpacityEvent(e: React.ChangeEvent<HTMLInputElement>) {
+        const opacityInt = parseInt(e.target.value);
+        setOpacityLevel(opacityInt);
+    }
+
+    const secondImageStyles = {
+        opacity: opacityLevel / MAX_OPACITY,
+    }
+
+    return (
+        <div className="image-view">
+            <div className="controls">
+                <button onClick={modeChangeEvent} >Mode: {viewMode === ViewMode.ORIGINAL_SIZE?"ORIGINAL":"FIT"}</button>
+                <input type="range" min="0" max={MAX_OPACITY} value={opacityLevel} onChange={changeOpacityEvent}/>
+            </div>
+            <div className={"image-wrapper " + ((viewMode === ViewMode.FIT_WIDTH)?"fit-image":"")}>
+                <img src={`/image/png/${props.first_image.pathstr}`}/>
+                <img src={`/image/png/${props.second_image.pathstr}`} style={secondImageStyles}/>
+            </div>
+        </div>
+    )
+}
+
 function ImageComparison(props: AssignedComparisonResult) {
     return (
-        <>
+        <div>
             <ImageDataBlock {...props.first_content} />
             <ComprassionBlock {...props.results} />
             <ImageDataBlock {...props.second_content} />
-        </>
+            <ImageComparisonView first_image={props.first_content} second_image={props.second_content} />
+        </div>
     )
 }
 
