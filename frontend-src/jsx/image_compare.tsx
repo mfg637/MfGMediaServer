@@ -124,6 +124,13 @@ function ComprassionBlock(results: CompareResult) {
             <div className={results.both_alternate_version?"status-important":"status-good"}>
                 {results.both_alternate_version?"Both images are alternate versions":"There is an replacement candidate"}
             </div>
+            <div>
+                {!results.both_alternate_version?
+                    <a href={`/medialib/mark_alternate?content_id=${results.first_content_id}&content_id=${results.second_content_id}`} >
+                        Mark as alternate versions
+                    </a>:null
+                }
+            </div>
         </div>
     )
 }

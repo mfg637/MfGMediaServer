@@ -556,9 +556,21 @@ def compare_image():
         "image_data": image_data_list,
         "compare_results": compare_results
     }
+    db_connection.close()
     #return flask.Response(json.dumps(result, default=custom_dumper), mimetype="application/json")
     return flask.render_template(
         "compare_images.html",
         title="Compare images",
         compare_data_json=json.dumps(result, default=custom_dumper)
     )
+
+@medialib_blueprint.route('/mark_alternate')
+@shared_code.login_validation
+def mark_alternate():
+    content_id_list = flask.request.args.getlist('content_id', type=int)
+    if len(content_id_list) != 2:
+        return "function takes exactly 2 content IDs"
+    connection = medialib_db.common.make_connection()
+    medialib_db.mark_alternate_version(content_id_list[0], content_id_list[1], connection)
+    connection.close()
+    return "OK"
