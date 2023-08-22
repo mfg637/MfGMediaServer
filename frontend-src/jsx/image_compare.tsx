@@ -162,6 +162,10 @@ function ImageComparisonView(props: ImageComparisonViewProps) {
         setOpacityLevel(opacityInt);
     }
 
+    const firstImageStyles = {
+        opacity: opacityLevel==MAX_OPACITY?0:1,
+    }
+
     const secondImageStyles = {
         opacity: opacityLevel / MAX_OPACITY,
     }
@@ -173,7 +177,7 @@ function ImageComparisonView(props: ImageComparisonViewProps) {
                 <input type="range" min="0" max={MAX_OPACITY} value={opacityLevel} onChange={changeOpacityEvent}/>
             </div>
             <div className={"image-wrapper " + ((viewMode === ViewMode.FIT_WIDTH)?"fit-image":"")}>
-                <img src={`/image/png/${props.first_image.pathstr}`}/>
+                <img src={`/image/png/${props.first_image.pathstr}`} style={firstImageStyles}/>
                 <img src={`/image/png/${props.second_image.pathstr}`} style={secondImageStyles}/>
             </div>
         </div>
