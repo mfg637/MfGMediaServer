@@ -141,10 +141,13 @@ class MedialibDefaultExtractor(InfoExtractor):
             if self.file.suffix == ".jxl":
                 self.filemeta['link'] = "/image/png/{}".format(base32path)
         if self.file.suffix.lower() == '.mpd':
+            mpd_file = self.file
+            if mpd_file.is_relative_to(shared_code.root_dir):
+                mpd_file = mpd_file.relative_to(shared_code.root_dir)
             self.filemeta['type'] = "DASH"
             self.filemeta['link'] = "/{}{}".format(
                 ('' if dir == shared_code.root_dir else 'browse/'),
-                str(self.file)
+                str(mpd_file)
             )
             if icon_path.exists():
                 self.make_icon(self.file, self.filemeta, icon_scale)
