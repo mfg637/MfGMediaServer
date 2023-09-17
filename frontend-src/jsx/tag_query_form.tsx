@@ -1,4 +1,4 @@
-import React, {MouseEventHandler, useEffect} from 'react';
+import React, {MouseEventHandler, useEffect, useId} from 'react';
 import { useState } from "react";
 import { createRoot } from 'react-dom/client';
 
@@ -72,6 +72,7 @@ interface TagGroupFormProps{
 }
 
 function TagGroupForm(props: TagGroupFormProps){
+    const field_id = useId();
     function notFieldChangeEvent(e: React.ChangeEvent<HTMLInputElement>) {
         let newTagGroup = {...props.tagGroup};
         newTagGroup.not = !props.tagGroup.not;
@@ -91,13 +92,13 @@ function TagGroupForm(props: TagGroupFormProps){
                 type="checkbox"
                 name="not"
                 value="1"
-                id="not_1_check"
+                id={field_id}
                 defaultChecked={props.tagGroup.not}
                 onChange={notFieldChangeEvent}
             />
             <input type="hidden" name="not" value="0" id="not_1_hidden" disabled={props.tagGroup.not}/>
             <input className="counter" type="hidden" name="tags_count" value={props.tagGroup.tags.length} />
-            <label htmlFor="not_1_check">NOT</label>
+            <label htmlFor={field_id}>NOT</label>
             <TagFields tags={props.tagGroup.tags} notifyChange={tagFieldChangeEvent}/>
         </div>
     )
