@@ -3,5 +3,6 @@ Pillow
 lxml
 python-magic
 CairoSVG
-psycopg2
+psycopg2-binary
 pypng
+pillow_heif
