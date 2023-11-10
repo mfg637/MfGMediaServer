@@ -6,3 +6,4 @@ CairoSVG
 psycopg2-binary
 pypng
 pillow_heif
+imagehash
