@@ -40,10 +40,16 @@
     Alias Names:
     <ul>
         {% for alias in tag.alias_names %}
-            <li>{{ alias }}</li>
+            <li>{{ alias }} <a href="../delete_alias?tag_id={{ tag.id }}&alias_name={{ alias }}">Delete</a> </li>
         {% endfor %}
     </ul>
     <br />
+    <form action="../add_alias" method="post">
+        <input type="hidden" name="tag_id" value="{{ tag.id }}" readonly />
+        <label for="alias_field">New alias: </label>
+        <input type="text" name="alias_name" id="alias_field" /><br />
+        <input type="submit" value="Save alias" />
+    </form>
 
     Tag Parents:
     <ul>

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, abort
 import medialib_db
 import dataclasses
 import shared_code
@@ -19,6 +19,34 @@ def edit_tag():
     connection.close()
 
     # Redirect to the show_tag route with the tag_id
+    return redirect(url_for('medialib.tag_manager.show_tag_properties', tag_id=tag_id))
+
+@tag_manager_blueprint.route('/add_alias', methods=['POST'])
+@shared_code.login_validation
+def add_alias():
+    tag_id = int(request.form['tag_id'])
+    alias_name = request.form['alias_name']
+
+    connection = medialib_db.common.make_connection()
+    medialib_db.tags_indexer.add_alias(tag_id, alias_name, connection)
+    connection.close()
+
+    return redirect(url_for('medialib.tag_manager.show_tag_properties', tag_id=tag_id))
+
+
+@tag_manager_blueprint.route('/delete_alias', methods=['GET'])
+@shared_code.login_validation
+def delete_alias():
+    tag_id = request.args.get("tag_id", type=int, default=None)
+    alias_name = request.args.get('alias_name', type=str, default=None)
+
+    if tag_id is None or alias_name is None:
+        abort(404)
+
+    connection = medialib_db.common.make_connection()
+    medialib_db.tags_indexer.delete_alias(tag_id, alias_name, connection)
+    connection.close()
+
     return redirect(url_for('medialib.tag_manager.show_tag_properties', tag_id=tag_id))
 
 @dataclasses.dataclass(frozen=True)
