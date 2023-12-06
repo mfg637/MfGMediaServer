@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Tag Properties</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/visuals.css') }}">
+    <style>
+        form label{
+            min-width: 3em;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    {% include 'modules/theme-selector.html' %}
+    <h1>Tag Properties</h1>
+    <form method="post" action="../edit_tag">
+        <label for="tagID">ID:</label>
+        <input type="text" id="tagID" name="tagID" value="{{ tag.id }}" readonly><br />
+
+        <label for="tagName">Name:</label>
+        <input type="text" id="tagName" name="tagName" value="{{ tag.name }}"><br />
+
+        <label for="tagType">Type:</label>
+        <select id="tagType" name="tagType">
+            {% for category_name in
+                [ 'artist', 'set', 'copyright', 'character', 'rating', 'species', 'content' ]
+            %}
+                {% if category_name == tag.category %}
+                <option selected>{{ category_name }}</option>
+                {% else %}
+                <option>{{ category_name }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        <br />
+        <input type="submit" value="Save changes" />
+    </form>
+    Alias Names:
+    <ul>
+        {% for alias in tag.alias_names %}
+            <li>{{ alias }}</li>
+        {% endfor %}
+    </ul>
+    <br />
+
+    Tag Parents:
+    <ul>
+        {% for parent in tag.parents %}
+            <li><a href="{{ parent.id }}">{{ parent.name }}</a></li>
+        {% endfor %}
+    </ul>
+    <br />
+
+    <a href="/medialib/tag-search?not=0&tags_count=1&tags={{ tag.id }}&sorting_order=4">Browse content</a>
+</body>
+</html>
