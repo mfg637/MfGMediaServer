@@ -49,6 +49,17 @@ def delete_alias():
 
     return redirect(url_for('medialib.tag_manager.show_tag_properties', tag_id=tag_id))
 
+@tag_manager_blueprint.route('/merge_tags', methods=['POST'])
+@shared_code.login_validation
+def merge_tags():
+    first_tag_id = int(request.form['first_tag_id'])
+    second_tag_id = int(request.form['second_tag_id'])
+    connection = medialib_db.common.make_connection()
+    medialib_db.tags_indexer.merge_tags(first_tag_id, second_tag_id, connection)
+    connection.close()
+
+    return redirect(url_for('medialib.tag_manager.show_tag_properties', tag_id=second_tag_id))
+
 @dataclasses.dataclass(frozen=True)
 class SimpleTagProperties:
     id: int

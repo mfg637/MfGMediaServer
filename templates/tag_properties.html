@@ -59,6 +59,14 @@
     </ul>
     <br />
 
+    <form action="../merge_tags" method="post">
+        <input type="hidden" name="first_tag_id" value="{{ tag.id }}" readonly />
+        <label for="second_id_field">Merge tag to (ID): </label>
+        <input type="number" name="second_tag_id" id="second_id_field" /><br />
+        <input type="submit" value="MERGE" />
+    </form>
+    <br />
+
     <a href="/medialib/tag-search?not=0&tags_count=1&tags={{ tag.id }}&sorting_order=4">Browse content</a>
 </body>
 </html>
