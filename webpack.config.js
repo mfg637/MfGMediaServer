@@ -6,7 +6,7 @@ module.exports = {
     })],
     entry: {
         "openCLIP-indexer": "./frontend-src/jsx/openCLIP-indexer.jsx",
-        "album-edit": "./frontend-src/jsx/album-edit.jsx",
+        "album-edit": "./frontend-src/jsx/album-edit.tsx",
         "visuals": "./frontend-src/sass/visuals.sass",
         "tag-edit": "./frontend-src/sass/tag-edit.sass",
         "index": "./frontend-src/sass/index_html-visuals.sass",
