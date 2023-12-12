@@ -84,25 +84,51 @@ type UpdateOrderCallback = (content_id: number, order: number) => void;
 
 interface IContentItemProps {
   content: IContent,
-  orderUpdated: UpdateOrderCallback
+  contentOrder: ISortingOrder,
+  orderUpdated: UpdateOrderCallback,
 }
 
 function ContentItem(props: IContentItemProps) {
   const [currentValue, setCurrentValue] = useState<string>(
-      typeof(props.content.album_order) === "number"? String(props.content.album_order): ""
+      typeof(props.contentOrder.order) === "number"? String(props.contentOrder.order): ""
   );
+  const [isEdited, setIsEdited] = useState<boolean>(false);
   function updateValue(event: React.FocusEvent<HTMLInputElement>) {
-    if ((event.target.value.length > 0) && isNaN(Number(event.target.value))){
+    if (isNaN(parseInt(event.target.value, 10))){
         event.target.value = currentValue;
         return;
     }
     const new_order = event.target.value.length ? Number(event.target.value) : null;
     setCurrentValue(event.target.value);
     props.orderUpdated(props.content.content_id, new_order);
+    setIsEdited(false);
+  }
+
+  function allowEditing(event: React.FocusEvent<HTMLInputElement>) {
+    setIsEdited(true);
+  }
+  
+  function editValue(event: React.ChangeEvent<HTMLInputElement>) {
+    const _currentValue = currentValue;
+    const newValue = event.target.value;
+    if (isNaN(parseInt(event.target.value, 10))){
+      event.target.value = _currentValue;
+      return;
+    }else {
+      setCurrentValue(newValue);
+    }
+  }
+
+  const props_value = typeof(props.contentOrder.order) === "number"? String(props.contentOrder.order): "";
+  const field_value = isEdited? currentValue : props_value;
+
+  if (!isEdited){
+    if (props_value != currentValue)
+      setCurrentValue(props_value);
   }
 
   return (
-    <div className="content-item wrapper-accent">
+    <div className="container-box content-item wrapper-accent">
       <Thumbnail {...props.content} />
       <div className="content-info">
         <div className="label">Title:</div>
@@ -117,8 +143,10 @@ function ContentItem(props: IContentItemProps) {
         <div className="value">
           <input
             type="number"
-            defaultValue={typeof(props.content.album_order) === "number"? props.content.album_order: ""}
+            value={field_value}
+            onChange={editValue}
             onBlur={updateValue}
+            onFocus={allowEditing}
           />
         </div>
       </div>
@@ -137,23 +165,51 @@ interface IContentListProps {
   content_list: IContent[],
   content_list_index: number[],
   sorted_array: number[],
-  orderUpdated: UpdateOrderCallback
+  content_order: ISortingOrder[],
+  orderUpdated: UpdateOrderCallback,
 }
 
 function ContentList(props: IContentListProps) {
   const elementsList = props.sorted_array.map(
-    (content_id) =>
-      <ContentItem
+    (content_id) => {
+      const index = props.content_list_index.indexOf(content_id);
+      return <ContentItem
         key={content_id}
-        content={props.content_list[props.content_list_index.indexOf(content_id)]}
+        content={props.content_list[index]}
+        contentOrder={props.content_order[index]}
         orderUpdated={props.orderUpdated}
       />
+    }
   );
   return (
     <div className="list-wrapper">
       {elementsList}
     </div>
   );
+}
+
+interface IAutosortingProps {
+  copy_origin_callback: parametlessCallback
+}
+
+function Autosorting(props: IAutosortingProps) {
+  function CopyIDsButtonMouseClickHandler(event: React.MouseEvent<HTMLButtonElement>) {
+    props.copy_origin_callback();
+  }
+  function CopyIDsButtonKeyboardHandler(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === 'Enter')
+      props.copy_origin_callback();
+  }
+
+  return (
+    <div className="container-box wrapper-accent">
+      <h2>Autosorting</h2>
+      <button onClick={CopyIDsButtonMouseClickHandler} onKeyDown={CopyIDsButtonKeyboardHandler}>
+        Copy origin IDs (when possible)
+      </button>
+      <button>Auto numbering by origin IDs</button>
+    </div>
+  )
 }
 
 interface ApplicationProps {
@@ -196,7 +252,7 @@ function Application(props: ApplicationProps) {
   function updateOrder(content_id: number, order: number){
     let new_order: ISortingOrder[] = [...contentOrder];
     const index: number = contentListIndex.indexOf(content_id);
-    new_order[index].order = order;
+    new_order[index] = {id: contentOrder[index].id, order: order};
     setContentOrder(new_order);
     setSortedArray(doListSorting());
   }
@@ -226,12 +282,27 @@ function Application(props: ApplicationProps) {
       commitChanges();
   }
 
+  function copyOriginIDs(){
+    let new_order: ISortingOrder[] = [];
+    for (let i = 0; i < props.content_list.length; i++) {
+      let content_id_int = parseInt(props.content_list[i].origin_content_id, 10);
+      if (isNaN(content_id_int))
+        new_order.push({id: contentOrder[i].id, order: null});
+      else
+        new_order.push({id: contentOrder[i].id, order: content_id_int});
+    }
+    setContentOrder(new_order);
+    setSortedArray(doListSorting());
+  }
+
   return (
     <div className="application-wrapper">
+      <Autosorting copy_origin_callback={copyOriginIDs}/>
       <ContentList
         content_list={props.content_list}
         content_list_index={contentListIndex}
         sorted_array={sortedArray}
+        content_order={contentOrder}
         orderUpdated={updateOrder}
       />
       <button onClick={SubmitButtonMouseClickHandler} onKeyDown={SubmitButtonKeyboardHandler}>COMMIT</button>

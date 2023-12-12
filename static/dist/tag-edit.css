@@ -6,11 +6,14 @@
   --thumbnail-height: 144px;
 }
 
-.content-item {
-  display: flex;
+.container-box {
   margin: 1em;
   padding: 0.75em;
   border-radius: 1em;
+}
+
+.content-item {
+  display: flex;
 }
 
 .thumbnail-wrapper {
