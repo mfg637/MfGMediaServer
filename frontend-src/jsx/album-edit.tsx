@@ -189,7 +189,8 @@ function ContentList(props: IContentListProps) {
 }
 
 interface IAutosortingProps {
-  copy_origin_callback: parametlessCallback
+  copy_origin_callback: parametlessCallback,
+  autonumber_callback: parametlessCallback
 }
 
 function Autosorting(props: IAutosortingProps) {
@@ -201,13 +202,23 @@ function Autosorting(props: IAutosortingProps) {
       props.copy_origin_callback();
   }
 
+  function AutonumberButtonMouseClickHandler(event: React.MouseEvent<HTMLButtonElement>) {
+    props.autonumber_callback();
+  }
+  function AutonumberButtonKeyboardHandler(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === 'Enter')
+      props.autonumber_callback();
+  }
+
   return (
     <div className="container-box wrapper-accent">
       <h2>Autosorting</h2>
       <button onClick={CopyIDsButtonMouseClickHandler} onKeyDown={CopyIDsButtonKeyboardHandler}>
         Copy origin IDs (when possible)
       </button>
-      <button>Auto numbering by origin IDs</button>
+      <button onClick={AutonumberButtonMouseClickHandler} onKeyDown={AutonumberButtonKeyboardHandler}>
+        Auto numbering by origin IDs
+      </button>
     </div>
   )
 }
@@ -295,9 +306,35 @@ function Application(props: ApplicationProps) {
     setSortedArray(doListSorting());
   }
 
+  function autofillByOriginIDs(){
+    let new_order: ISortingOrder[] = [];
+    for (let i = 0; i < props.content_list.length; i++) {
+      let content_id_int = parseInt(props.content_list[i].origin_content_id, 10);
+      if (isNaN(content_id_int))
+        new_order.push({id: contentOrder[i].id, order: null});
+      else
+        new_order.push({id: contentOrder[i].id, order: content_id_int});
+    }
+    let sortableArray: ISortingOrder[] = new_order.map(
+      (contentItem: ISortingOrder): ISortingOrder => ({
+        id: contentItem.id,
+        order: typeof(contentItem.order) === "number"? contentItem.order : REALLY_LARGE_NUMBER
+      })
+    );
+    sortableArray.sort(sortListCallback);
+    const sorted_ids = sortableArray.map((element) => element.id);
+    for (let i = 0; i < sorted_ids.length; i++) {
+      const current_id = sorted_ids[i];
+      const current_index = contentListIndex.indexOf(current_id);
+      new_order[current_index].order = i + 1;
+    }
+    setContentOrder(new_order);
+    setSortedArray(sorted_ids);
+  }
+
   return (
     <div className="application-wrapper">
-      <Autosorting copy_origin_callback={copyOriginIDs}/>
+      <Autosorting copy_origin_callback={copyOriginIDs} autonumber_callback={autofillByOriginIDs}/>
       <ContentList
         content_list={props.content_list}
         content_list_index={contentListIndex}
