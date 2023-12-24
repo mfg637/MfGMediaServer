@@ -6,6 +6,10 @@ input, textarea, button, select {
   margin: 2px;
 }
 
+.wrapper-accent {
+  border-style: solid;
+}
+
 body.dark, body.aqua-rarity, body.rarity, body.twilight-sparkle, body.dark-purple {
   color: #aaaaaa;
   background-color: #2d2d2d;
@@ -30,6 +34,7 @@ body.dark li, body.aqua-rarity li, body.rarity li, body.twilight-sparkle li, bod
 body.dark .wrapper-accent, body.aqua-rarity .wrapper-accent, body.rarity .wrapper-accent, body.twilight-sparkle .wrapper-accent, body.dark-purple .wrapper-accent {
   background-color: #444;
   color: #dbdbdb;
+  border-style: none;
 }
 
 body.dark-purple {
