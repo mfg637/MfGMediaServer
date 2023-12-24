@@ -75,7 +75,10 @@ body.twilight-sparkle li {
   font-weight: 500;
 }
 body.twilight-sparkle .wrapper-accent {
-  background-color: #D6B0E6;
+  background-color: #8D5DA4;
+}
+body.twilight-sparkle .wrapper-accent, body.twilight-sparkle .wrapper-accent h2 {
+  color: white;
 }
 
 body.rarity {
