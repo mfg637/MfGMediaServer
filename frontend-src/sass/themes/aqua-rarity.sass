@@ -1,0 +1,39 @@
+@use 'dark'
+
+%aqua-rarity-theme
+  @extend %dark-theme
+
+  color: black
+  background-color: #5693CF
+
+  a
+    color: #0F0582
+    text-decoration-line: none
+
+    &:hover
+      color: black
+      text-decoration-line: underline
+
+  input, textarea, button, select
+    background-color: #76ADE5
+    color: black
+    border-color: #3977B8
+    border-style: solid
+
+  li
+    color: black
+
+  .wrapper-accent
+    background-color: #76ADE5
+    color: #20476B
+
+    & input, & textarea, & button, & select
+      background-color: #B8E1F0
+
+    & .value.source-id span::before
+      background-color: #5E50A0
+      padding: 4px
+      border-radius: 4px
+
+  div#imageViewer
+    background-color: #02172B

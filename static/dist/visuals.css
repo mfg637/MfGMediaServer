@@ -6,28 +6,28 @@ input, textarea, button, select {
   margin: 2px;
 }
 
-body.dark, body.rarity, body.twilight-sparkle, body.dark-purple {
+body.dark, body.aqua-rarity, body.rarity, body.twilight-sparkle, body.dark-purple {
   color: #aaaaaa;
   background-color: #2d2d2d;
   font-family: "Noto Sans", "Roboto", "Liberation Sans", sans-serif;
 }
-body.dark a, body.rarity a, body.twilight-sparkle a, body.dark-purple a {
+body.dark a, body.aqua-rarity a, body.rarity a, body.twilight-sparkle a, body.dark-purple a {
   color: #999999;
 }
-body.dark a:hover, body.rarity a:hover, body.twilight-sparkle a:hover, body.dark-purple a:hover {
+body.dark a:hover, body.aqua-rarity a:hover, body.rarity a:hover, body.twilight-sparkle a:hover, body.dark-purple a:hover {
   color: white;
 }
-body.dark input, body.rarity input, body.twilight-sparkle input, body.dark-purple input, body.dark textarea, body.rarity textarea, body.twilight-sparkle textarea, body.dark-purple textarea, body.dark button, body.rarity button, body.twilight-sparkle button, body.dark-purple button, body.dark select, body.rarity select, body.twilight-sparkle select, body.dark-purple select {
+body.dark input, body.aqua-rarity input, body.rarity input, body.twilight-sparkle input, body.dark-purple input, body.dark textarea, body.aqua-rarity textarea, body.rarity textarea, body.twilight-sparkle textarea, body.dark-purple textarea, body.dark button, body.aqua-rarity button, body.rarity button, body.twilight-sparkle button, body.dark-purple button, body.dark select, body.aqua-rarity select, body.rarity select, body.twilight-sparkle select, body.dark-purple select {
   background-color: #222222;
   color: white;
   border-color: #1a1a1a;
   border-radius: 5px;
   padding: 0.5em;
 }
-body.dark li, body.rarity li, body.twilight-sparkle li, body.dark-purple li {
+body.dark li, body.aqua-rarity li, body.rarity li, body.twilight-sparkle li, body.dark-purple li {
   color: #cccccc;
 }
-body.dark .wrapper-accent, body.rarity .wrapper-accent, body.twilight-sparkle .wrapper-accent, body.dark-purple .wrapper-accent {
+body.dark .wrapper-accent, body.aqua-rarity .wrapper-accent, body.rarity .wrapper-accent, body.twilight-sparkle .wrapper-accent, body.dark-purple .wrapper-accent {
   background-color: #444;
   color: #dbdbdb;
 }
@@ -99,4 +99,41 @@ body.rarity li {
 body.rarity .wrapper-accent {
   background-color: #BDC1C2;
   color: #4A1767;
+}
+
+body.aqua-rarity {
+  color: black;
+  background-color: #5693CF;
+}
+body.aqua-rarity a {
+  color: #0F0582;
+  text-decoration-line: none;
+}
+body.aqua-rarity a:hover {
+  color: black;
+  text-decoration-line: underline;
+}
+body.aqua-rarity input, body.aqua-rarity textarea, body.aqua-rarity button, body.aqua-rarity select {
+  background-color: #76ADE5;
+  color: black;
+  border-color: #3977B8;
+  border-style: solid;
+}
+body.aqua-rarity li {
+  color: black;
+}
+body.aqua-rarity .wrapper-accent {
+  background-color: #76ADE5;
+  color: #20476B;
+}
+body.aqua-rarity .wrapper-accent input, body.aqua-rarity .wrapper-accent textarea, body.aqua-rarity .wrapper-accent button, body.aqua-rarity .wrapper-accent select {
+  background-color: #B8E1F0;
+}
+body.aqua-rarity .wrapper-accent .value.source-id span::before {
+  background-color: #5E50A0;
+  padding: 4px;
+  border-radius: 4px;
+}
+body.aqua-rarity div#imageViewer {
+  background-color: #02172B;
 }
