@@ -97,8 +97,11 @@ body.rarity li {
   color: black;
 }
 body.rarity .wrapper-accent {
-  background-color: #BDC1C2;
+  background-color: white;
   color: #4A1767;
+}
+body.rarity div#imageViewer {
+  background-color: #4A1767;
 }
 
 body.aqua-rarity {
