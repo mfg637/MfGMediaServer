@@ -528,6 +528,14 @@ function RainbowDASHVideoPlayer(filemeta) {/*
     this.dash_js_player.cntxt=this;
     this.audio_tracks = null;
     this.video_tracks = null;
+    this.dash_js_player.updateSettings({
+        "streaming": {
+            "capabilities": {
+                "useMediaCapabilitiesApi": true
+            }
+        }
+    })
+    console.log("config", this.dash_js_player.getSettings());
     this.dash_js_player.on(dashjs.MediaPlayer.events['PLAYBACK_METADATA_LOADED'], (function () {
         this.cntxt.video_tracks = this.cntxt.dash_js_player.getTracksFor('video');
         this.cntxt.audio_tracks = this.cntxt.dash_js_player.getTracksFor('audio');
@@ -614,6 +622,12 @@ function RainbowDASHVideoPlayer(filemeta) {/*
         this.dash_js_player.off(dashjs.MediaPlayer.events['FRAGMENT_LOADING_STARTED'], this.init_track.bind(this), this);
     }
     this.dash_js_player.on(dashjs.MediaPlayer.events['FRAGMENT_LOADING_STARTED'], this.init_track.bind(this), this)
+    this.dash_js_player.on(dashjs.MediaPlayer.events['PLAYBACK_ERROR'], (function (event) {
+        console.log("PLAYBACK_ERROR happened", event);
+        console.log("active stream: ", this.dash_js_player.getActiveStream())
+        console.log("current video track: ", this.dash_js_player.getCurrentTrackFor("video"))
+        console.log("available video tracks: ", this.dash_js_player.getTracksFor("video"))
+    }).bind(this))
     this.bind_video();
     this.disable_live_transcoding_buttons();
 }
