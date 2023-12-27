@@ -524,104 +524,88 @@ function RainbowDASHVideoPlayer(filemeta) {/*
     var url = filemeta.link;
     this.dash_js_player = dashjs.MediaPlayer().create();
     this.dash_js_player.initialize(this.videoElement, url, true);
+    this.representation_filter_callback = function (representation){
+        const compatibility_level = Number(localStorage.getItem("clevel"));
+        console.log("compatibility_level", compatibility_level);
+        let mediaCapabilitiesResponse = false;
+        console.log("representation: ", representation);
+
+        const codec_name = representation.codecs.split(".")[0];
+        let is_compatible = false;
+        if ("width" in representation) {
+            console.log("video representation detected");
+            const cl1_compatible_codecs = ["av01", "av1", "vp09", "vp9", "vp8", "avc1"];
+            const cl2_compatible_codecs = ["vp09", "vp9", "vp8", "avc1"];
+            const cl3_compatible_codecs = ["vp8", "avc1"];
+            let is_codec_compatible = false;
+            let compatible_codec_list = null;
+            if (compatibility_level <= 1) {
+                compatible_codec_list = cl1_compatible_codecs;
+            } else if (compatibility_level === 2) {
+                compatible_codec_list = cl2_compatible_codecs;
+            } else if (compatibility_level >= 3) {
+                compatible_codec_list = cl3_compatible_codecs;
+            }
+            for (const compatibleCodecListElement of compatible_codec_list) {
+                if (codec_name === compatibleCodecListElement) {
+                    is_codec_compatible = true;
+                    break;
+                }
+            }
+
+            const framerate_str = representation.frameRate.split("/");
+            const framerate_number = Number(framerate_str[0]) / Number(framerate_str[1]);
+            console.log("framerate_number", framerate_number);
+
+            let fps_compatible = true;
+            if ((compatibility_level >= 3) && (framerate_number > 30)) {
+                fps_compatible = false;
+            }else if ((compatibility_level >= 0) && (framerate_number > 60)) {
+                fps_compatible = false;
+            }
+
+            const width = representation.width;
+            const height = representation.height;
+            let max_side = width;
+            let min_side = height;
+
+            if (height > width){
+                max_side = height;
+                min_side = width;
+            }
+            let size_compatible = false;
+            if (compatibility_level >= 3){
+                size_compatible = min_side <= 720 && max_side <= 1280;
+            } else if (compatibility_level === 2){
+                size_compatible = min_side <= 1080 && max_side <= 1920;
+            }
+            else {
+                size_compatible = true;
+            }
+            console.log(
+              "is_codec_compatible: ", is_codec_compatible,
+              ", fps_compatible: ", fps_compatible,
+              ", size_compatible: ", size_compatible
+            );
+            is_compatible = is_codec_compatible && fps_compatible && size_compatible;
+        } else { is_compatible = true;}
+        console.log("return ", is_compatible);
+        return is_compatible;
+    }
+    this.dash_js_player.registerCustomCapabilitiesFilter(this.representation_filter_callback);
     this.videoElement = this.dash_js_player.getVideoElement();
     this.dash_js_player.cntxt=this;
-    this.audio_tracks = null;
-    this.video_tracks = null;
     this.dash_js_player.updateSettings({
         "streaming": {
             "capabilities": {
                 "useMediaCapabilitiesApi": true
+            },
+            "trackSwitchMode": {
+                "video": "alwaysReplace"
             }
         }
     })
     console.log("config", this.dash_js_player.getSettings());
-    this.dash_js_player.on(dashjs.MediaPlayer.events['PLAYBACK_METADATA_LOADED'], (function () {
-        this.cntxt.video_tracks = this.cntxt.dash_js_player.getTracksFor('video');
-        this.cntxt.audio_tracks = this.cntxt.dash_js_player.getTracksFor('audio');
-        if ((this.cntxt.audio_tracks.length>1)||(this.cntxt.video_tracks.length>1)){
-            let settings_button = document.createElement('a');
-            settings_button.classList.add('button-icon')
-            settings_button.classList.add('x16-button');
-            settings_button.classList.add('settings');
-            settings_button.cntxt = this.cntxt;
-            settings_button.appendChild(document.createElement('span'));
-            this.cntxt.controls.appendChild(settings_button);
-            settings_button.onclick = function () {
-                let fill_tracks_list = function(tracks, current_track, list){
-                    for (i=0; i<tracks.length; i++){
-                        let opt = document.createElement('option');
-                        opt.value = tracks[i].id;
-                        opt.innerText = tracks[i].id + " (" + tracks[i].lang + ")";
-                        if (tracks[i] === current_track)
-                            opt.selected = true;
-                        list.appendChild(opt);
-                    }
-                }
-                let audio_tracks_list = document.createElement('select');
-                let video_tracks_list = document.createElement('select');
-                let settings_container = document.createElement('div');
-                settings_container.classList.add('settings_wrapper');
-                settings_container.appendChild(document.createTextNode("video track: "));
-                fill_tracks_list(
-                    this.cntxt.video_tracks,
-                    this.cntxt.dash_js_player.getCurrentTrackFor("video"),
-                    video_tracks_list
-                );
-                settings_container.appendChild(video_tracks_list);
-                settings_container.appendChild(document.createElement('br'));
-                settings_container.appendChild(document.createTextNode("audio track: "));
-                fill_tracks_list(
-                    this.cntxt.audio_tracks,
-                    this.cntxt.dash_js_player.getCurrentTrackFor("audio"),
-                    audio_tracks_list
-                );
-                settings_container.appendChild(audio_tracks_list);
-                settings_container.appendChild(document.createElement('br'));
-                let list_item_change = function(){
-                    for (let i=0; i<this.length; i++){
-                        if (this[i].selected){
-                            let track_num = -1;
-                            for (let j=0; j<this.tracks.length; j++){
-                                if (this.tracks[j].id === this[i].value){
-                                    track_num = j;
-                                    break;
-                                }
-                            }
-                            this.cntxt.dash_js_player.setCurrentTrack(this.tracks[track_num]);
-                        }
-                    }
-
-                    this.cntxt.dash_js_player.preload();
-                    this.cntxt.reseek();
-                }
-                audio_tracks_list.cntxt = this.cntxt;
-                audio_tracks_list.tracks = this.cntxt.audio_tracks;
-                video_tracks_list.cntxt = this.cntxt;
-                video_tracks_list.tracks = this.cntxt.video_tracks;
-                audio_tracks_list.onchange = list_item_change;
-                video_tracks_list.onchange = list_item_change;
-                settings_container.appendChild(document.createElement('br'));
-                let close_button = document.createElement('button');
-                close_button.innerText = "close";
-                close_button.self_root = settings_container;
-                close_button.app_root = this.cntxt.container;
-                close_button.onclick = function () {
-                    this.app_root.removeChild(this.self_root);
-                }
-                settings_container.appendChild(close_button);
-                this.cntxt.container.appendChild(settings_container);
-            }
-        }
-    }).bind(this));
-    this.init_track = function () {
-        if (this.dash_js_player.getCurrentTrackFor('video') === this.track_60fps){
-            this.mode_60fps = true;
-            _60fps_mode_btn.classList.add('active');
-        }
-        this.dash_js_player.off(dashjs.MediaPlayer.events['FRAGMENT_LOADING_STARTED'], this.init_track.bind(this), this);
-    }
-    this.dash_js_player.on(dashjs.MediaPlayer.events['FRAGMENT_LOADING_STARTED'], this.init_track.bind(this), this)
     this.dash_js_player.on(dashjs.MediaPlayer.events['PLAYBACK_ERROR'], (function (event) {
         console.log("PLAYBACK_ERROR happened", event);
         console.log("active stream: ", this.dash_js_player.getActiveStream())
