@@ -4,3 +4,6 @@ static/js-cache
 logs/*
 /node_modules/
 /yarn.lock
+*__pycache__*
+venv/
+.idea
