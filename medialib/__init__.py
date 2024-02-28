@@ -11,6 +11,8 @@ import filesystem
 import json
 import pyimglib
 import pathlib
+import PIL.Image as PILimage
+from PIL.Image import Image as PILimageClass
 import PIL.Image
 import config
 import logging
@@ -457,6 +459,7 @@ class ImageData:
     source_id: str
     download_date: datetime.datetime
     alternate_version: bool
+    image: PIL.Image.Image | None
 
     def calc_size(self) -> int:
         return self.width * self.height
@@ -474,9 +477,15 @@ class CompareResult:
     is_first_newer: bool
     is_origin_equal: bool
     both_alternate_version: bool
+    no_difference: bool
+    difference: float = float('inf')
 
 def custom_dumper(obj):
-    if isinstance(obj, pathlib.PurePath):
+    if isinstance(obj, PILimageClass):
+        # side effect to prevent dumping image data to page template
+        obj.close()
+        return None
+    elif isinstance(obj, pathlib.PurePath):
         return str(obj)
     elif isinstance(obj, datetime.datetime):
         return obj.isoformat()
@@ -484,6 +493,8 @@ def custom_dumper(obj):
         return dataclasses.asdict(obj)
     else:
         raise TypeError("Unknown type {}".format(type(obj)))
+
+RGBA_BANDS_COUNT = 4
 
 @medialib_blueprint.route('/compare-by-hash')
 @shared_code.login_validation
@@ -513,10 +524,10 @@ def compare_image():
         else:
             img = pyimglib.decoders.open_image(file_path)
 
-        if not isinstance(img, PIL.Image.Image):
+        if not isinstance(img, PILimageClass):
             img = complex_formats_processing(img)
 
-        if not isinstance(img, PIL.Image.Image):
+        if not isinstance(img, PILimageClass):
             raise TypeError("Unidentified image type: {}".format(type(img)))
 
         image_data = ImageData(
@@ -530,7 +541,8 @@ def compare_image():
             raw_content_data[6],
             raw_content_data[7],
             raw_content_data[5],
-            alternate_version
+            alternate_version,
+            image=img
         )
 
         image_data_list.append(image_data)
@@ -541,18 +553,51 @@ def compare_image():
         for second_index in range(first_index + 1, len(image_data_list)):
             first_image_data = image_data_list[first_index]
             second_image_data = image_data_list[second_index]
+            size_equal: bool = \
+                first_image_data.calc_size() == second_image_data.calc_size()
+            difference: float = float("inf")
+            no_difference = False
+            if size_equal:
+                import PIL.ImageMath
+                max_value = \
+                    first_image_data.calc_size() * 255 * (RGBA_BANDS_COUNT - 1)
+                pixels_sum = 0
+                first_rgba_image_bands = first_image_data.image.convert(
+                    mode="RGBA"
+                ).split()
+                second_rgba_image_bands = second_image_data.image.convert(
+                    mode="RGBA"
+                ).split()
+                bands_diff = []
+                for i in range(RGBA_BANDS_COUNT):
+                    diff_image: PIL.Image.Image = PIL.ImageMath.eval(
+                        "abs(a - b)",
+                        a = first_rgba_image_bands[i],
+                        b = second_rgba_image_bands[i]
+                    )
+                    diff_histogram = diff_image.histogram()
+                    for value in range(256):
+                        pixels_sum += value * diff_histogram[value] 
+                    diff_image.close()
+                print("pixels sum", pixels_sum)
+                if pixels_sum == 0:
+                    no_difference = True
+                difference = pixels_sum / max_value
+                print("difference", "%.2f" % (difference * 100), "%")
             compare_result = CompareResult(
                 first_image_data.content_id,
                 second_image_data.content_id,
-                first_image_data.calc_size() == second_image_data.calc_size(),
+                size_equal,
                 first_image_data.calc_aspect_ratio() == second_image_data.calc_aspect_ratio(),
                 first_image_data.calc_size() > second_image_data.calc_size(),
                 first_image_data.download_date > second_image_data.download_date,
                 first_image_data.source == second_image_data.source,
-                first_image_data.alternate_version == True and second_image_data.alternate_version == True
+                first_image_data.alternate_version == True and second_image_data.alternate_version == True,
+                no_difference,
+                difference
             )
             compare_results.append(compare_result)
-
+    print("compare results list", compare_results)
     result = {
         "image_data": image_data_list,
         "compare_results": compare_results
