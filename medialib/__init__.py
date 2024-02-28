@@ -478,7 +478,7 @@ class CompareResult:
     is_origin_equal: bool
     both_alternate_version: bool
     no_difference: bool
-    difference: float = float('inf')
+    difference: float | None
 
 def custom_dumper(obj):
     if isinstance(obj, PILimageClass):
@@ -555,7 +555,7 @@ def compare_image():
             second_image_data = image_data_list[second_index]
             size_equal: bool = \
                 first_image_data.calc_size() == second_image_data.calc_size()
-            difference: float = float("inf")
+            difference: float | None = None
             no_difference = False
             if size_equal:
                 import PIL.ImageMath
@@ -579,11 +579,9 @@ def compare_image():
                     for value in range(256):
                         pixels_sum += value * diff_histogram[value] 
                     diff_image.close()
-                print("pixels sum", pixels_sum)
                 if pixels_sum == 0:
                     no_difference = True
                 difference = pixels_sum / max_value
-                print("difference", "%.2f" % (difference * 100), "%")
             compare_result = CompareResult(
                 first_image_data.content_id,
                 second_image_data.content_id,
@@ -597,13 +595,11 @@ def compare_image():
                 difference
             )
             compare_results.append(compare_result)
-    print("compare results list", compare_results)
     result = {
         "image_data": image_data_list,
         "compare_results": compare_results
     }
     db_connection.close()
-    #return flask.Response(json.dumps(result, default=custom_dumper), mimetype="application/json")
     return flask.render_template(
         "compare_images.html",
         title="Compare images",

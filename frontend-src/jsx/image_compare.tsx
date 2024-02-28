@@ -33,7 +33,7 @@ interface CompareResult {
     is_first_newer: boolean
     is_origin_equal: boolean
     both_alternate_version: boolean
-    difference: number
+    difference: number | null
     no_difference: boolean
 }
 
@@ -108,6 +108,20 @@ function ImageDataBlock(imageData: ImageData){
 }
 
 function ComprassionBlock(results: CompareResult) {
+    let show_difference = (
+        <div >
+           Impossible to calculate difference
+        </div>
+    );
+    if (results.difference !== null){
+        show_difference = (
+            <div 
+                className={results.no_difference?"status-good":"status-warning"}
+            >
+                Difference: {(results.difference * 100).toFixed(2)} %
+            </div>
+        );
+    }
     return (
         <div className="comparison-block">
             <div className={results.is_size_equal?"status-warning":"status-good"}>
@@ -125,9 +139,7 @@ function ComprassionBlock(results: CompareResult) {
             <div className={results.both_alternate_version?"status-important":"status-good"}>
                 {results.both_alternate_version?"Both images are alternate versions":"There is an replacement candidate"}
             </div>
-            <div className={results.no_difference?"status-good":""}>
-                Difference: {(results.difference * 100).toFixed(2)} %
-            </div>
+            { show_difference }
             <div>
                 {!results.both_alternate_version?
                     <a href={`/medialib/mark_alternate?content_id=${results.first_content_id}&content_id=${results.second_content_id}`} >
