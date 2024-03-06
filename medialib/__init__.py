@@ -49,6 +49,8 @@ def medialib_tag_search():
     tags_count = flask.request.args.getlist('tags_count')
     tags_list = flask.request.args.getlist('tags')
     not_tag = flask.request.args.getlist('not')
+    if len(tags_count) == 0 or len(tags_list) == 0 or len(not_tag) == 0:
+        return flask.render_template("tag_query.html")
     tags_groups = [{"not": bool(int(not_tag[i])), "tags": [], "count": int(tags_count[i])} for i in range(len(tags_count))]
     for tag in tags_groups:
         tags_count = tag["count"]

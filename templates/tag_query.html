@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta 
+        name="query_data_json"
+        content="{&#34;tags_groups&#34;: [{&#34;not&#34;: false, &#34;tags&#34;: [&#34;&#34;], &#34;count&#34;: 1}], &#34;order_by&#34;: 4, &#34;hidden_filtering&#34;: 1}" 
+    />
+    <title>Tag query form</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/visuals.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/index.css') }}">
+</head>
+<body>
+    {% include 'modules/theme-selector.html' %}
+    <h1>Tag query form</h1>
+    <div id="medialib-tag-query-form-placeholder"></div>
+    <script src="/static/dist/tagQueryForm.bundle.js"></script>
+</body>
+</html>

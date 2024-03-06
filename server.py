@@ -74,6 +74,12 @@ logger = logging.getLogger(__name__)
 @app.route('/')
 @shared_code.login_validation
 def app_root():
+    return flask.render_template("home_page.html")
+
+
+@app.route('/browse/')
+@shared_code.login_validation
+def fs_root():
     return browse(shared_code.root_dir)
 
 
@@ -584,6 +590,7 @@ def file_processing(file: pathlib.Path):
 @shared_code.login_validation
 def browse_dir(pathstr):
     path = pathlib.Path(pathstr).absolute()
+    logger.info(f"path = {path}")
     if pathlib.Path(path).is_dir():
         in_root_dir = False
         for parent in path.parents:

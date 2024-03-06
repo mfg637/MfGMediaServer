@@ -14,6 +14,8 @@ module.exports = {
         "tagQueryForm": "./frontend-src/jsx/tag_query_form.tsx",
         "imageCompare": "./frontend-src/jsx/image_compare.tsx",
         "imageCompareVisuals": "./frontend-src/sass/image-compare.sass",
+        "HomePageVisuals": "./frontend-src/sass/home_page.sass",
+
     },
     module: {
         rules: [

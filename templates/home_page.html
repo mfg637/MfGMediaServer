@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home page</title>
+    <link 
+        rel="stylesheet" 
+        href="{{ url_for('static', filename='dist/HomePageVisuals.css') }}"
+    >
+    <link 
+        rel="stylesheet" 
+        href="{{ url_for('static', filename='dist/visuals.css') }}"
+    >
+</head>
+<body>
+    {% include 'modules/theme-selector.html' %}
+    <h1>Home page</h1>
+    <menu class="main-menu">
+        <li><a href="/browse/">Browse file system</a></li>
+        <li><a href="/medialib/tag-search">Search in medialib database</a></li>
+        <li><a href="/medialib/album/show">View albums</a></li>
+        <li><a href="/medialib/show-duplicates/">
+            Show only duplicates
+        </a></li>
+        <li><a href="/medialib/show-duplicates/?show_alternates=1">
+            Show duplicates and alternate versions
+        </a></li>
+    </menu>
+</body>
+</html>
