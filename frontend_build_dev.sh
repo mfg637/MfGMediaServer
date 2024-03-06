@@ -1,0 +1,1 @@
+yarn webpack --mode development
