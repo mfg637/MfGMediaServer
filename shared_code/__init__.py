@@ -13,6 +13,7 @@ import io
 import tempfile
 import subprocess
 import pyimglib
+import enum
 
 import config
 
@@ -89,12 +90,30 @@ def gen_access_token():
         access_token += i
     return access_token
 
+class OrientationEnum(enum.Enum):
+    HORIZONTAL = enum.auto()
+    VERTICAL = enum.auto()
+    SQUARE = enum.auto()
 
-def get_thumbnail_size(scale=1):
-    return {
-        "width": int(flask.session['thumbnail_width'] * scale),
-        "height": int(flask.session['thumbnail_height'] * scale)
-    }
+def get_thumbnail_size(
+        scale=1, orientation: OrientationEnum = OrientationEnum.HORIZONTAL
+    ):
+    if orientation == OrientationEnum.HORIZONTAL:
+        return {
+            "width": int(flask.session['thumbnail_width'] * scale),
+            "height": int(flask.session['thumbnail_height'] * scale)
+        }
+    elif orientation == OrientationEnum.VERTICAL:
+        return {
+            "height": int(flask.session['thumbnail_width'] * scale),
+            "width": int(flask.session['thumbnail_height'] * scale)
+        }
+    elif orientation == OrientationEnum.SQUARE:
+        return {
+            "height": int(flask.session['thumbnail_width'] * scale),
+            "width": int(flask.session['thumbnail_width'] * scale)
+        }
+
 
 
 root_dir: pathlib.Path = None

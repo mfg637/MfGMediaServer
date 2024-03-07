@@ -118,7 +118,17 @@ class FileExtractor(InfoExtractor):
 
 
 class MedialibDefaultExtractor(InfoExtractor):
-    def __init__(self, content_id: int, file_str: str, content_type, title, items_count=0, icon_scale=1):
+    def __init__(
+            self, 
+            content_id: int, 
+            file_str: str, 
+            content_type, 
+            title, 
+            items_count=0, 
+            icon_scale=1,
+            orientation: shared_code.OrientationEnum = \
+                    shared_code.OrientationEnum.HORIZONTAL
+        ):
         super().__init__(items_count)
 
         self.content_id = content_id
@@ -137,7 +147,7 @@ class MedialibDefaultExtractor(InfoExtractor):
         }
         icon_path = pathlib.Path("{}.icon".format(self.file))
         if content_type in ("image", "video", "video-loop"):
-            self.make_icon(self.file, self.filemeta, icon_scale)
+            self.make_icon(self.file, self.filemeta, icon_scale, orientation)
             if self.file.suffix == ".jxl":
                 self.filemeta['link'] = "/image/png/{}".format(base32path)
         if self.file.suffix.lower() == '.mpd':
@@ -150,7 +160,7 @@ class MedialibDefaultExtractor(InfoExtractor):
                 str(mpd_file)
             )
             if icon_path.exists():
-                self.make_icon(self.file, self.filemeta, icon_scale)
+                self.make_icon(self.file, self.filemeta, icon_scale, orientation)
         elif self.file.suffix.lower() == '.srs':
             if content_type in ("video", "video-loop"):
                 self.filemeta['type'] = "video"
@@ -158,31 +168,47 @@ class MedialibDefaultExtractor(InfoExtractor):
             elif content_type == "image":
                 self.filemeta['type'] = "picture"
                 self.filemeta['link'] = "/image/autodetect/{}".format(base32path)
-            self.make_icon(self.file, self.filemeta, icon_scale)
+            self.make_icon(self.file, self.filemeta, icon_scale, orientation)
         elif self.file.suffix.lower() == ".m3u8":
             access_token = shared_code.gen_access_token()
             self.filemeta['link'] = "https://{}:{}/m3u8/{}.m3u8".format(config.host_name, config.port, base32path)
             shared_code.access_tokens[self.filemeta['link']] = access_token
             self.filemeta['link'] += "?access_token={}".format(access_token)
             if icon_path.exists():
-                self.make_icon(self.file, self.filemeta, icon_scale)
+                self.make_icon(self.file, self.filemeta, icon_scale, orientation)
         if self.file.suffix == '.mkv':
             self.filemeta['link'] = "/vp8/{}".format(base32path)
             self.filemeta["is_vp8"] = True
 
-    def make_icon(self, file, filemeta, scale=1):
-        width = flask.session['thumbnail_width']
-        height = flask.session['thumbnail_height']
+    def make_icon(
+            self, 
+            file, 
+            filemeta, 
+            scale=1, 
+            orientation: shared_code.OrientationEnum = \
+                    shared_code.OrientationEnum.HORIZONTAL
+        ):
+        default_size = shared_code.get_thumbnail_size(
+            scale, orientation
+        )
         filemeta['icon'] = "/medialib/thumbnail/jpeg/{}x{}/id{}".format(
-            width * scale, height * scale, filemeta['content_id']
+            default_size['width'], 
+            default_size['height'], 
+            filemeta['content_id']
         )
         filemeta['sources'] = []
         for _format in THUMBNAIL_FORMATS:
             source_strings = []
             for _scale in THUMBNAIL_SCALES:
+                size = shared_code.get_thumbnail_size(
+                    scale * _scale, orientation
+                )
                 source_strings.append(
                     "/medialib/thumbnail/{}/{}x{}/id{} {}x".format(
-                        _format, int(width * _scale * scale), int(height * _scale * scale), filemeta['content_id'],
+                        _format, 
+                        size['width'], 
+                        size['height'], 
+                        filemeta['content_id'],
                         _scale
                     )
                 )
@@ -190,9 +216,28 @@ class MedialibDefaultExtractor(InfoExtractor):
 
 
 class MedialibExtendedExtractor(MedialibDefaultExtractor):
-    def __init__(self, content_id: int, file_str: str, content_type, title, description, origin_name, origin_content_id,
-                 items_count=0, icon_scale=1):
-        super().__init__(content_id, file_str, content_type, title, items_count, icon_scale)
+    def __init__(
+            self, 
+            content_id: int, 
+            file_str: str, 
+            content_type, 
+            title, 
+            description, 
+            origin_name, 
+            origin_content_id,
+            items_count=0, 
+            icon_scale=1,
+            orientation=shared_code.OrientationEnum.HORIZONTAL
+        ):
+        super().__init__(
+            content_id, 
+            file_str, 
+            content_type, 
+            title, 
+            items_count, 
+            icon_scale,
+            orientation
+        )
         self.filemeta |= {
             "description": description,
             "origin_name": origin_name,
@@ -212,7 +257,8 @@ class MedialibAlbumExtractor(MedialibExtendedExtractor):
             origin_content_id,
             album_order,
             items_count=0,
-            icon_scale=1
+            icon_scale=1,
+            orientation=shared_code.OrientationEnum.HORIZONTAL
     ):
         super().__init__(
             content_id,
@@ -223,15 +269,33 @@ class MedialibAlbumExtractor(MedialibExtendedExtractor):
             origin_name,
             origin_content_id,
             items_count,
-            icon_scale
+            icon_scale,
+            orientation
         )
         self.filemeta |= {
             "album_order": album_order,
         }
 
 class MedialibAlbumGalleryExtractor(MedialibDefaultExtractor):
-    def __init__(self, content_id: int, file_str: str, content_type, title, album_id, items_count=0, icon_scale=2):
-        super().__init__(content_id, file_str, content_type, title, items_count, icon_scale)
+    def __init__(
+            self, 
+            content_id: int, 
+            file_str: str, 
+            content_type, 
+            title, 
+            album_id, 
+            items_count=0, 
+            icon_scale=1.5
+        ):
+        super().__init__(
+            content_id, 
+            file_str, 
+            content_type, 
+            title, 
+            items_count, 
+            icon_scale,
+            orientation = shared_code.OrientationEnum.VERTICAL
+        )
         self.filemeta |= {
             "link": "/medialib/album/show/id{}".format(album_id),
         }

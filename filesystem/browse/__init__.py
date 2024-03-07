@@ -194,12 +194,14 @@ def files_processor(filelist, excluded_filelist, initial_item_count):
 def db_content_processing(
         content_list,
         initial_item_count,
-        extractor_type: Type[InfoExtractor.MedialibDefaultExtractor] = InfoExtractor.MedialibDefaultExtractor
+        extractor_type: Type[InfoExtractor.MedialibDefaultExtractor] = \
+                InfoExtractor.MedialibDefaultExtractor,
+        **kwargs
 ):
     items_count = initial_item_count
     content_data_list = list()
     for file in content_list:
-        extractor = extractor_type(*file, items_count=items_count)
+        extractor = extractor_type(*file, items_count=items_count, **kwargs)
         file_data = extractor.get_filemeta()
         items_count = extractor.get_current_item_number()
         content_data_list.append(file_data)

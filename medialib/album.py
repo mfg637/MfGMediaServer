@@ -29,7 +29,8 @@ def show_album(album_id: int):
     content_list = filesystem.browse.db_content_processing(
         raw_content_list,
         items_count,
-        filesystem.browse.InfoExtractor.MedialibAlbumExtractor
+        filesystem.browse.InfoExtractor.MedialibAlbumExtractor,
+        orientation=shared_code.OrientationEnum.VERTICAL
     )
     itemslist.extend(content_list)
 
@@ -50,7 +51,9 @@ def show_album(album_id: int):
         filemeta=json.dumps(content_list),
         page=0,
         max_pages=0,
-        thumbnail=shared_code.get_thumbnail_size(),
+        thumbnail=shared_code.get_thumbnail_size(
+            orientation=shared_code.OrientationEnum.VERTICAL
+        ),
         **template_kwargs
     )
 
@@ -96,7 +99,9 @@ def show_album_gallery():
         filemeta=json.dumps([]),
         page=0,
         max_pages=0,
-        thumbnail=shared_code.get_thumbnail_size(scale=2),
+        thumbnail=shared_code.get_thumbnail_size(
+            scale=1.5, orientation=shared_code.OrientationEnum.VERTICAL
+        ),
         **template_kwargs
     )
 
