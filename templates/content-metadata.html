@@ -127,6 +127,17 @@
                         {% endif %}
                     {% endif %}
                 {%- endmacro %}
+            {% if content_id %}
+                    <a href="/autodownload/mlid{{ content_id }}">
+                        Autodownload
+                    </a><br/>
+            {% else %}
+                    <a href="/autodownload/{{ path_str }}">
+                        Autodownload
+                    </a><br/>
+
+            {% endif %}
+
 
 {% for format in ('png', 'webp', 'jpeg') %}
 {{ image_render_link(format) }}

@@ -139,39 +139,47 @@ def get_original(pathstr):
     return file_url_template(body, pathstr)
 
 
+def get_download_filename(content_title, origin_id, path, _format) -> str:
+    if content_title is not None:
+        for suffix in FILE_SUFFIX_LIST:
+            if suffix in content_title:
+                content_title = content_title.replace(suffix, "")
+        content_title = content_title.replace(
+            "-amp-", "&"
+        ).replace(
+            "-eq-", "="
+        )
+    filename = None
+    if origin_id is not None and content_title is not None:
+        filename = "{} {}.{}".format(
+            origin_id, content_title, _format.lower
+        )
+    elif content_title is None and origin_id is not None:
+        filename = "{}.{}".format(origin_id, _format.lower())
+    elif content_title is not None:
+        filename = "{}.{}".format(content_title, _format.lower())
+    else:
+        filename = "{}.{}".format(path.stem, _format.lower())
+    return filename
+
+
+def jxl_jpeg_decode(file_path, download, content_title, origin_id, path):
+    logger.info("decoding JPEG XL to JPEG")
+    jpeg_buffer = io.BytesIO(shared_code.jpeg_xl_fast_decode(file_path))
+    f = flask.send_file(jpeg_buffer, mimetype="image/jpeg")
+    response = flask.make_response(f)
+    if download:
+        filename = get_download_filename(content_title, origin_id, path, "jpeg")
+        response.headers['content-disposition'] = \
+            'attachment; filename="{}"'.format(
+                urllib.parse.quote(filename)
+            )
+    return response
+
+
 @app.route('/image/<string:_format>/<string:pathstr>')
 @shared_code.login_validation
 def transcode_image(_format: str, pathstr):
-    def get_download_filename(content_title, origin_id, path) -> str:
-        if content_title is not None:
-            if content_title is not None:
-                for suffix in FILE_SUFFIX_LIST:
-                    if suffix in content_title:
-                        content_title = content_title.replace(suffix, "")
-            content_title = content_title.replace("-amp-", "&").replace("-eq-", "=")
-        filename = None
-        if origin_id is not None and content_title is not None:
-            filename = "{} {}.{}".format(origin_id, content_title, _format.lower)
-        elif content_title is None and origin_id is not None:
-            filename = "{}.{}".format(origin_id, _format.lower())
-        elif content_title is not None:
-            filename = "{}.{}".format(content_title, _format.lower())
-        else:
-            filename = "{}.{}".format(path.stem, _format.lower())
-        return filename
-
-    def jxl_jpeg_decode(file_path, download, content_title, origin_id, path):
-        logger.info("decoding JPEG XL to JPEG")
-        jpeg_buffer = io.BytesIO(shared_code.jpeg_xl_fast_decode(file_path))
-        f = flask.send_file(jpeg_buffer, mimetype="image/jpeg")
-        response = flask.make_response(f)
-        if download:
-            filename = get_download_filename(content_title, origin_id, path)
-            response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
-                urllib.parse.quote(filename)
-            )
-        return response
-
     def body(path: pathlib.Path, _format):
         logger.debug("TRANSCODE path = {}, format = {}".format(path.__repr__(), _format))
         origin_id = flask.request.args.get("origin_id", None, str)
@@ -268,7 +276,7 @@ def transcode_image(_format: str, pathstr):
         f.set_etag(src_hash)
         response = flask.make_response(f)
         if download:
-            filename = get_download_filename(content_title, origin_id, path)
+            filename = get_download_filename(content_title, origin_id, path, _format)
             response.headers['content-disposition'] = 'attachment; filename="{}"'.format(
                 urllib.parse.quote(filename)
             )
@@ -376,6 +384,16 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None):
     return file_url_template(file_path_processing, pathstr, _format=_format, width=width, height=height)
 
 
+ORIGIN_PREFIX = {
+    "derpibooru": "db",
+    "ponybooru": "pb",
+    "twibooru": "tb",
+    "e621": "ef",
+    "furbooru": "fb",
+    "furaffinity": "fa"
+}
+
+
 @app.route('/content_metadata/mlid<int:content_id>', methods=['GET', 'POST'], defaults={'pathstr': None})
 @app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'], defaults={'content_id': None})
 @shared_code.login_validation
@@ -407,14 +425,6 @@ def get_content_metadata(pathstr, content_id):
             "e621": "https://e621.net/posts/{}",
             "furbooru": "https://furbooru.org/images/{}",
             "furaffinity": "https://www.furaffinity.net/view/{}/"
-        }
-        ORIGIN_PREFIX = {
-            "derpibooru": "db",
-            "ponybooru": "pb",
-            "twibooru": "tb",
-            "e621": "ef",
-            "furbooru": "fb",
-            "furaffinity": "fa"
         }
         connection = medialib_db.common.make_connection()
         db_query_results = None
@@ -541,6 +551,152 @@ def get_content_metadata(pathstr, content_id):
                 representations=representations,
                 **template_kwargs
             )
+    if content_id is not None:
+        return body(None, content_id)
+    elif pathstr is not None:
+        return file_url_template(body, pathstr)
+
+
+@app.route('/autodownload/mlid<int:content_id>', methods=['GET'], defaults={'pathstr': None})
+@app.route('/autodownload/<string:pathstr>', methods=['GET'], defaults={'content_id': None})
+@shared_code.login_validation
+def autodownload(pathstr, content_id):
+    def body(path: pathlib.Path | None, content_id=None):
+        def detect_content_type(path: pathlib.Path):
+            if path.suffix in filesystem.browse.image_file_extensions:
+                return "image"
+            elif path.suffix in filesystem.browse.video_file_extensions:
+                data = pyimglib.decoders.ffmpeg.probe(path)
+                if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
+                    return "video"
+                else:
+                    return "video-loop"
+            elif path.suffix in filesystem.browse.audio_file_extensions:
+                return "audio"
+            elif path.suffix == ".srs":
+                f = path.open("r")
+                data = json.load(f)
+                f.close()
+                return medialib_db.srs_indexer.get_content_type(data)
+            else:
+                raise Exception("undetected content type", path.suffix, path)
+
+        connection = medialib_db.common.make_connection()
+        db_query_results = None
+        db_albums_registered = None
+        is_file = True
+        if content_id is not None:
+            is_file = False
+            db_query_results = medialib_db.get_content_metadata_by_content_id(
+                content_id, connection
+            )
+            path = pathlib.Path(db_query_results[1])
+            db_albums_registered = medialib_db.get_content_albums(content_id, connection)
+            if db_albums_registered is not None and len(db_albums_registered) == 0:
+                db_albums_registered = None
+        else:
+            db_query_results = medialib_db.get_content_metadata_by_file_path(
+                path, connection
+            )
+        content_title: str | None = None
+        prefix_id = None
+        path_str = shared_code.str_to_base32(str(path))
+        template_kwargs = {
+            'content_id': "",
+            'origin_name': "",
+            'origin_id': ""
+        }
+        if db_query_results is not None:
+            template_kwargs['content_id'] = db_query_results[0]
+            content_id = db_query_results[0]
+            if db_query_results[2] is not None:
+                content_title = db_query_results[2]
+            if db_query_results[-3] is not None:
+                template_kwargs['origin_name'] = db_query_results[-3]
+                if db_query_results[-2] is not None and \
+                        template_kwargs['origin_name'] in ORIGIN_PREFIX:
+                    prefix_id = "{}{}".format(
+                        ORIGIN_PREFIX[template_kwargs['origin_name']], 
+                        db_query_results[-2]
+                    )
+            else:
+                prefix_id = "mlid{}".format(
+                    db_query_results[0]
+                )
+            if db_query_results[-2] is not None:
+                template_kwargs['origin_id'] = db_query_results[-2]
+        representations: list[medialib_db.srs_indexer.ContentRepresentationUnit] | None = \
+            None
+        if content_id is not None:
+            representations = medialib_db.get_representation_by_content_id(
+                content_id, connection
+            )
+        connection.close()
+
+        if path.suffix == ".srs" and representations:
+            compatible_repr: medialib_db.srs_indexer.ContentRepresentationUnit = \
+                representations[0]
+            for _repr in representations:
+                if _repr.compatibility_level > compatible_repr.compatibility_level:
+                    compatible_repr = _repr
+            if compatible_repr.format == "jxl" and \
+                compatible_repr.compatibility_level == 2:
+
+                return jxl_jpeg_decode(
+                    compatible_repr.file_path, 
+                    True, 
+                    content_title, 
+                    prefix_id, 
+                    path
+                )
+            else:
+                repr_path = compatible_repr.file_path
+                f = flask.send_file(repr_path)
+                response = flask.make_response(f)
+                filename = get_download_filename(
+                    content_title, prefix_id, path, repr_path.suffix[1:]
+                )
+                response.headers['content-disposition'] = \
+                    'attachment; filename="{}"'.format(
+                        urllib.parse.quote(filename)
+                    )
+                return response
+        elif path.suffix == ".jxl":
+            return jxl_jpeg_decode(path, True, content_title, prefix_id, path)
+        elif path.suffix.lower() in {".jpg", ".jpeg"}:
+            if content_title is not None and prefix_id is not None:
+                safe_title = content_title.replace(
+                    "?", "-qm-"
+                ).replace(
+                    "&", "-amp-"
+                ).replace(
+                    "=", "-eq-"
+                ).replace(
+                    "#", "-hash-"
+                )
+                return flask.redirect(
+                    f"/image/jpeg/{path_str}?download=1&origin_id={prefix_id}&title={safe_title}"
+                )
+            elif prefix_id is not None:
+                return flask.redirect(
+                    f"/image/jpeg/{path_str}?download=1&origin_id={prefix_id}"
+                )
+            else:
+                return flask.redirect(
+                    f"/image/jpeg/{path_str}?download=1"
+                )
+        else:
+            f = flask.send_file(path)
+            response = flask.make_response(f)
+            filename = get_download_filename(
+                content_title, prefix_id, path, path.suffix[1:]
+            )
+            response.headers['content-disposition'] = \
+                'attachment; filename="{}"'.format(
+                    urllib.parse.quote(filename)
+                )
+            return response
+
     if content_id is not None:
         return body(None, content_id)
     elif pathstr is not None:
