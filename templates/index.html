@@ -97,6 +97,11 @@
             decodeURI("%3Cscript src='/static/js-cache/js.cookie.min.js' type='text/javascript'%3E%3C/script%3E")
           );
         }
+        if(typeof dashjs === 'undefined'){
+          document.write(
+            decodeURI("%3Cscript src='/static/js-cache/dash.all.min.js' type='text/javascript'%3E%3C/script%3E")
+          );
+        }
     </script>
     <script src="/static/js/ajax.js"></script>
     <script src="/static/js/videoplayer.js"></script>
