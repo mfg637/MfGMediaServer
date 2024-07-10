@@ -121,17 +121,15 @@ def get_original(pathstr):
             try:
                 if jpeg.arithmetic_coding():
                     return flask.redirect(
-                        "https://{}:{}/image/jpeg/{}".format(
-                            config.host_name,
-                            config.port,
+                        "{}image/jpeg/{}".format(
+                            flask.request.host_url,
                             pathstr
                         )
                     )
             except ValueError:
                 return flask.redirect(
-                    "https://{}:{}/image/jpeg/{}".format(
-                        config.host_name,
-                        config.port,
+                    "{}image/jpeg/{}".format(
+                        flask.request.host_url,
                         pathstr
                     )
                 )
@@ -219,9 +217,8 @@ def transcode_image(_format: str, pathstr):
                 if current_lod_format in possible_formats and not download:
                     base32path = shared_code.str_to_base32(str(current_lod))
                     return flask.redirect(
-                        "https://{}:{}/orig/{}".format(
-                            config.host_name,
-                            config.port,
+                        "{}orig/{}".format(
+                            flask.request.host_url,
                             base32path
                         )
                     )
@@ -328,11 +325,9 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None):
             logger.debug("srs_image_processing: {}".format(selected_image.__repr__()))
             if isinstance(selected_image, pathlib.Path):
                 base32path = shared_code.str_to_base32(str(selected_image))
-                print("path", selected_image, "base32path", base32path)
                 return flask.redirect(
-                    "https://{}:{}/orig/{}".format(
-                        config.host_name,
-                        config.port,
+                    "{}orig/{}".format(
+                        flask.request.host_url,
                         base32path
                     )
                 )
@@ -344,11 +339,9 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None):
         if check_origin_allowed(img, allow_origin):
             logger.info("origin redirect allowed")
             base32path = shared_code.str_to_base32(str(file_path))
-            print("path", file_path, "base32path", base32path)
             return flask.redirect(
-                "https://{}:{}/orig/{}".format(
-                    config.host_name,
-                    config.port,
+                "{}orig/{}".format(
+                    flask.request.host_url,
                     base32path
                 )
             )

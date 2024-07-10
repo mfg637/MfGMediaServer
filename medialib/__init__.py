@@ -299,9 +299,8 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
                     db_connection.close()
                     base32path = shared_code.str_to_base32(str(representation.file_path))
                     return flask.redirect(
-                        "https://{}:{}/orig/{}".format(
-                            config.host_name,
-                            config.port,
+                        "{}orig/{}".format(
+                            flask.request.host_url,
                             base32path
                         )
                     )
@@ -309,9 +308,8 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
                 db_connection.close()
                 base32path = shared_code.str_to_base32(str(representations[-1].file_path))
                 return flask.redirect(
-                    "https://{}:{}/orig/{}".format(
-                        config.host_name,
-                        config.port,
+                    "{}orig/{}".format(
+                        flask.request.host_url,
                         base32path
                     )
                 )
