@@ -19,7 +19,7 @@ import logging
 import multiprocessing.managers
 
 from shared_code import jpeg_xl_fast_decode
-from . import album, tag_manager
+from . import album, tag_manager, upload
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ medialib_blueprint = flask.Blueprint('medialib', __name__, url_prefix='/medialib
 
 medialib_blueprint.register_blueprint(album.album_blueprint)
 medialib_blueprint.register_blueprint(tag_manager.tag_manager_blueprint)
+medialib_blueprint.register_blueprint(upload.upload_blueprint)
 
 
 @medialib_blueprint.route('/tag-search')
