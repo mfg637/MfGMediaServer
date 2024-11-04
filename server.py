@@ -550,30 +550,31 @@ def get_content_metadata(pathstr, content_id):
         return file_url_template(body, pathstr)
 
 
+def detect_content_type(path: pathlib.Path):
+    if path.suffix in filesystem.browse.image_file_extensions:
+        return "image"
+    elif path.suffix in filesystem.browse.video_file_extensions:
+        data = pyimglib.decoders.ffmpeg.probe(path)
+        if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
+            return "video"
+        else:
+            return "video-loop"
+    elif path.suffix in filesystem.browse.audio_file_extensions:
+        return "audio"
+    elif path.suffix == ".srs":
+        f = path.open("r")
+        data = json.load(f)
+        f.close()
+        return medialib_db.srs_indexer.get_content_type(data)
+    else:
+        raise Exception("undetected content type", path.suffix, path)
+
+
 @app.route('/autodownload/mlid<int:content_id>', methods=['GET'], defaults={'pathstr': None})
 @app.route('/autodownload/<string:pathstr>', methods=['GET'], defaults={'content_id': None})
 @shared_code.login_validation
 def autodownload(pathstr, content_id):
     def body(path: pathlib.Path | None, content_id=None):
-        def detect_content_type(path: pathlib.Path):
-            if path.suffix in filesystem.browse.image_file_extensions:
-                return "image"
-            elif path.suffix in filesystem.browse.video_file_extensions:
-                data = pyimglib.decoders.ffmpeg.probe(path)
-                if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
-                    return "video"
-                else:
-                    return "video-loop"
-            elif path.suffix in filesystem.browse.audio_file_extensions:
-                return "audio"
-            elif path.suffix == ".srs":
-                f = path.open("r")
-                data = json.load(f)
-                f.close()
-                return medialib_db.srs_indexer.get_content_type(data)
-            else:
-                raise Exception("undetected content type", path.suffix, path)
-
         connection = medialib_db.common.make_connection()
         db_query_results = None
         db_albums_registered = None
@@ -695,6 +696,102 @@ def autodownload(pathstr, content_id):
     elif pathstr is not None:
         return file_url_template(body, pathstr)
 
+
+@app.route('/autotag/mlid<int:content_id>', methods=['GET', 'POST'], defaults={'pathstr': None})
+@app.route('/autotag/<string:pathstr>', methods=['GET', 'POST'], defaults={'content_id': None})
+@shared_code.login_validation
+def get_tags_from_external_service(pathstr, content_id):
+    def body(path: pathlib.Path | None, content_id=None):
+        connection = medialib_db.common.make_connection()
+        db_query_results = None
+        db_albums_registered = None
+        is_file = True
+        if content_id is not None:
+            is_file = False
+            db_query_results = medialib_db.get_content_metadata_by_content_id(
+                content_id, connection
+            )
+            path = pathlib.Path(db_query_results[1])
+            db_albums_registered = medialib_db.get_content_albums(content_id, connection)
+            if db_albums_registered is not None and len(db_albums_registered) == 0:
+                db_albums_registered = None
+        else:
+            db_query_results = medialib_db.get_content_metadata_by_file_path(
+                path, connection
+            )
+
+        representations: list[medialib_db.srs_indexer.ContentRepresentationUnit] | None = \
+            None
+        if content_id is not None:
+            representations = medialib_db.get_representation_by_content_id(
+                content_id, connection
+            )
+        connection.close()
+
+        img = None
+        img_file = None
+        img_file_path = None
+        mime = None
+
+        if path.suffix == ".srs" and representations:
+            compatible_repr: medialib_db.srs_indexer.ContentRepresentationUnit = \
+                representations[0]
+            for _repr in representations:
+                if _repr.compatibility_level > compatible_repr.compatibility_level:
+                    compatible_repr = _repr
+            if compatible_repr.format == "jxl" and \
+                compatible_repr.compatibility_level == 2:
+                img_file = shared_code.jpeg_xl_fast_decode(compatible_repr.file_path)
+                mime = "image/jpeg"
+            else:
+                img_file_path = compatible_repr.file_path
+        elif path.suffix == ".jxl":
+            img_file = shared_code.jpeg_xl_fast_decode(path)
+            mime = "image/x-portable-anymap"
+        elif path.suffix.lower() in {".jpg", ".jpeg"}:
+            jpeg_object = pyimglib.decoders.jpeg.JPEGDecoder(path)
+            if jpeg_object.arithmetic_coding():
+                img_file = jpeg_object.decode().stdout
+            else:
+                img_file_path = path
+        elif path.suffix.lower() in {".png", ".webp"}:
+            img_file_path = path
+        else:
+            img = pyimglib.decoders.open_image(path)
+
+        URL = "http://127.0.0.1:10877/tagging"
+        
+        import requests
+        if img_file is not None:
+            r = requests.post(
+                URL,
+                data={"threshold": "0.1"},
+                files={"image-file": img_file}
+            )
+        elif img_file_path is not None:
+            mime = magic.from_file(str(img_file_path), mime=True)
+            r = requests.post(
+                URL,
+                data={"threshold": "0.1"},
+                files={"image-file": (img_file_path.name, img_file_path.open("br"), mime)}
+            )
+        elif img is not None:
+            png_file = io.BytesIO()
+            img.save(png_file, "PNG")
+            r = requests.post(
+                URL,
+                data={"threshold": "0.1"},
+                files={"image-file": png_file}
+            )
+        else:
+            print(img, img_file, img_file_path)
+            raise Exception("Undefined state")
+        return r.text
+
+    if content_id is not None:
+        return body(None, content_id)
+    elif pathstr is not None:
+        return file_url_template(body, pathstr)
 
 def mpd_processing(mpd_file: pathlib.Path):
     subs_file = mpd_file.with_suffix(".mpd.subs")
