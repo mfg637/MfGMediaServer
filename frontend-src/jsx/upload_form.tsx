@@ -1,19 +1,90 @@
-import React from 'react';
+import React, {ReactElement, ReactHTML, useId}  from 'react';
 import { useState } from "react";
 import { createRoot } from 'react-dom/client';
 
 
-function UploadForm(){
+type FileType = File | null;
+
+
+interface UploadFormProps{
+    submittion_allowed: boolean
+    file_update_event: (new_file: FileType) => void
+}
+
+type SubmitButton = ReactElement<HTMLInputElement> | null;
+
+
+function UploadForm(props: UploadFormProps){
+    function handleFileChange(e: React.ChangeEvent<HTMLInputElement>){
+        console.log(e.target.files);
+        if (e.target.files.length > 0)
+            props.file_update_event(e.target.files[0]);
+        else
+            props.file_update_event(null);
+    }
+    function clear_file(){
+        props.file_update_event(null);
+    }
+    const image_field_id = useId()
+    const submit_button = (props.submittion_allowed) ? <input type="submit" />: null;
     return (
         <form>
-            <label htmlFor="image-file-field">Put file here:</label>
-            <input type="file" name="image-file" id="image-file-field" />
+            <label htmlFor={image_field_id}>
+                Put file here: 
+                <input type="file" name="image-file" id={image_field_id} onChange={handleFileChange}/>
+            </label>
+            {submit_button}
+            <input type="reset" value="Clear" onClick={clear_file}/>
         </form>
     )
 }
 
+interface FileInfoProps{
+    file: File
+}
+
+function FileInfoView(props: FileInfoProps){
+    return <>
+        <h2>File Info</h2>
+        <div>Title: <b>{props.file.name}</b></div>
+        <div>Size: <b>{Number(props.file.size / 1024).toFixed(2)} KiB</b></div>
+        <div>Mime type: <b>{props.file.type}</b></div>
+    </>
+}
+
+type ImageElementType = ReactElement<HTMLImageElement> | null;
+
 function App(){
-    return <UploadForm />
+    const [current_file, set_current_file] = useState<FileType>(null);
+    const [is_image_file, set_image_file_status] = useState<boolean>(false);
+    const [submittion_allowed, allow_submittion] = useState<boolean>(false);
+    function file_update(new_file: FileType){
+        set_current_file(new_file);
+        if (new_file != null){
+            allow_submittion(true);
+            if (new_file.type.startsWith("image/")){
+                set_image_file_status(true);
+            } else {
+                set_image_file_status(false);
+            }
+        }else{
+            set_image_file_status(false);
+            allow_submittion(false);
+        }
+    }
+    const image_element = (is_image_file)? 
+        <img className="preview-image" src={URL.createObjectURL(current_file)} /> 
+        : null;
+    const upload_form_props: UploadFormProps = {
+        "submittion_allowed": submittion_allowed,
+        "file_update_event": file_update
+    }
+    const file_info_elem = (current_file !== null)? <FileInfoView file={current_file} /> : null;
+    return <>
+        {image_element}
+        <UploadForm {...upload_form_props} />
+        {file_info_elem}
+    </>
 }
 
 const app = <App />

@@ -5,6 +5,12 @@
         <title>Upload file</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='dist/visuals.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='dist/index.css') }}">
+        <style>
+            .preview-image {
+                max-width: {{preview_width}}px;
+                max-height: {{preview_height}}px;
+            }
+        </style>
     </head>
     <body>
         {% include 'modules/theme-selector.html' %}
