@@ -15,7 +15,7 @@ module.exports = {
         "imageCompare": "./frontend-src/jsx/image_compare.tsx",
         "imageCompareVisuals": "./frontend-src/sass/image-compare.sass",
         "HomePageVisuals": "./frontend-src/sass/home_page.sass",
-
+        "upload_form": "./frontend-src/jsx/upload_form.tsx",
     },
     module: {
         rules: [

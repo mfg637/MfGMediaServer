@@ -9,9 +9,7 @@
     <body>
         {% include 'modules/theme-selector.html' %}
         <h1>Upload file to Medialib database</h1>
-        <form>
-            <label for="image-file-field">Put file here:</label>
-            <input type="file" name="image-file" id="image-file-field" />
-        </form>
+        <div id="app-container"></div>
+        <script src="{{ url_for('static', filename='dist/upload_form.bundle.js') }}"></script>
     </body>
 </html>
