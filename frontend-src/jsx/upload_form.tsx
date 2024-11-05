@@ -26,15 +26,38 @@ function UploadForm(props: UploadFormProps){
         props.file_update_event(null);
     }
     const image_field_id = useId()
+    const description_field_id = useId()
+    const origin_name_field_id = useId()
+    const origin_id_field_id = useId()
+    const alternate_version_flag_id = useId()
     const submit_button = (props.submittion_allowed) ? <input type="submit" />: null;
     return (
-        <form>
+        <form method="post" action="/medialib/upload/uploading" encType="multipart/form-data">
             <label htmlFor={image_field_id}>
                 Put file here: 
                 <input type="file" name="image-file" id={image_field_id} onChange={handleFileChange}/>
             </label>
             {submit_button}
-            <input type="reset" value="Clear" onClick={clear_file}/>
+            <input type="reset" value="Clear" onClick={clear_file}/><br/>
+            <label htmlFor={description_field_id}>
+                Description: <br />
+                <textarea name="description" id={description_field_id}></textarea>
+            </label>
+            <br />
+            <label htmlFor={origin_name_field_id}>
+                Origin name: 
+                <input type="text" name="origin_name" id={origin_name_field_id}/>
+            </label>
+            <br />
+            <label htmlFor={origin_id_field_id} >
+                Origin content ID:
+                <input type="text" name="origin_id" id={origin_id_field_id} />
+            </label>
+            <br />
+            <label htmlFor={alternate_version_flag_id}>
+                Alternate version 
+                <input type="checkbox" name="alternate_version" id={alternate_version_flag_id} />
+            </label>
         </form>
     )
 }
