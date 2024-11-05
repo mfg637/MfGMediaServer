@@ -146,6 +146,104 @@ def medialib_tag_search():
     )
 
 
+def detect_content_type(path: pathlib.Path):
+    if path.suffix in filesystem.browse.image_file_extensions:
+        return "image"
+    elif path.suffix in filesystem.browse.video_file_extensions:
+        data = pyimglib.decoders.ffmpeg.probe(path)
+        if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
+            return "video"
+        else:
+            return "video-loop"
+    elif path.suffix in filesystem.browse.audio_file_extensions:
+        return "audio"
+    elif path.suffix == ".srs":
+        f = path.open("r")
+        data = json.load(f)
+        f.close()
+        return medialib_db.srs_indexer.get_content_type(data)
+    else:
+        raise Exception("undetected content type", path.suffix, path)
+
+
+@medialib_blueprint.route('/tags-register', methods=["POST"])
+@shared_code.login_validation
+def register_tags():
+    def discard_existing_tags():
+        existing_tags_categorised = medialib_db.get_tags_by_content_id(content_id)
+        existing_tag_ids = []
+        for category in existing_tags_categorised:
+            for tag in existing_tags_categorised[category]:
+                existing_tag_ids.append(tag[0])
+        for tag_id in existing_tag_ids:
+            tag_ids.discard(tag_id)
+
+    resource_id_type = flask.request.form["resource_id_type"]
+    pathstr = None
+    content_id = None
+    if resource_id_type == "file":
+        pathstr = flask.request.form["resource_id"]
+    elif resource_id_type == "content_id":
+        content_id = int(flask.request.form["resource_id"])
+    else:
+        flask.abort(400)
+    
+    enabled_tags = []
+
+    tag_index = 0
+    if "tag_name_0" not in flask.request.form:
+        tag_index = 1
+    while f"tag_name_{tag_index}" in flask.request.form:
+        tag_name = flask.request.form[f"tag_name_{tag_index}"]
+        tag_enabled = int(flask.request.form[f"tag_enabled_{tag_index}"])
+        if tag_enabled == 1:
+            enabled_tags.append(tag_name)
+        tag_index += 1
+
+    tag_ids = set()
+    connection = medialib_db.common.make_connection()
+    for tag in enabled_tags:
+        tag_id = medialib_db.tags_indexer.get_tag_id_by_alias(tag, connection)
+        if tag_id is None:
+            connection.close()
+            return flask.make_response(f"Not found tag {tag}", 500)
+        tag_ids.add(tag_id)
+
+    if content_id is None:
+        path = pathlib.Path(shared_code.base32_to_str(pathstr))
+        db_query_results = medialib_db.get_content_metadata_by_file_path(
+            path, connection
+        )
+        if db_query_results is not None:
+            content_id = db_query_results[0]
+            discard_existing_tags()
+        else:
+            content_new_data = {
+                'content_title': path.stem,
+                'file_path': path,
+                'content_type': detect_content_type(path),
+                'addition_date': datetime.datetime.fromtimestamp(path.stat().st_mtime),
+                'content_id': None,
+                'origin_name': None,
+                'origin_id': None,
+                'hidden': False,
+                'description': None,
+            }
+            content_id = medialib_db.content_register(**content_new_data, connection=connection)
+    else:
+        db_query_results = medialib_db.get_content_metadata_by_content_id(
+            content_id, connection
+        )
+        path = pathlib.Path(db_query_results[1])
+        discard_existing_tags()
+    
+    medialib_db.add_tags_for_content_by_tag_ids(content_id, list(tag_ids), connection)
+    connection.commit()
+    connection.close()
+    
+    return flask.redirect(f"/content_metadata/mlid{content_id}")
+
+
 @medialib_blueprint.route('/show-duplicates/')
 @shared_code.login_validation
 def medialib_show_duplicates():

@@ -64,7 +64,7 @@
             </div>
         {% endif %}
         </a>
-        <form>
+        <form method="post" action="/medialib/tags-register">
             <input type="hidden" name="resource_id_type" value="{{ resource_id_type }}" />
             <input type="hidden" name="resource_id" value="{{ resource_id }}" />
             {% for tag_data in tags.items() %}
@@ -85,13 +85,14 @@
                         id="tag_on_{{loop.index}}"
                         checked="1"
                     />
-                    <label for="tag_off_{{loop.index}}">On</label>
+                    <label for="tag_on_{{loop.index}}">On</label>
                 </fieldset>
                 <div class="probability-bar">
                     <div class="probability-indicator" style="width: {{tag_data[1] * 100}}%;"></div>
                 </div>
             </div>
             {% endfor %}
+            <input type="submit" />
         </form>
     </body>
 </html>

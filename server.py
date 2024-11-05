@@ -387,30 +387,31 @@ ORIGIN_PREFIX = {
 }
 
 
+def detect_content_type(path: pathlib.Path):
+    if path.suffix in filesystem.browse.image_file_extensions:
+        return "image"
+    elif path.suffix in filesystem.browse.video_file_extensions:
+        data = pyimglib.decoders.ffmpeg.probe(path)
+        if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
+            return "video"
+        else:
+            return "video-loop"
+    elif path.suffix in filesystem.browse.audio_file_extensions:
+        return "audio"
+    elif path.suffix == ".srs":
+        f = path.open("r")
+        data = json.load(f)
+        f.close()
+        return medialib_db.srs_indexer.get_content_type(data)
+    else:
+        raise Exception("undetected content type", path.suffix, path)
+
+
 @app.route('/content_metadata/mlid<int:content_id>', methods=['GET', 'POST'], defaults={'pathstr': None})
 @app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'], defaults={'content_id': None})
 @shared_code.login_validation
 def get_content_metadata(pathstr, content_id):
     def body(path: pathlib.Path | None, content_id=None):
-        def detect_content_type(path: pathlib.Path):
-            if path.suffix in filesystem.browse.image_file_extensions:
-                return "image"
-            elif path.suffix in filesystem.browse.video_file_extensions:
-                data = pyimglib.decoders.ffmpeg.probe(path)
-                if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
-                    return "video"
-                else:
-                    return "video-loop"
-            elif path.suffix in filesystem.browse.audio_file_extensions:
-                return "audio"
-            elif path.suffix == ".srs":
-                f = path.open("r")
-                data = json.load(f)
-                f.close()
-                return medialib_db.srs_indexer.get_content_type(data)
-            else:
-                raise Exception("undetected content type", path.suffix, path)
-
         ORIGIN_URL_TEMPLATE = {
             "derpibooru": "https://derpibooru.org/images/{}",
             "ponybooru": "https://ponybooru.org/images/{}",
@@ -550,26 +551,6 @@ def get_content_metadata(pathstr, content_id):
         return file_url_template(body, pathstr)
 
 
-def detect_content_type(path: pathlib.Path):
-    if path.suffix in filesystem.browse.image_file_extensions:
-        return "image"
-    elif path.suffix in filesystem.browse.video_file_extensions:
-        data = pyimglib.decoders.ffmpeg.probe(path)
-        if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
-            return "video"
-        else:
-            return "video-loop"
-    elif path.suffix in filesystem.browse.audio_file_extensions:
-        return "audio"
-    elif path.suffix == ".srs":
-        f = path.open("r")
-        data = json.load(f)
-        f.close()
-        return medialib_db.srs_indexer.get_content_type(data)
-    else:
-        raise Exception("undetected content type", path.suffix, path)
-
-
 @app.route('/autodownload/mlid<int:content_id>', methods=['GET'], defaults={'pathstr': None})
 @app.route('/autodownload/<string:pathstr>', methods=['GET'], defaults={'content_id': None})
 @shared_code.login_validation
@@ -585,9 +566,6 @@ def autodownload(pathstr, content_id):
                 content_id, connection
             )
             path = pathlib.Path(db_query_results[1])
-            db_albums_registered = medialib_db.get_content_albums(content_id, connection)
-            if db_albums_registered is not None and len(db_albums_registered) == 0:
-                db_albums_registered = None
         else:
             db_query_results = medialib_db.get_content_metadata_by_file_path(
                 path, connection
@@ -712,9 +690,6 @@ def get_tags_from_external_service(pathstr, content_id):
                 content_id, connection
             )
             path = pathlib.Path(db_query_results[1])
-            db_albums_registered = medialib_db.get_content_albums(content_id, connection)
-            if db_albums_registered is not None and len(db_albums_registered) == 0:
-                db_albums_registered = None
         else:
             db_query_results = medialib_db.get_content_metadata_by_file_path(
                 path, connection
@@ -788,7 +763,6 @@ def get_tags_from_external_service(pathstr, content_id):
             raise Exception("Undefined state")
         
         tags = r.json()
-        print("JSON", tags)
         
         if is_file:
             return flask.render_template(
@@ -798,7 +772,6 @@ def get_tags_from_external_service(pathstr, content_id):
                 tags=tags,
                 resource_id_type="file",
                 resource_id=pathstr
-                #**template_kwargs
             )
         else:
             file_item = None
@@ -819,7 +792,6 @@ def get_tags_from_external_service(pathstr, content_id):
                 tags=tags,
                 resource_id_type="content_id",
                 resource_id=content_id
-                #**template_kwargs
             )
 
     if content_id is not None:

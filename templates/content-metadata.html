@@ -260,7 +260,9 @@
             {% endif %}
             {% if content_id %}
                 <a href="/medialib/db-drop-thumbnails/{{ content_id }}">Drop thumbnails</a><br />
-                <a href="/medialib/openCLIP/{{ content_id }}">Do openCLIP AI image classification</a>
+                <a href="/autotag/mlid{{ content_id }}">Autotag</a>
+            {% else %}
+                <a href="/autotag/{{ path_str }}">Autotag</a>
             {% endif %}
             {% if derpibooru_dl_server and origin_name and origin_id %}
                 <a href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&rewrite=1">Redownload content</a>
