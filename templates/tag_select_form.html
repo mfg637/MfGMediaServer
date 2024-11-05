@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Tag select form</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='dist/visuals.css') }}">
+        <style>
+            h1{
+                max-width: 100%;
+                overflow: hidden;
+            }
+            .origin_link{
+                display: inline-block;
+                margin: 1em 0;
+            }
+
+            .img{
+                max-width: 100%;
+            }
+
+            textarea{
+                width: 95%;
+            }
+            .tag .probability-bar{
+                width: 100%;
+                max-width: 300px;
+                position: relative;
+                height: 6px;
+                background: black;
+            }
+            .tag .probability-indicator{
+                height: 6px;
+                background: green;
+            }
+            form fieldset{
+                display: inline;
+                border: none;
+            }
+        </style>
+    </head>
+    <body>
+        {% include 'modules/theme-selector.html' %}
+        <h1>Select tags for «{{ file_name }}»</h1>
+        <h2>Preview</h2>
+        {% if item.icon is not none %}
+            <a class="item icon" href="{{ item.link }}" title="{{ item.file_name }}">
+        {% else %}
+            <a class="item" href="{{ item.link }}" title="{{ item.file_name }}">
+        {% endif %}
+        {% if item.icon is not none %}
+            {% if item.sources is not none %}
+                <picture>
+                {% for source in item.sources %}
+                    <source srcset="{{ source }}"/>
+                {% endfor %}
+            {% endif %}
+            <img src="{{ item.icon }}"/>
+            {% if item.sources is not none %}
+                </picture>
+            {% endif %}
+            <div class="title-wrapper">
+                {{ item.file_name }}
+            </div>
+        {% endif %}
+        </a>
+        <form>
+            <input type="hidden" name="resource_id_type" value="{{ resource_id_type }}" />
+            <input type="hidden" name="resource_id" value="{{ resource_id }}" />
+            {% for tag_data in tags.items() %}
+            <div class="tag">
+                <input type="text" name="tag_name_{{loop.index}}" value="{{tag_data[0]}}" readonly="1" />
+                <fieldset>
+                    <input
+                        type="radio"
+                        name="tag_enabled_{{loop.index}}"
+                        value="0"
+                        id="tag_off_{{loop.index}}"
+                    />
+                    <label for="tag_off_{{loop.index}}">Off</label>
+                    <input 
+                        type="radio"
+                        name="tag_enabled_{{loop.index}}"
+                        value="1"
+                        id="tag_on_{{loop.index}}"
+                        checked="1"
+                    />
+                    <label for="tag_off_{{loop.index}}">On</label>
+                </fieldset>
+                <div class="probability-bar">
+                    <div class="probability-indicator" style="width: {{tag_data[1] * 100}}%;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </form>
+    </body>
+</html>

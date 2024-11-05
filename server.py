@@ -786,7 +786,41 @@ def get_tags_from_external_service(pathstr, content_id):
         else:
             print(img, img_file, img_file_path)
             raise Exception("Undefined state")
-        return r.text
+        
+        tags = r.json()
+        print("JSON", tags)
+        
+        if is_file:
+            return flask.render_template(
+                'tag_select_form.html',
+                item=filesystem.browse.get_file_info(path),
+                file_name=path.name,
+                tags=tags,
+                resource_id_type="file",
+                resource_id=pathstr
+                #**template_kwargs
+            )
+        else:
+            file_item = None
+            try:
+                file_item = filesystem.browse.get_db_content_info(
+                    content_id,
+                    db_query_results[1],
+                    db_query_results[3],
+                    db_query_results[2],
+                    icon_scale=2
+                )[0]
+            except FileNotFoundError:
+                pass
+            return flask.render_template(
+                'tag_select_form.html',
+                item=file_item,
+                file_name=path.name,
+                tags=tags,
+                resource_id_type="content_id",
+                resource_id=content_id
+                #**template_kwargs
+            )
 
     if content_id is not None:
         return body(None, content_id)
