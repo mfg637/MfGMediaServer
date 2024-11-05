@@ -725,10 +725,13 @@ def get_tags_from_external_service(pathstr, content_id):
             mime = "image/x-portable-anymap"
         elif path.suffix.lower() in {".jpg", ".jpeg"}:
             jpeg_object = pyimglib.decoders.jpeg.JPEGDecoder(path)
-            if jpeg_object.arithmetic_coding():
+            try:
+                if jpeg_object.arithmetic_coding():
+                    img_file = jpeg_object.decode().stdout
+                else:
+                    img_file_path = path
+            except ValueError:
                 img_file = jpeg_object.decode().stdout
-            else:
-                img_file_path = path
         elif path.suffix.lower() in {".png", ".webp"}:
             img_file_path = path
         else:
