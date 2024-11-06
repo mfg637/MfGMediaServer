@@ -24,6 +24,13 @@ def show_upload_page():
     )
 
 
+EXTENSIONS_BY_MIME = {
+    "image/jpeg": ".jpeg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+
+
 @upload_blueprint.route("/uploading", methods=["POST"])
 @shared_code.login_validation
 def upload_file():
@@ -33,7 +40,17 @@ def upload_file():
     file_buffer = io.BytesIO(file.stream.read(200 * 1024 * 1024))
     file.stream.seek(0)
     mime = magic.from_buffer(file_buffer.getvalue(), mime=True)
+    print("MIME", mime)
     file_buffer.seek(0)
+    if mime not in EXTENSIONS_BY_MIME:
+        supported_formats = []
+        for mime in EXTENSIONS_BY_MIME:
+            supported_formats.append(f"{EXTENSIONS_BY_MIME[mime]} ({mime})")
+        return flask.Response(
+            "Server accepts only this formats: " + \
+                ", ".join(supported_formats),
+            415
+        )
     if mime.startswith("image/"):
         is_image = True
     hash = None
@@ -69,12 +86,6 @@ def upload_file():
         str(current_date.year), str(current_date.month), str(current_date.day)
     )
     outdir.mkdir(parents=True, exist_ok=True)
-
-    EXTENSIONS_BY_MIME = {
-        "image/jpeg": ".jpg",
-        "image/png": ".png",
-        "image/webp": ".webp"
-    }
 
     filename = ''.join(random.choices(string.ascii_letters+string.digits, k=16)) + \
         EXTENSIONS_BY_MIME[mime]
