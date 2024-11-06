@@ -28,6 +28,7 @@ EXTENSIONS_BY_MIME = {
     "image/jpeg": ".jpeg",
     "image/png": ".png",
     "image/webp": ".webp",
+    "video/mp4": ".mp4"
 }
 
 
@@ -40,6 +41,8 @@ def upload_file():
     file_buffer = io.BytesIO(file.stream.read(200 * 1024 * 1024))
     file.stream.seek(0)
     mime = magic.from_buffer(file_buffer.getvalue(), mime=True)
+    if mime == "video/quicktime" and file.mimetype == "video/mp4":
+        mime = "video/mp4"
     print("MIME", mime)
     file_buffer.seek(0)
     if mime not in EXTENSIONS_BY_MIME:
