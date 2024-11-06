@@ -28,7 +28,8 @@ EXTENSIONS_BY_MIME = {
     "image/jpeg": ".jpeg",
     "image/png": ".png",
     "image/webp": ".webp",
-    "video/mp4": ".mp4"
+    "video/mp4": ".mp4",
+    "video/webm": ".webm"
 }
 
 
