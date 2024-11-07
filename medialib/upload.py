@@ -8,9 +8,12 @@ import medialib_db
 import datetime
 import random
 import string
+import pathlib
 
 
 upload_blueprint = flask.Blueprint('upload', __name__, url_prefix='/upload')
+
+MAX_TITLE_LENGTH = 63
 
 
 @upload_blueprint.route("/")
@@ -55,6 +58,8 @@ def upload_file():
                 ", ".join(supported_formats),
             415
         )
+    # trim too long filename
+    title = str(pathlib.Path(file.filename).stem[:MAX_TITLE_LENGTH])
     if mime.startswith("image/"):
         is_image = True
     hash = None
@@ -110,7 +115,7 @@ def upload_file():
         origin_id = flask.request.form["origin_id"]
 
     content_new_data = {
-        'content_title': file.filename,
+        'content_title': title,
         'file_path': file_path,
         'content_type': file_type,
         'addition_date': datetime.datetime.now(),
