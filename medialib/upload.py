@@ -120,8 +120,12 @@ def upload_file():
         'hidden': False,
         'description': description,
     }
-    content_id = medialib_db.content_register(**content_new_data, connection=connection)
-    connection.commit()
-    connection.close()
+    try:
+        content_id = medialib_db.content_register(**content_new_data, connection=connection)
+        connection.commit()
+        connection.close()
+    except Exception as e:
+        file_path.unlink()
+        raise e
 
     return flask.redirect(f"/content_metadata/mlid{content_id}")
