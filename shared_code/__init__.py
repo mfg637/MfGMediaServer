@@ -179,7 +179,9 @@ def jpeg_xl_fast_decode(file_path: pathlib.Path) -> bytes:
     commandline = [
         "djxl",
         file_path,
-        "jpeg:-"
+        "-",
+        "--output_format",
+        "jpeg"
     ]
     proc = subprocess.run(commandline, capture_output=True)
     logger.debug(proc.stderr.decode("utf-8"))
