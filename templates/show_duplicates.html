@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    {% include 'modules/theme-selector.html' %}
+    {% include 'modules/header.html' %}
     <h1>Content Duplicates</h1>
     {% for group in duplicated_groups %}
         <h2>[{{ group.value_hash }}]-[{{ group.hue_hash }}]-[{{ group.saturation_hash }}]</h2>

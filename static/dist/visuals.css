@@ -10,6 +10,24 @@ input, textarea, button, select {
   border-style: solid;
 }
 
+.nostyle-fallback {
+  display: none;
+}
+
+header .home-page-link {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDguNDY3IDguNDY3Ij48cGF0aCBkPSJNMS41ODcgMi42NDZoNS4yOTJ2NC43NjNIMS41ODd6IiBzdHlsZT0iZmlsbDojZmZmO3N0cm9rZS13aWR0aDouNTI5MTY2Njc7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlOiMwMDA7c3Ryb2tlLWRhc2hhcnJheTpub25lIi8+PHBhdGggZD0iTS42NyAyLjY3OCA0LjMuNTY4bDMuNTUxIDIuMDlaIiBzdHlsZT0iZmlsbDojZmZmO3N0cm9rZTojMDAwO3N0cm9rZS13aWR0aDouNTI5MTY2Njc7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW9wYWNpdHk6MTtzdHJva2UtZGFzaGFycmF5Om5vbmUiLz48cGF0aCBkPSJNMy40NCA0LjQ5OGgxLjU4N3YxLjU4N0gzLjQ0eiIgc3R5bGU9ImZpbGw6I2ZmZjtzdHJva2U6IzAwMDtzdHJva2Utd2lkdGg6LjUyOTE2NztzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtZGFzaGFycmF5Om5vbmUiLz48L3N2Zz4=);
+  position: relative;
+  top: 12px;
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 4px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
 body.dark, body.aqua-rarity, body.rarity, body.twilight-sparkle, body.dark-purple {
   color: #aaaaaa;
   background-color: #2d2d2d;
