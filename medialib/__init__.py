@@ -311,7 +311,10 @@ def ml_update_content(content_id: int):
                 old_file_path.unlink()
 
         f = flask.request.files['content-update-file']
-        file_path = shared_code.root_dir.joinpath("pictures").joinpath("medialib").joinpath(
+
+        outdir = shared_code.get_output_directory()
+        outdir.mkdir(parents=True, exist_ok=True)
+        file_path = outdir.joinpath(
             "mlid{}{}".format(content_id, pathlib.Path(f.filename).suffix)
         )
         f.save(file_path)
@@ -319,7 +322,7 @@ def ml_update_content(content_id: int):
         image_hash = None
         if file_path.suffix in {".jpeg", ".jpg", ".png", ".webp", ".avif"}:
             with PIL.Image.open(file_path) as img:
-                image_hash = shared_code.calc_image_hash(img)
+                image_hash = pyimglib.calc_image_hash(img)
         medialib_db.update_file_path(
             content_id, file_path, image_hash, medialib_db_connection
         )
