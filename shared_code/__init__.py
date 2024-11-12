@@ -14,6 +14,7 @@ import tempfile
 import subprocess
 import pyimglib
 import enum
+import datetime
 
 import config
 
@@ -126,6 +127,15 @@ MIME_TYPES_BY_FORMAT = {
 }
 
 
+def get_output_directory() -> pathlib.Path:
+    MEDIALIB_ROOT = root_dir.joinpath("pictures").joinpath("medialib")
+    
+    current_date = datetime.datetime.now()
+    return MEDIALIB_ROOT.joinpath(
+        str(current_date.year), str(current_date.month), str(current_date.day)
+    )
+
+
 def extract_frame_from_video(img: pyimglib.decoders.frames_stream.FramesStream):
     logger.info("video extraction")
     _img = img.next_frame()
@@ -186,3 +196,13 @@ def jpeg_xl_fast_decode(file_path: pathlib.Path) -> bytes:
     proc = subprocess.run(commandline, capture_output=True)
     logger.debug(proc.stderr.decode("utf-8"))
     return proc.stdout
+
+
+EXTENSIONS_BY_MIME = {
+    "image/jpeg": ".jpeg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
+    "image/avif": ".avif"
+}

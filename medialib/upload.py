@@ -12,6 +12,8 @@ import pathlib
 import pyimglib
 import pillow_heif
 
+from shared_code import EXTENSIONS_BY_MIME
+
 
 upload_blueprint = flask.Blueprint('upload', __name__, url_prefix='/upload')
 
@@ -27,16 +29,6 @@ def show_upload_page():
         preview_width=thumnbail_size["width"] * 2,
         preview_height=thumnbail_size["height"] * 2,
     )
-
-
-EXTENSIONS_BY_MIME = {
-    "image/jpeg": ".jpeg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "video/mp4": ".mp4",
-    "video/webm": ".webm",
-    "image/avif": ".avif"
-}
 
 
 @upload_blueprint.route("/uploading", methods=["POST"])
@@ -95,12 +87,7 @@ def upload_file():
     else:
         raise Exception("undetected content type")
     
-    MEDIALIB_ROOT = shared_code.root_dir.joinpath("pictures").joinpath("medialib")
-    
-    current_date = datetime.datetime.now()
-    outdir = MEDIALIB_ROOT.joinpath(
-        str(current_date.year), str(current_date.month), str(current_date.day)
-    )
+    outdir = shared_code.get_output_directory()
     outdir.mkdir(parents=True, exist_ok=True)
 
     filename = ''.join(random.choices(string.ascii_letters+string.digits, k=16)) + \
