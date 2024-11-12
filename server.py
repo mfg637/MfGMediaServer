@@ -759,7 +759,7 @@ def get_tags_from_external_service(pathstr, content_id):
             r = requests.post(
                 URL,
                 data={"threshold": "0.1"},
-                files={"image-file": png_file}
+                files={"image-file": (path.name, png_file.getvalue(), "image/png")}
             )
         else:
             print(img, img_file, img_file_path)
