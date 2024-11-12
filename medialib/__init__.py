@@ -354,6 +354,19 @@ def complex_formats_processing(img, file_path = None, allow_origin = None) -> PI
         logger.debug("extracted frame: {}".format(img.__repr__()))
     return img
 
+
+COMPATIBILITY_LEVEL_MAX_SIZE = {
+    0: 2**15,
+    1: 2**13,
+    2: 2**12,
+    3: 2**11,
+    4: 2**10
+}
+
+def check_max_size(size, compatibility_level) -> bool:
+    return size <= COMPATIBILITY_LEVEL_MAX_SIZE[compatibility_level]
+
+
 @medialib_blueprint.route('/thumbnail/<string:_format>/<int:width>x<int:height>/id<int:content_id>')
 @shared_code.login_validation
 def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None):
@@ -430,6 +443,18 @@ def gen_thumbnail(_format: str, width: int, height: int, content_id: int | None)
         if allow_origin:
             return flask.send_file(jpeg_buffer, mimetype="image/jpeg")
         img = PIL.Image.open(jpeg_buffer)
+    elif file_path.suffix == ".avif":
+        img = pyimglib.decoders.avif.decode(file_path)
+        if allow_origin and _format == "avif" and \
+            check_max_size(img.width, compatibility_level) and \
+            check_max_size(img.height, compatibility_level):
+
+            return flask.redirect(
+                "{}orig/{}".format(
+                    flask.request.host_url,
+                    shared_code.str_to_base32(str(file_path))
+                )
+            )
     else:
         img = pyimglib.decoders.open_image(file_path)
 
