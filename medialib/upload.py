@@ -9,6 +9,8 @@ import datetime
 import random
 import string
 import pathlib
+import pyimglib
+import pillow_heif
 
 
 upload_blueprint = flask.Blueprint('upload', __name__, url_prefix='/upload')
@@ -32,7 +34,8 @@ EXTENSIONS_BY_MIME = {
     "image/png": ".png",
     "image/webp": ".webp",
     "video/mp4": ".mp4",
-    "video/webm": ".webm"
+    "video/webm": ".webm",
+    "image/avif": ".avif"
 }
 
 
@@ -66,7 +69,11 @@ def upload_file():
     connection = medialib_db.common.make_connection()
     is_alternate_version = False
     if is_image:
-        img = PIL.Image.open(file_buffer)
+        if mime == "image/avif":
+            heif = pillow_heif.open_heif(file_buffer)
+            img = heif.to_pillow()
+        else:
+            img = PIL.Image.open(file_buffer)
         hash = pyimglib.calc_image_hash(img)
         duplicates = medialib_db.find_content_by_hash(hash[1].hex().lower(), hash[2], hash[3], connection)
         if len(duplicates) > 0:
