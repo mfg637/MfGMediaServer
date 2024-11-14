@@ -465,6 +465,21 @@ class FurAffinityOrigin(SimpleOrigin):
         return "fa"
 
 
+class TwitterXOrigin(Origin):
+    def generate_url(self, origin_content_id):
+        id_parts: list[str] = origin_content_id.split("#")
+        print("ID PARTS", id_parts)
+        if len(id_parts) == 3:
+            return f"https://x.com/{id_parts[0]}/status/{id_parts[1]}/photo/{id_parts[2]}"
+        elif len(id_parts) == 2:
+            return f"https://x.com/{id_parts[0]}/status/{id_parts[1]}"
+        else:
+            raise ValueError("Incorrect X (Twitter) ID!")
+    
+    def get_prefix(self):
+        return "tx-"
+
+
 ORIGIN_CLASS: dict[str, typing.Type[Origin]] = {
     "derpibooru": DerpibooruOrigin,
     "ponybooru": PonybooruOrigin,
@@ -472,6 +487,7 @@ ORIGIN_CLASS: dict[str, typing.Type[Origin]] = {
     "e621": E621Origin,
     "furbooru": FurbooruOrigin,
     "furaffinity": FurAffinityOrigin,
+    "twitter": TwitterXOrigin,
 }
 
 
@@ -650,7 +666,7 @@ def autodownload(pathstr, content_id):
                         template_kwargs['origin_name'] in ORIGIN_CLASS:
                     prefix_id = "{}{}".format(
                         ORIGIN_CLASS[template_kwargs['origin_name']]().get_prefix(), 
-                        db_query_results[-2]
+                        db_query_results[-2].replace("#", "-")
                     )
             else:
                 prefix_id = "mlid{}".format(
