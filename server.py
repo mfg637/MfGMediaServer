@@ -25,6 +25,7 @@ import shared_code
 import pyimglib.ACLMMP as ACLMMP
 import medialib_db
 import medialib
+import typing
 
 from filesystem.browse import browse
 
@@ -377,16 +378,6 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None):
     return file_url_template(file_path_processing, pathstr, _format=_format, width=width, height=height)
 
 
-ORIGIN_PREFIX = {
-    "derpibooru": "db",
-    "ponybooru": "pb",
-    "twibooru": "tb",
-    "e621": "ef",
-    "furbooru": "fb",
-    "furaffinity": "fa"
-}
-
-
 def detect_content_type(path: pathlib.Path):
     if path.suffix in filesystem.browse.image_file_extensions:
         return "image"
@@ -407,19 +398,88 @@ def detect_content_type(path: pathlib.Path):
         raise Exception("undetected content type", path.suffix, path)
 
 
+class Origin(abc.ABC):
+    @abc.abstractmethod
+    def generate_url(self, origin_content_id: str) -> str:
+        pass
+
+    @abc.abstractmethod
+    def get_prefix(self) -> str:
+        pass
+
+
+class SimpleOrigin(Origin):
+    @abc.abstractmethod
+    def _get_template_string(self) -> str:
+        pass
+
+    def generate_url(self, origin_content_id):
+        return self._get_template_string().format(origin_content_id)
+
+
+class DerpibooruOrigin(SimpleOrigin):
+    def _get_template_string(self):
+        return "https://derpibooru.org/images/{}"
+    
+    def get_prefix(self):
+        return "db"
+
+
+class PonybooruOrigin(SimpleOrigin):
+    def _get_template_string(self):
+        return "https://ponybooru.org/images/{}"
+    
+    def get_prefix(self):
+        return "pb"
+
+
+class TwibooruOrigin(SimpleOrigin):
+    def _get_template_string(self):
+        return "https://twibooru.org/{}"
+    
+    def get_prefix(self):
+        return "tb"
+
+
+class E621Origin(SimpleOrigin):
+    def _get_template_string(self):
+        return "https://e621.net/posts/{}"
+    
+    def get_prefix(self):
+        return "ef"
+
+
+class FurbooruOrigin(SimpleOrigin):
+    def _get_template_string(self):
+        return "https://furbooru.org/images/{}"
+    
+    def get_prefix(self):
+        return "fb"
+    
+
+class FurAffinityOrigin(SimpleOrigin):
+    def _get_template_string(self):
+        return "https://www.furaffinity.net/view/{}/"
+    
+    def get_prefix(self):
+        return "fa"
+
+
+ORIGIN_CLASS: dict[str, typing.Type[Origin]] = {
+    "derpibooru": DerpibooruOrigin,
+    "ponybooru": PonybooruOrigin,
+    "twibooru": TwibooruOrigin,
+    "e621": E621Origin,
+    "furbooru": FurbooruOrigin,
+    "furaffinity": FurAffinityOrigin,
+}
+
+
 @app.route('/content_metadata/mlid<int:content_id>', methods=['GET', 'POST'], defaults={'pathstr': None})
 @app.route('/content_metadata/<string:pathstr>', methods=['GET', 'POST'], defaults={'content_id': None})
 @shared_code.login_validation
 def get_content_metadata(pathstr, content_id):
     def body(path: pathlib.Path | None, content_id=None):
-        ORIGIN_URL_TEMPLATE = {
-            "derpibooru": "https://derpibooru.org/images/{}",
-            "ponybooru": "https://ponybooru.org/images/{}",
-            "twibooru": "https://twibooru.org/{}",
-            "e621": "https://e621.net/posts/{}",
-            "furbooru": "https://furbooru.org/images/{}",
-            "furaffinity": "https://www.furaffinity.net/view/{}/"
-        }
         connection = medialib_db.common.make_connection()
         db_query_results = None
         db_albums_registered = None
@@ -455,11 +515,12 @@ def get_content_metadata(pathstr, content_id):
                 template_kwargs['content_title'] = db_query_results[2]
             if db_query_results[-3] is not None:
                 template_kwargs['origin_name'] = db_query_results[-3]
-                if db_query_results[-2] is not None and template_kwargs['origin_name'] in ORIGIN_URL_TEMPLATE:
+                if db_query_results[-2] is not None and template_kwargs['origin_name'] in ORIGIN_CLASS:
+                    origin_obj = ORIGIN_CLASS[template_kwargs['origin_name']]()
                     template_kwargs['origin_link'] = \
-                        ORIGIN_URL_TEMPLATE[template_kwargs['origin_name']].format(db_query_results[-2])
+                        origin_obj.generate_url(db_query_results[-2])
                     template_kwargs['prefix_id'] = "{}{}".format(
-                        ORIGIN_PREFIX[template_kwargs['origin_name']], db_query_results[-2]
+                        origin_obj.get_prefix(), db_query_results[-2]
                     )
             else:
                 template_kwargs['prefix_id'] = "mlid{}".format(
@@ -586,9 +647,9 @@ def autodownload(pathstr, content_id):
             if db_query_results[-3] is not None:
                 template_kwargs['origin_name'] = db_query_results[-3]
                 if db_query_results[-2] is not None and \
-                        template_kwargs['origin_name'] in ORIGIN_PREFIX:
+                        template_kwargs['origin_name'] in ORIGIN_CLASS:
                     prefix_id = "{}{}".format(
-                        ORIGIN_PREFIX[template_kwargs['origin_name']], 
+                        ORIGIN_CLASS[template_kwargs['origin_name']]().get_prefix(), 
                         db_query_results[-2]
                     )
             else:
