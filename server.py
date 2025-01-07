@@ -455,7 +455,15 @@ class FurbooruOrigin(SimpleOrigin):
     
     def get_prefix(self):
         return "fb"
+
+
+class TantabusAIOrigin(SimpleOrigin):
+    def _get_template_string(self):
+        return "https://tantabus.ai/images/{}"
     
+    def get_prefix(self):
+        return "ta"
+
 
 class FurAffinityOrigin(SimpleOrigin):
     def _get_template_string(self):
@@ -486,6 +494,7 @@ ORIGIN_CLASS: dict[str, typing.Type[Origin]] = {
     "twibooru": TwibooruOrigin,
     "e621": E621Origin,
     "furbooru": FurbooruOrigin,
+    "tantabus": TantabusAIOrigin,
     "furaffinity": FurAffinityOrigin,
     "twitter": TwitterXOrigin,
 }
