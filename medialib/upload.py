@@ -1,4 +1,5 @@
 import json
+import logging
 import lzma
 import subprocess
 import tempfile
@@ -22,6 +23,8 @@ import dataclasses
 
 from shared_code import EXTENSIONS_BY_MIME
 
+logger = logging.getLogger(__name__)
+
 simple_id_pattern = re.compile("[a-z]{2}\d+")
 
 CIVIT_AI_ORIGIN = "civit ai"
@@ -33,6 +36,8 @@ JPEG_MIMETYPE = "image/jpeg"
 AVIF_MIMETYPE = "image/avif"
 PNG_MIMETYPE = "image/png"
 WEBP_MIMETYPE = "image/webp"
+UNDEFINED_MIMETYPE = "application/octet-stream"
+PNG_HEADER_SEQUENCE = b"\x89PNG\x0d\x0a\x1a\x0a"
 
 def generate_unsupported_type_response():
     supported_formats = []
@@ -44,21 +49,29 @@ def generate_unsupported_type_response():
         415
     )
 
-def detect_file_type(file_buffer, request_header_mimetype):
+def detect_file_type(file_buffer: io.BytesIO, request_header_mimetype):
     mime = magic.from_buffer(file_buffer.getvalue(), mime=True)
     if mime == MOV_MIMETYPE and request_header_mimetype == MPEG4V_MIMETYPE:
         mime = MPEG4V_MIMETYPE
+    if mime == UNDEFINED_MIMETYPE:
+        file_buffer.seek(0)
+        # check PNG header
+        header = file_buffer.read(8)
+        if header == PNG_HEADER_SEQUENCE:
+            mime = PNG_MIMETYPE
     is_image = False
     if mime.startswith("image/"):
         is_image = True
         file_type = None
-    if is_image:
         file_type = "image"
-    elif mime.startswith("video/"):
+    if mime.startswith("video/"):
         file_type = "video"
     elif mime.startswith("audio/"):
         file_type = "audio"
+    elif is_image:
+        pass
     else:
+        logger.error(f"undetected content type, mime: {mime}")
         raise Exception("undetected content type")
     return mime, file_type, is_image
 
