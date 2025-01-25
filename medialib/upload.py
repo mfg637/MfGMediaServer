@@ -174,6 +174,7 @@ def upload_file():
     connection = medialib_db.common.make_connection()
     is_alternate_version = False
     image_metadata = None
+    img = None
     if is_image:
         if mime == AVIF_MIMETYPE:
             heif = pillow_heif.open_heif(file_buffer)
@@ -201,7 +202,8 @@ def upload_file():
     outdir.mkdir(parents=True, exist_ok=True)
 
     file_path, saved_name = save_image(file, mime, outdir, img)
-    img.close()
+    if img is not None:
+        img.close()
 
     content_new_data = {
         'content_title': title,
