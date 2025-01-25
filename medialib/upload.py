@@ -1,4 +1,9 @@
+import json
+import lzma
+import subprocess
+import tempfile
 import flask
+import medialib_db.config
 import shared_code
 import pyimglib
 import magic
@@ -26,6 +31,8 @@ MOV_MIMETYPE = "video/quicktime"
 MPEG4V_MIMETYPE = "video/mp4"
 JPEG_MIMETYPE = "image/jpeg"
 AVIF_MIMETYPE = "image/avif"
+PNG_MIMETYPE = "image/png"
+WEBP_MIMETYPE = "image/webp"
 
 def generate_unsupported_type_response():
     supported_formats = []
@@ -66,9 +73,44 @@ def detect_source(filename: str, origin_name: str | None, origin_id: str | None)
     return origin_name, origin_id
 
 
+def save_image(source_file, mime: str, outdir: pathlib.Path, img: PIL.Image.Image):
+    def generate_filename(mime):
+        title_only = ''.join(random.choices(string.ascii_letters+string.digits, k=16))
+        return title_only + EXTENSIONS_BY_MIME[mime], title_only
+    if mime == PNG_MIMETYPE:
+        if img.has_transparency_data:
+            filename, file_title = generate_filename(WEBP_MIMETYPE)
+            file_path = outdir.joinpath(filename)
+            img.save(file_path, quality=95)
+        else:
+            filename, file_title = generate_filename(JPEG_MIMETYPE)
+            file_path = outdir.joinpath(filename)
+            src_tmp_file = tempfile.NamedTemporaryFile(mode='wb', suffix=".png", delete=True)
+            img.save(src_tmp_file, format="PNG", compress_level=0)
+            commandline = [
+                "cjpegli",
+                src_tmp_file.name,
+                str(file_path)
+            ]
+            subprocess.run(commandline)
+            src_tmp_file.close()
+    else:
+        filename, file_title = generate_filename(mime)
+        file_path = outdir.joinpath(filename)
+        print("SAVE OUTPUT FILE", file_path)
+        source_file.save(file_path)
+    return file_path, file_title
+
+
 @dataclasses.dataclass
 class PlainTextData:
     data: str
+
+
+@dataclasses.dataclass
+class ComfyUIWorkflow:
+    prompt: dict
+    workflow: dict
 
 
 def extract_metadata_from_image(img: PIL.Image.Image, mime: str, origin_name: str | None):
@@ -78,6 +120,14 @@ def extract_metadata_from_image(img: PIL.Image.Image, mime: str, origin_name: st
             exif_items = {k:v for k, v in exif.get_ifd(PIL.ExifTags.Base.ExifOffset).items()}
             user_comment_raw: bytes = exif_items[37510]
             return PlainTextData(user_comment_raw.decode("utf-16_be")[5:])
+    elif mime == PNG_MIMETYPE:
+        if "parameters" in img.info:
+            return PlainTextData(img.info["parameters"])
+        elif "prompt" in img.info and "workflow" in img.info:
+            return ComfyUIWorkflow(
+                json.loads(img.info["prompt"]),
+                json.loads(img.info["workflow"])
+            )
     return None
 
 upload_blueprint = flask.Blueprint('upload', __name__, url_prefix='/upload')
@@ -141,6 +191,8 @@ def upload_file():
                 return "Duplicates detected " + ", ".join(link_elements)
             else:
                 is_alternate_version = True
+
+    print("image metadata", image_metadata)
     
     if description is None and isinstance(image_metadata, PlainTextData):
         description = image_metadata.data
@@ -148,11 +200,8 @@ def upload_file():
     outdir = shared_code.get_output_directory()
     outdir.mkdir(parents=True, exist_ok=True)
 
-    filename = ''.join(random.choices(string.ascii_letters+string.digits, k=16)) + \
-        EXTENSIONS_BY_MIME[mime]
-    file_path = outdir.joinpath(filename)
-    print("SAVE OUTPUT FILE", file_path)
-    file.save(file_path)
+    file_path, saved_name = save_image(file, mime, outdir, img)
+    img.close()
 
     content_new_data = {
         'content_title': title,
@@ -167,6 +216,16 @@ def upload_file():
     }
     try:
         content_id = medialib_db.content_register(**content_new_data, connection=connection)
+        if isinstance(image_metadata, ComfyUIWorkflow):
+            binary_encoded_json = json.dumps(image_metadata.workflow).encode("utf-8")
+            comfy_workflow_filepath = outdir.joinpath(saved_name + ".json.xz")
+            with lzma.open(comfy_workflow_filepath, "wb") as f:
+                f.write(binary_encoded_json)
+            relative_file_path = \
+                str(comfy_workflow_filepath.relative_to(medialib_db.config.relative_to))
+            medialib_db.register_representation(
+                content_id, "json+xz", -1, relative_file_path, connection
+            )
         connection.commit()
         connection.close()
     except Exception as e:
