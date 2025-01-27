@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, abort
+import flask
 import medialib_db
 import dataclasses
 import shared_code
@@ -92,3 +93,12 @@ def show_tag_properties(tag_id: int):
     )
     connection.close()
     return render_template("tag_properties.html", tag=tag_properties)
+
+@tag_manager_blueprint.route('/delete_tag/content<int:content_id>tag<int:tag_id>', methods=['GET'])
+@shared_code.login_validation
+def delete_tag(content_id: int, tag_id: int):
+    connection = medialib_db.common.make_connection()
+    medialib_db.delete_tag(content_id, tag_id, connection)
+    connection.commit()
+    connection.close()
+    return flask.redirect(f"/content_metadata/mlid{content_id}")
