@@ -20,6 +20,7 @@ import pyimglib
 import pillow_heif
 import re
 import dataclasses
+from pyimglib.transcoding.encoders.srs_image_encoder import test_alpha_channel
 
 from shared_code import EXTENSIONS_BY_MIME
 
@@ -91,7 +92,7 @@ def save_image(source_file, mime: str, outdir: pathlib.Path, img: PIL.Image.Imag
         title_only = ''.join(random.choices(string.ascii_letters+string.digits, k=16))
         return title_only + EXTENSIONS_BY_MIME[mime], title_only
     if mime == PNG_MIMETYPE:
-        if img.has_transparency_data:
+        if img.has_transparency_data and test_alpha_channel(img):
             filename, file_title = generate_filename(WEBP_MIMETYPE)
             file_path = outdir.joinpath(filename)
             img.save(file_path, quality=95)
