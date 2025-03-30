@@ -46,6 +46,7 @@ medialib_blueprint.register_blueprint(upload.upload_blueprint)
 def medialib_tag_search():
     global NUMBER_OF_ITEMS
     global CACHED_REQUEST
+    EMPTY_GROUP = {"not": False, "tags": [], "count": 0}
 
     tags_count = flask.request.args.getlist('tags_count')
     tags_list = flask.request.args.getlist('tags')
@@ -56,7 +57,23 @@ def medialib_tag_search():
                                                 medialib_db.files_by_tag_search.HIDDEN_FILTERING.FILTER.value))
     itemslist, dirmeta_list, content_list = [], [], []
 
-    if len(tags_count) > 0 and len(tags_list) > 0 and len(not_tag) > 0:
+    if len(tags_count) == 0 and len(tags_list) == 0 and len(not_tag) == 0 or \
+        len(tags_count) == 1 and int(tags_count[0]) == 0:
+        raw_content_list = medialib_db.files_by_tag_search.get_all_media(
+            limit=flask.session['items_per_page'],
+            offset=flask.session['items_per_page'] * page,
+            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
+            filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
+        )
+        tags_groups = None
+        max_pages = 1
+        _args = ""
+        query_data = {
+            "tags_groups": [{"not": False, "tags": [], "count": 1}],
+            "order_by": order_by,
+            "hidden_filtering": hidden_filtering
+        }
+    else:
         tags_groups = [{"not": bool(int(not_tag[i])), "tags": [], "count": int(tags_count[i])} for i in range(len(tags_count))]
         for tag in tags_groups:
             tags_count = tag["count"]
@@ -97,21 +114,6 @@ def medialib_tag_search():
                 filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
             )
             max_pages = math.ceil(NUMBER_OF_ITEMS / flask.session['items_per_page'])
-    else:
-        raw_content_list = medialib_db.files_by_tag_search.get_all_media(
-            limit=flask.session['items_per_page'],
-            offset=flask.session['items_per_page'] * page,
-            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
-            filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
-        )
-        tags_groups = None
-        max_pages = 1
-        _args = ""
-        query_data = {
-            "tags_groups": [{"not": False, "tags": [], "count": 1}],
-            "order_by": order_by,
-            "hidden_filtering": hidden_filtering
-        }
 
 
     items_count = 0
