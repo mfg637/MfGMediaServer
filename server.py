@@ -455,7 +455,23 @@ class FurbooruOrigin(SimpleOrigin):
     
     def get_prefix(self):
         return "fb"
+
+
+class TantabusAIOrigin(SimpleOrigin):
+    def _get_template_string(self):
+        return "https://tantabus.ai/images/{}"
     
+    def get_prefix(self):
+        return "ta"
+
+
+class CivitAIOrigin(SimpleOrigin):
+    def _get_template_string(self):
+        return "https://civitai.com/images/{}"
+    
+    def get_prefix(self):
+        return "ca"
+
 
 class FurAffinityOrigin(SimpleOrigin):
     def _get_template_string(self):
@@ -486,8 +502,10 @@ ORIGIN_CLASS: dict[str, typing.Type[Origin]] = {
     "twibooru": TwibooruOrigin,
     "e621": E621Origin,
     "furbooru": FurbooruOrigin,
+    "tantabus": TantabusAIOrigin,
     "furaffinity": FurAffinityOrigin,
     "twitter": TwitterXOrigin,
+    "civit ai": CivitAIOrigin,
 }
 
 
@@ -1052,90 +1070,6 @@ def ffmpeg_vp9_simplestream(pathstr):
     return vp9_converter.do_convert(pathstr)
 
 
-class NVENC_VideoTranscoder(VideoTranscoder):
-    def get_mimetype(self):
-        return "video/mp4"
-
-    def __init__(self):
-        global tmp_file
-        super().__init__()
-        # self.tmpfile = tempfile.TemporaryFile()
-        if not tmp_file.closed:
-            tmp_file.close()
-        tmp_file = tempfile.NamedTemporaryFile(delete=True)
-
-    def get_specific_commandline_part(self, path, fps):
-        width = flask.request.args.get('width', 1440)
-        height = flask.request.args.get('height', 720)
-        return [
-            '-y',
-            '-i', str(path),
-            '-vf',
-            'scale=\'min({},iw)\':\'min({}, ih)\''.format(width, height) + \
-            ':force_original_aspect_ratio=decrease' + \
-            (",fps={}".format(fps / 2) if fps > 30 else ""),
-            '-vcodec', 'h264_nvenc',
-            '-preset', 'fast',
-            '-b:v', '8M',
-            '-ac', '2',
-            '-acodec', 'libfdk_aac',
-            '-vbr', '4',
-            '-f', 'mp4',
-            tmp_file.name
-        ]
-
-    def get_output_buffer(self):
-        return tmp_file.name
-
-    def read_input_from_pipe(self, pipe_output):
-        self.process.wait()
-
-
-@app.route('/nvenc/<string:pathstr>')
-@shared_code.login_validation
-def ffmpeg_nvenc_filestream(pathstr):
-    nvenc_converter = NVENC_VideoTranscoder()
-    return nvenc_converter.do_convert(pathstr)
-
-
-@app.route('/aclmmp_webm/<string:pathstr>')
-@shared_code.login_validation
-def aclmmp_webm_muxer(pathstr):
-    def body(path):
-        dir = path.parent
-        SRS_file = path.open('r')
-        content_metadata, streams_metadata, minimal_content_compatibility_level = ACLMMP.srs_parser.parseJSON(
-            SRS_file,
-            webp_compatible=True
-        )
-        SRS_file.close()
-        LEVEL = int(flask.session['clevel'])
-        CHANNELS = int(flask.session['audio_channels'])
-        if minimal_content_compatibility_level < LEVEL:
-            flask.abort(404)
-        commandline = ['ffmpeg']
-        video_file = False
-        audio_file = False
-        if streams_metadata[0] is not None:
-            video_file= True
-            commandline += ['-i', dir.joinpath(streams_metadata[0].get_compatible_files(LEVEL)[0])]
-        if streams_metadata[1] is not None:
-            audio_file = True
-            file = streams_metadata[1][0].get_file(CHANNELS, LEVEL)
-            if file is not None:
-                commandline += ['-i', dir.joinpath(file)]
-            else:
-                files = streams_metadata[1][0].get_compatible_files(LEVEL)
-                commandline += ['-i', dir.joinpath(files[0])]
-        if video_file and audio_file:
-            commandline += ['-map', '0', '-map', '1']
-        commandline += ['-c', 'copy', '-f', 'webm', '-']
-        process = subprocess.Popen(commandline, stdout=subprocess.PIPE)
-        f = flask.send_file(process.stdout, add_etags=False, mimetype='video/webm')
-        return f
-    return file_url_template(body, pathstr)
-
-
 @app.route('/folder_icon_paint/<path:pathstr>')
 @shared_code.login_validation
 def icon_paint(pathstr):
@@ -1201,33 +1135,6 @@ def icon_paint(pathstr):
     return flask.Response(rendered_template, mimetype="image/svg+xml")
 
 
-@app.route('/m3u8/<string:pathstr>.m3u8')
-@shared_code.login_validation
-def gen_m3u8(pathstr):
-    path = pathlib.Path(shared_code.base32_to_str(pathstr))
-    if path.is_file():
-        buffer = io.StringIO()
-        with path.open("r") as f:
-            for line in f:
-                if '#' in line:
-                    buffer.write(line)
-                elif line.strip() == "":
-                    buffer.write(line)
-                else:
-                    base32path = shared_code.str_to_base32(str(path.parent.joinpath(line)).rstrip())
-                    base_url = "https://{}:{}/orig/{}".format(
-                        config.host_name,
-                        config.port,
-                        base32path
-                    )
-                    access_token = shared_code.gen_access_token()
-                    shared_code.access_tokens[base_url] = access_token
-                    buffer.write(base_url + "?access_token={}\n".format(access_token))
-        return flask.Response(buffer.getvalue(), mimetype="audio/x-mpegurl", status=200)
-    else:
-        flask.abort(404)
-
-
 @app.route('/<path:pathstr>')
 @shared_code.login_validation
 def root_open_file(pathstr):
@@ -1244,16 +1151,6 @@ def ffprobe_response(pathstr):
     path = pathlib.Path(shared_code.base32_to_str(pathstr))
     if path.is_file():
         return flask.Response(pyimglib.decoders.ffmpeg.probe(path), mimetype="application/json")
-    else:
-        flask.abort(404)
-
-
-@app.route('/webvtt/<string:pathstr>')
-@shared_code.login_validation
-def get_vtt_subs(pathstr):
-    path = pathlib.Path(shared_code.base32_to_str(pathstr) + ".vtt")
-    if path.is_file():
-        return static_file(path, mimetype="text/vtt")
     else:
         flask.abort(404)
 

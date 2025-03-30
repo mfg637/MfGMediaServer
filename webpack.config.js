@@ -5,7 +5,6 @@ module.exports = {
       filename: '[name].css',
     })],
     entry: {
-        "openCLIP-indexer": "./frontend-src/jsx/openCLIP-indexer.jsx",
         "album-edit": "./frontend-src/jsx/album-edit.tsx",
         "visuals": "./frontend-src/sass/visuals.sass",
         "tag-edit": "./frontend-src/sass/tag-edit.sass",

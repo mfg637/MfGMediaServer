@@ -224,7 +224,12 @@
                 <h3>{{category}}</h3>
                 <ul>
                 {% for tag in tag_list %}
-                    <li><a href="/medialib/tag_manager/show_tag/{{ tag[0] }}">{{ tag[1] }}</a></li>
+                    <li>
+                        <a href="/medialib/tag_manager/show_tag/{{ tag[0] }}">{{ tag[1] }}</a>
+                        <a href="/medialib/tag_manager/delete_tag/content{{ content_id }}tag{{ tag[0] }}">
+                            delete
+                        </a>
+                    </li>
                 {% endfor %}
                 </ul>
             {% endfor %}
