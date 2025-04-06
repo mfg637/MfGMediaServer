@@ -104,7 +104,7 @@ def medialib_tag_search():
     order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.RANDOM.value))
     hidden_filtering = int(flask.request.args.get("hidden_filtering",
                                                 medialib_db.files_by_tag_search.HIDDEN_FILTERING.FILTER.value))
-    items_per_page = flask.session['items_per_page']
+    items_per_page = int(flask.request.args.get('per_page', flask.session['items_per_page']))
     itemslist, dirmeta_list, content_list = [], [], []
 
     connection = medialib_db.common.make_connection()
@@ -215,6 +215,7 @@ def medialib_tag_search():
         query_data=json.dumps(query_data),
         page=page,
         max_pages=max_pages,
+        items_per_page = items_per_page,
         thumbnail=shared_code.get_thumbnail_size(),
         **template_kwargs
     )

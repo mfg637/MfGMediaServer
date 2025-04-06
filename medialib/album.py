@@ -51,6 +51,7 @@ def show_album(album_id: int):
         filemeta=json.dumps(content_list),
         page=0,
         max_pages=0,
+        items_per_page = flask.session['items_per_page'],
         thumbnail=shared_code.get_thumbnail_size(
             orientation=shared_code.OrientationEnum.VERTICAL
         ),
@@ -99,6 +100,7 @@ def show_album_gallery():
         filemeta=json.dumps([]),
         page=0,
         max_pages=0,
+        items_per_page = flask.session['items_per_page'],
         thumbnail=shared_code.get_thumbnail_size(
             scale=1.5, orientation=shared_code.OrientationEnum.VERTICAL
         ),
