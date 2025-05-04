@@ -20,7 +20,8 @@ import pyimglib
 import pillow_heif
 import re
 import dataclasses
-from pyimglib.transcoding.encoders.srs_image_encoder import test_alpha_channel
+from pyimglib.transcoding.encoders.srs_image_encoder import test_alpha_channel, SrsLossyJpegXlEncoder
+from werkzeug.datastructures import FileStorage
 
 from shared_code import EXTENSIONS_BY_MIME
 
@@ -34,6 +35,7 @@ MAX_SAMPLE_LENGTH = 200 * 1024 * 1024 # 200 MiB
 MOV_MIMETYPE = "video/quicktime"
 MPEG4V_MIMETYPE = "video/mp4"
 JPEG_MIMETYPE = "image/jpeg"
+JPEG_XL_MIMETYPE = "image/jxl"
 AVIF_MIMETYPE = "image/avif"
 PNG_MIMETYPE = "image/png"
 WEBP_MIMETYPE = "image/webp"
@@ -87,7 +89,9 @@ def detect_source(filename: str, origin_name: str | None, origin_id: str | None)
     return origin_name, origin_id
 
 
-def save_image(source_file, mime: str, outdir: pathlib.Path, img: PIL.Image.Image):
+def save_image(
+        source_file: FileStorage, file_size: int, mime: str, outdir: pathlib.Path, img: PIL.Image.Image
+        ):
     def generate_filename(mime):
         title_only = ''.join(random.choices(string.ascii_letters+string.digits, k=16))
         return title_only + EXTENSIONS_BY_MIME[mime], title_only
@@ -99,14 +103,12 @@ def save_image(source_file, mime: str, outdir: pathlib.Path, img: PIL.Image.Imag
         else:
             filename, file_title = generate_filename(JPEG_MIMETYPE)
             file_path = outdir.joinpath(filename)
+
             src_tmp_file = tempfile.NamedTemporaryFile(mode='wb', suffix=".png", delete=True)
             img.save(src_tmp_file, format="PNG", compress_level=0)
-            commandline = [
-                "cjpegli",
-                src_tmp_file.name,
-                str(file_path)
-            ]
-            subprocess.run(commandline)
+
+            srs_jxl_encoder = SrsLossyJpegXlEncoder(90, file_size, 40)
+            file_path = srs_jxl_encoder.encode(pathlib.Path(src_tmp_file.name), file_path)
             src_tmp_file.close()
     else:
         filename, file_title = generate_filename(mime)
@@ -173,9 +175,11 @@ def upload_file():
             origin_id = flask.request.form["origin_id"]
         return description, origin_name, origin_id
 
-    file = flask.request.files["image-file"]
+    file: FileStorage = flask.request.files["image-file"]
     description, origin_name, origin_id = extract_fields()
     file_buffer = io.BytesIO(file.stream.read(MAX_SAMPLE_LENGTH))
+    file_size = len(file_buffer.getvalue())
+    file_buffer.seek(0)
     file.stream.seek(0)
     mime, file_type, is_image = detect_file_type(file_buffer, file.mimetype)
     file_buffer.seek(0)
@@ -215,7 +219,7 @@ def upload_file():
     outdir = shared_code.get_output_directory()
     outdir.mkdir(parents=True, exist_ok=True)
 
-    file_path, saved_name = save_image(file, mime, outdir, img)
+    file_path, saved_name = save_image(file, file_size, mime, outdir, img)
     if img is not None:
         img.close()
 
