@@ -74,10 +74,16 @@ function ListRepresentations(props: ListRepresentationsProps) {
 }
 
 function ImageDataBlock(imageData: ImageData){
+    function remove_highlight_from_button(button: HTMLButtonElement){
+        button.classList.remove("green-highlight");
+    }
+
     function copy_content_id_to_clipboard(e: React.MouseEvent<HTMLButtonElement>){
         const button = e.currentTarget;
         const content_id = button.dataset.contentId;
         navigator.clipboard.writeText(content_id);
+        button.classList.add("green-highlight");
+        setTimeout(remove_highlight_from_button, 2000, button);
     }
     return (
         <div className="image-data">
@@ -88,6 +94,7 @@ function ImageDataBlock(imageData: ImageData){
                     type="button"
                     data-content-id={imageData.content_id}
                     onClick={copy_content_id_to_clipboard}
+                    className="clipboard-copy"
                 >
                     Copy
                 </button>
