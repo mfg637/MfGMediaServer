@@ -74,11 +74,23 @@ function ListRepresentations(props: ListRepresentationsProps) {
 }
 
 function ImageDataBlock(imageData: ImageData){
+    function copy_content_id_to_clipboard(e: React.MouseEvent<HTMLButtonElement>){
+        const button = e.currentTarget;
+        const content_id = button.dataset.contentId;
+        navigator.clipboard.writeText(content_id);
+    }
     return (
         <div className="image-data">
             <div>
                 content id: 
                 <a href={`/content_metadata/mlid${imageData.content_id}`}>{imageData.content_id}</a>
+                <button
+                    type="button"
+                    data-content-id={imageData.content_id}
+                    onClick={copy_content_id_to_clipboard}
+                >
+                    Copy
+                </button>
             </div>
             <div>
                 type: {imageData.content_type}
