@@ -77,7 +77,8 @@ function ImageDataBlock(imageData: ImageData){
     return (
         <div className="image-data">
             <div>
-                content id: {imageData.content_id}
+                content id: 
+                <a href={`/content_metadata/mlid${imageData.content_id}`}>{imageData.content_id}</a>
             </div>
             <div>
                 type: {imageData.content_type}
