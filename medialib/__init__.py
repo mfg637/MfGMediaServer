@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import io
+from typing import Any
 
 import flask
 import shared_code
@@ -17,6 +18,7 @@ import PIL.Image
 import config
 import logging
 import multiprocessing.managers
+import enum
 
 from shared_code import jpeg_xl_fast_decode
 from . import album, tag_manager, upload
@@ -24,8 +26,57 @@ from . import album, tag_manager, upload
 logger = logging.getLogger(__name__)
 
 
-NUMBER_OF_ITEMS = 0
-CACHED_REQUEST = None
+class ItemCountCache:
+    class State(enum.Enum):
+        EMPTY = enum.auto()
+        TOTAL = enum.auto()
+        TAGS = enum.auto()
+    
+    def __init__(self):
+        self._number_of_items = 0
+        self._tags_groups = None
+        self._state: ItemCountCache.State = ItemCountCache.State.EMPTY
+    
+    def get_items_count(
+        self, db_connection, hidden_filtering, tags_groups: list | list[dict[str, Any]] = None
+    ):
+        expected_state = ItemCountCache.State.TOTAL if tags_groups is None else ItemCountCache.State.TAGS
+        if expected_state is ItemCountCache.State.TAGS:
+            tags_group_tulpified = tuple(tags_groups)
+            if self._state == expected_state and self._tags_groups == tags_group_tulpified:
+                return self._number_of_items
+            self._state = expected_state
+            self._number_of_items = medialib_db.files_by_tag_search.count_media_by_tags(
+                db_connection,
+                *tags_groups,
+                filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
+            )
+            return self._number_of_items
+        elif expected_state is ItemCountCache.State.TOTAL and self._state == expected_state:
+            return self._number_of_items
+        elif expected_state is ItemCountCache.State.TOTAL:
+            self._state = expected_state
+            self._number_of_items = medialib_db.files_by_tag_search.get_total_count(
+                db_connection,
+                filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
+            )
+            return self._number_of_items
+        else:
+            raise NotImplementedError("Unknown state")
+    
+    def count_pages(
+        self,
+        db_connection,
+        items_per_page,
+        hidden_filtering,
+        tags_groups: list | list[dict[str, Any]] = None
+    ) -> int:
+        items_count = self.get_items_count(db_connection, hidden_filtering, tags_groups)
+        print("ITEMS COUNT", items_count)
+        return math.ceil(items_count / items_per_page)
+
+
+ITEM_COUNT_CACHE = ItemCountCache()
 
 process: multiprocessing.Process | None = None
 manager = None
@@ -44,59 +95,77 @@ medialib_blueprint.register_blueprint(upload.upload_blueprint)
 @medialib_blueprint.route('/tag-search')
 @shared_code.login_validation
 def medialib_tag_search():
-    global NUMBER_OF_ITEMS
-    global CACHED_REQUEST
+    EMPTY_GROUP = {"not": False, "tags": [], "count": 0}
 
     tags_count = flask.request.args.getlist('tags_count')
     tags_list = flask.request.args.getlist('tags')
     not_tag = flask.request.args.getlist('not')
-    if len(tags_count) == 0 or len(tags_list) == 0 or len(not_tag) == 0:
-        return flask.render_template("tag_query.html")
-    tags_groups = [{"not": bool(int(not_tag[i])), "tags": [], "count": int(tags_count[i])} for i in range(len(tags_count))]
-    for tag in tags_groups:
-        tags_count = tag["count"]
-        for i in range(tags_count):
-            value = tags_list.pop(0)
-            if value.isdigit():
-                value = int(value)
-            tag["tags"].append(value)
     page = int(flask.request.args.get('page', 0))
-    order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.DATE_DECREASING.value))
+    order_by = int(flask.request.args.get("sorting_order", medialib_db.files_by_tag_search.ORDERING_BY.RANDOM.value))
     hidden_filtering = int(flask.request.args.get("hidden_filtering",
-                                                  medialib_db.files_by_tag_search.HIDDEN_FILTERING.FILTER.value))
-    query_data = {
-        "tags_groups": tags_groups,
-        "order_by": order_by,
-        "hidden_filtering": hidden_filtering
-    }
-
-    _args = ""
-    for key in flask.request.args:
-        if key != "page":
-            for value in flask.request.args.getlist(key):
-                _args += "&{}={}".format(urllib.parse.quote_plus(key), urllib.parse.quote_plus(value))
-
-    global page_cache
+                                                medialib_db.files_by_tag_search.HIDDEN_FILTERING.FILTER.value))
+    items_per_page = int(flask.request.args.get('per_page', flask.session['items_per_page']))
     itemslist, dirmeta_list, content_list = [], [], []
 
+    connection = medialib_db.common.make_connection()
 
-    max_pages = 0
-    raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
-        *tags_groups,
-        limit=flask.session['items_per_page'] + 1,
-        offset=flask.session['items_per_page'] * page,
-        order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
-        filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
-    )
-    if CACHED_REQUEST is not None and CACHED_REQUEST == tuple(tags_groups):
-        max_pages = math.ceil(NUMBER_OF_ITEMS / filesystem.browse.items_per_page)
-    else:
-        CACHED_REQUEST = tuple(tags_groups)
-        NUMBER_OF_ITEMS = medialib_db.files_by_tag_search.count_files_with_every_tag(
-            *tags_groups,
+    if len(tags_count) == 0 and len(tags_list) == 0 and len(not_tag) == 0 or \
+        len(tags_count) == 1 and int(tags_count[0]) == 0:
+        raw_content_list = medialib_db.files_by_tag_search.get_all_media(
+            connection,
+            limit=items_per_page,
+            offset=items_per_page * page,
+            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
             filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
         )
-        max_pages = math.ceil(NUMBER_OF_ITEMS / flask.session['items_per_page'])
+        tags_groups = None
+        max_pages = ITEM_COUNT_CACHE.count_pages(
+            connection,
+            items_per_page,
+            medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
+        )
+        _args = ""
+        query_data = {
+            "tags_groups": [{"not": False, "tags": [], "count": 1}],
+            "order_by": order_by,
+            "hidden_filtering": hidden_filtering
+        }
+    else:
+        tags_groups = [{"not": bool(int(not_tag[i])), "tags": [], "count": int(tags_count[i])} for i in range(len(tags_count))]
+        for tag in tags_groups:
+            tags_count = tag["count"]
+            for i in range(tags_count):
+                value = tags_list.pop(0)
+                if value.isdigit():
+                    value = int(value)
+                tag["tags"].append(value)
+        query_data = {
+            "tags_groups": tags_groups,
+            "order_by": order_by,
+            "hidden_filtering": hidden_filtering
+        }
+
+        _args = ""
+        for key in flask.request.args:
+            if key != "page":
+                for value in flask.request.args.getlist(key):
+                    _args += "&{}={}".format(urllib.parse.quote_plus(key), urllib.parse.quote_plus(value))
+
+        max_pages = 0
+        raw_content_list = medialib_db.files_by_tag_search.get_media_by_tags(
+            connection,
+            *tags_groups,
+            limit=items_per_page,
+            offset=items_per_page * page,
+            order_by=medialib_db.files_by_tag_search.ORDERING_BY(order_by),
+            filter_hidden=medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering)
+        )
+        max_pages = ITEM_COUNT_CACHE.count_pages(
+            connection,
+            items_per_page,
+            medialib_db.files_by_tag_search.HIDDEN_FILTERING(hidden_filtering),
+            tags_groups
+        )
 
 
     items_count = 0
@@ -112,19 +181,22 @@ def medialib_tag_search():
 
     itemslist.extend(content_list)
 
-    tags_group_str = []
-    for tags_group in tags_groups:
-        group_list = []
-        for tag in tags_group["tags"]:
-            if type(tag) is int:
-                group_list.append(medialib_db.get_tag_name_by_id(tag))
-            else:
-                group_list.append(medialib_db.get_tag_name_by_alias(tag))
-        tags_group["group_str"] = " or ".join([tag for tag in group_list])
+    if tags_groups is not None:
+        tags_group_str = []
+        for tags_group in tags_groups:
+            group_list = []
+            for tag in tags_group["tags"]:
+                if type(tag) is int:
+                    group_list.append(medialib_db.get_tag_name_by_id(tag))
+                else:
+                    group_list.append(medialib_db.get_tag_name_by_alias(tag))
+            tags_group["group_str"] = " or ".join([tag for tag in group_list])
 
-    title = "Search query results for {}".format(
-        (" and ".join([("not " if tags_group["not"] else "") + tags_group["group_str"] for tags_group in tags_groups]))
-    )
+        title = "Search query results for {}".format(
+            (" and ".join([("not " if tags_group["not"] else "") + tags_group["group_str"] for tags_group in tags_groups]))
+        )
+    else:
+        title = "Content in medialib database"
     template_kwargs = {
         'title': title,
         '_glob': None,
@@ -132,6 +204,8 @@ def medialib_tag_search():
         'args': _args,
         'enable_external_scripts': shared_code.enable_external_scripts
     }
+
+    connection.close()
 
     return flask.render_template(
         'index.html',
@@ -141,6 +215,7 @@ def medialib_tag_search():
         query_data=json.dumps(query_data),
         page=page,
         max_pages=max_pages,
+        items_per_page = items_per_page,
         thumbnail=shared_code.get_thumbnail_size(),
         **template_kwargs
     )

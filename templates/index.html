@@ -74,17 +74,17 @@
     </div>
     {% if _glob != None %}
         {% if page > 0 %}
-            <a href="{{ url }}?glob={{ _glob }}&page={{ page-1 }}">Back</a>
+            <a href="{{ url }}?glob={{ _glob }}&page={{ page-1 }}&per_page={{ items_per_page }}">Back</a>
         {% endif %}
         {% if page+1 < max_pages %}
-            <a href="{{ url }}?glob={{ _glob }}&page={{ page+1 }}">Next</a>
+            <a href="{{ url }}?glob={{ _glob }}&page={{ page+1 }}&per_page={{ items_per_page }}"">Next</a>
         {% endif %}
     {% else %}
         {% if page > 0 %}
-            <a href="{{ url }}?page={{ page-1 }}{{ args }}">Back</a>
+            <a href="{{ url }}?page={{ page-1 }}{{ args }}&per_page={{ items_per_page }}"">Back</a>
         {% endif %}
         {% if page+1 < max_pages %}
-            <a href="{{ url }}?page={{ page+1 }}{{ args }}">Next</a>
+            <a href="{{ url }}?page={{ page+1 }}{{ args }}&per_page={{ items_per_page }}"">Next</a>
         {% endif %}
     {% endif %}
     {% if enable_external_scripts %}
