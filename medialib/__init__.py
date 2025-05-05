@@ -96,6 +96,11 @@ medialib_blueprint.register_blueprint(upload.upload_blueprint)
 @shared_code.login_validation
 def medialib_tag_search():
     EMPTY_GROUP = {"not": False, "tags": [], "count": 0}
+    def check_empty_group(tags_count, tags_list, not_tag) -> bool:
+        return len(tags_count) == 0 and len(tags_list) == 0 and len(not_tag) == 0 or \
+            len(tags_count) == 1 and int(tags_count[0]) == 0
+    def check_empty_tag(tags_count, tags_list) -> bool:
+        return len(tags_count) == 1 and int(tags_count[0]) == 1 and tags_list[0] == ""
 
     tags_count = flask.request.args.getlist('tags_count')
     tags_list = flask.request.args.getlist('tags')
@@ -109,8 +114,7 @@ def medialib_tag_search():
 
     connection = medialib_db.common.make_connection()
 
-    if len(tags_count) == 0 and len(tags_list) == 0 and len(not_tag) == 0 or \
-        len(tags_count) == 1 and int(tags_count[0]) == 0:
+    if check_empty_group(tags_count, tags_list, not_tag) or check_empty_tag(tags_count, tags_list):
         raw_content_list = medialib_db.files_by_tag_search.get_all_media(
             connection,
             limit=items_per_page,
