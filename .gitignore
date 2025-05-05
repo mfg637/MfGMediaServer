@@ -8,4 +8,5 @@ logs/*
 venv/
 .idea
 .python-version
-.code-workspace
+*.code-workspace
+*.bundle.js.LICENSE.txt
