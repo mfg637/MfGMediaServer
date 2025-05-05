@@ -35,18 +35,21 @@ $thumbnail-height: 144px
     width: 16px
     height: 16px
     margin-right: 0.5em
+    content: ""
+    display: inline-block
+    background-size: 16px 16px
 
   .derpibooru::before
-    content: url("../resources/db-favicon.svg")
+    background-image: url("https://derpibooru.org/favicon.svg")
 
   .twibooru::before
-    content: url("../resources/favicon-twibooru-min.svg")
+    background-image: url("https://cdn.twibooru.org/favicon.svg")
 
   .ponybooru::before
-    content: url("../resources/favicon-ponybooru-min.svg")
+    background-image: url("https://ponybooru.org/favicon.svg")
 
   .furbooru::before
-    content: url("../resources/favicon-furbooru-min.svg")
+    background-image: url("https://furbooru.org/favicon.svg")
 
   .e621::before
-    content: url("https://e621.net/favicon-16x16.png")
+    background-image: url("https://e621.net/favicon-16x16.png")
