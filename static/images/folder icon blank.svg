@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<svg
+		xmlns="http://www.w3.org/2000/svg"
+		version="1.1"
+		x="0px"
+		y="0px"
+		viewBox="0 0 192 144"
+		style="enable-background:new 0 0 192 144;"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
+		id="svg40"
+>
+	<linearGradient
+			id="back_side_linear_gradient"
+			gradientUnits="userSpaceOnUse"
+			x1="93.653816"
+			y1="-4.3538256"
+			x2="96.657471"
+			y2="18.423824"
+	>
+		<stop
+				offset="0"
+				style="stop-color:#FFEA8C"
+				id="stop4"
+		/>
+		<stop
+				offset="0.7974"
+				style="stop-color:#E6C229"
+				id="stop6"
+		/>
+		<stop
+				offset="1"
+				style="stop-color:#D6B834"
+				id="stop8"
+		/>
+	</linearGradient>
+	<radialGradient
+			id="back_side_radial_gradient"
+			cx="18.627119"
+			cy="11.757029"
+			r="154.3423"
+			gradientUnits="userSpaceOnUse"
+			fx="18.627119"
+			fy="11.757029"
+	>
+		<stop
+				offset="0"
+				style="stop-color:#FFEA8C"
+				id="stop13" />
+		<stop
+				offset="1"
+				style="stop-color:#E6C229;stop-opacity:0"
+				id="stop15"
+		/>
+	</radialGradient>
+	<linearGradient
+			id="front_side_linear_gradient"
+			gradientUnits="userSpaceOnUse"
+			x1="95.694916"
+			y1="22.5"
+			x2="96"
+			y2="144.1967"
+	>
+		<stop
+				offset="0"
+				style="stop-color:#FFEA8C"
+				id="stop21" />
+		<stop
+				offset="0.2231"
+				style="stop-color:#F6D443"
+				id="stop23"
+		/>
+		<stop
+				offset="0.741"
+				style="stop-color:#EDCB3A"
+				id="stop25"
+		/>
+		<stop
+				offset="1"
+				style="stop-color:#D6B834"
+				id="stop27"
+		/>
+	</linearGradient>
+	<radialGradient
+			id="front_side_radial_gradient"
+			cx="7.8078766"
+			cy="17.039852"
+			r="216.67191"
+			gradientTransform="matrix(1,0,0,0.7611,0,10.8711)"
+			gradientUnits="userSpaceOnUse"
+			fx="7.8078766"
+			fy="17.039852"
+	>
+		<stop
+				offset="0"
+				style="stop-color:#FFEFA8"
+				id="stop32"
+		/>
+		<stop
+				offset="1"
+				style="stop-color:#F6D443;stop-opacity:0"
+				id="stop34"
+		/>
+	</radialGradient>
+	<g id="back_side">
+		<path
+				d="M 69.56,0 H 8.08 c -1.3,0 -2.04,2.62 -2.04,2.62 0,0 0.11,8.35 0,11.13 C 5.96,16 4.54,16.62 3.59,16.7 0.7,16.94 3.65,16.8 1.06,16.73 0.4,16.71 0,17.94 0,17.94 V 144 H 192 V 16.7 c 0,0 -99.43,-0.14 -115.18,0 C 68.55,16.77 71.56,0 69.56,0 Z"
+				id="back_side_layer_1"
+				style="display:inline;fill:url(#back_side_linear_gradient)"
+		/>
+		<path
+				d="M 69.56,0 H 9.48 C 8.18,0 7.199489,1.5731576 6.84,2.62 5.635043,6.1288714 6.0297628,11.122349 5.9247458,13.902542 5.8397658,16.152359 4.14,16.62 3.19,16.7 0.3,16.94 3.65,16.8 1.06,16.73 0.4,16.71 0,17.94 0,17.94 V 144 H 192 V 16.7 c 0,0 -99.43,-0.14 -115.18,0 C 68.55,16.77 71.56,0 69.56,0 Z"
+				id="back_side_layer_2"
+				style="display:inline;fill:url(#back_side_radial_gradient)"
+		/>
+	</g>
+	<g id="front_side" style="display:inline">
+		<path
+				style="display:inline;fill:url(#front_side_linear_gradient)"
+				d="M 0,144 V 20 h 192 v 124 z"
+				id="front_side_layer_1"
+		/>
+		<path
+				style="display:inline;fill:url(#front_side_radial_gradient)"
+				d="M 0,20 H 192 V 144 H 0 Z"
+				id="front_side_layer_2"
+		/>
+	</g>
+	<image x="10px" y="30px" width="174px" height="108px" xlink:href="folder_icon.png"/>
+	<!--
+		overlay_position: 10x + 30y;
+		overlay_size: 174px * 108px;
+	-->
+</svg>
