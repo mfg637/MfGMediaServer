@@ -21,6 +21,8 @@ import pillow_heif
 import re
 import dataclasses
 from pyimglib.transcoding.encoders.srs_image_encoder import test_alpha_channel, SrsLossyJpegXlEncoder
+from pyimglib.decoders.srs import ClImage
+from pyimglib.decoders.srs import decode as decode_srs
 from werkzeug.datastructures import FileStorage
 
 from shared_code import EXTENSIONS_BY_MIME
@@ -95,27 +97,29 @@ def save_image(
     def generate_filename(mime):
         title_only = ''.join(random.choices(string.ascii_letters+string.digits, k=16))
         return title_only + EXTENSIONS_BY_MIME[mime], title_only
+    is_srs = False
     if mime == PNG_MIMETYPE:
         if img.has_transparency_data and test_alpha_channel(img):
             filename, file_title = generate_filename(WEBP_MIMETYPE)
             file_path = outdir.joinpath(filename)
             img.save(file_path, quality=95)
         else:
+            is_srs = True
             filename, file_title = generate_filename(JPEG_MIMETYPE)
             file_path = outdir.joinpath(filename)
 
             src_tmp_file = tempfile.NamedTemporaryFile(mode='wb', suffix=".png", delete=True)
             img.save(src_tmp_file, format="PNG", compress_level=0)
 
-            srs_jxl_encoder = SrsLossyJpegXlEncoder(90, file_size, 40)
-            file_path = srs_jxl_encoder.encode(pathlib.Path(src_tmp_file.name), file_path)
+            srs_encoder = SrsLossyJpegXlEncoder(90, file_size, 40)
+            file_path = srs_encoder.encode(pathlib.Path(src_tmp_file.name), file_path)
             src_tmp_file.close()
     else:
         filename, file_title = generate_filename(mime)
         file_path = outdir.joinpath(filename)
         print("SAVE OUTPUT FILE", file_path)
         source_file.save(file_path)
-    return file_path, file_title
+    return file_path, file_title, is_srs
 
 
 @dataclasses.dataclass
@@ -219,7 +223,7 @@ def upload_file():
     outdir = shared_code.get_output_directory()
     outdir.mkdir(parents=True, exist_ok=True)
 
-    file_path, saved_name = save_image(file, file_size, mime, outdir, img)
+    file_path, saved_name, is_srs = save_image(file, file_size, mime, outdir, img)
     if img is not None:
         img.close()
 
@@ -246,6 +250,15 @@ def upload_file():
             medialib_db.register_representation(
                 content_id, "json+xz", -1, relative_file_path, connection
             )
+        if is_srs:
+            srs_image = decode_srs(file_path)
+            levels = srs_image.get_levels()
+            for level in levels:
+                representation_file = outdir.joinpath(levels[level])
+                relative_repr_path = str(representation_file.relative_to(medialib_db.config.relative_to))
+                medialib_db.register_representation(
+                    content_id, representation_file.suffix[1:], level, relative_repr_path, connection
+                )
         connection.commit()
         connection.close()
     except Exception as e:
