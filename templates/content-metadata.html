@@ -3,281 +3,249 @@
 {%- endmacro %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Content metadata for «{{ file_name }}»</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/visuals.css') }}">
     <style>
-        h1{
+        h1 {
             max-width: 100%;
             overflow: hidden;
         }
-        .origin_link{
+
+        .origin_link {
             display: inline-block;
             margin: 1em 0;
         }
 
-        .img{
+        .img {
             max-width: 100%;
         }
 
-        textarea{
+        textarea {
             width: 95%;
         }
     </style>
 </head>
+
 <body>
     {% include 'modules/header.html' %}
     <h1>Content metadata for «{{ file_name }}»</h1>
     <h2>Preview</h2>
     {% if item.icon is not none %}
-        <a class="item icon" href="{{ item.link }}" title="{{ item.file_name }}">
-    {% else %}
+    <a class="item icon" href="{{ item.link }}" title="{{ item.file_name }}">
+        {% else %}
         <a class="item" href="{{ item.link }}" title="{{ item.file_name }}">
-    {% endif %}
-    {% if item.icon is not none %}
-        {% if item.sources is not none %}
+            {% endif %}
+            {% if item.icon is not none %}
+            {% if item.sources is not none %}
             <picture>
-            {% for source in item.sources %}
-                <source srcset="{{ source }}"/>
-            {% endfor %}
-        {% endif %}
-        <img src="{{ item.icon }}"/>
-        {% if item.sources is not none %}
+                {% for source in item.sources %}
+                <source srcset="{{ source }}" />
+                {% endfor %}
+                {% endif %}
+                <img src="{{ item.icon }}" />
+                {% if item.sources is not none %}
             </picture>
-        {% endif %}
-        <div class="title-wrapper">
-            {{ item.file_name }}
-        </div>
-    {% endif %}
-    </a>
-            <h2>Content metadata edit form</h2>
-            <form action="{{ request.path }}" method="POST">
+            {% endif %}
+            <div class="title-wrapper">
+                {{ item.file_name }}
+            </div>
+            {% endif %}
+        </a>
+        <h2>Content metadata edit form</h2>
+        <form action="{{ request.path }}" method="POST">
 
-                <label for="title">Title:</label>
-                <input id="title" type="text" name="content_title" value="{{ content_title }}">
-                <br/>
+            <label for="title">Title:</label>
+            <input id="title" type="text" name="content_title" value="{{ content_title }}">
+            <br />
 
-                <label for="origin">Origin:</label>
-                <input id="origin" type="text" name="origin_name" value="{{ origin_name }}">
-                <br/>
+            <label for="description">Description:</label><br />
+            <textarea id="description" rows="12" cols="80" name="description">{{ description }}</textarea>
+            <br />
 
-                <label for="origin_id">Origin ID:</label>
-                <input id="origin_id" type="text" name="origin_id" value="{{ origin_id }}">
-                <br/>
+            <label for="hide_content_checkbox">Is hidden:</label>
+            <input id="hide_content_checkbox" type="checkbox" name="hidden" {% if hidden %} checked {% endif %}>
+            <br />
 
-                <label for="description">Description:</label><br/>
-                <textarea id="description" rows="12" cols="80" name="description">{{ description }}</textarea>
-                <br/>
-
-                <label for="hide_content_checkbox">Is hidden:</label>
-                <input id="hide_content_checkbox" type="checkbox" name="hidden"
-                {% if hidden %}
-                       checked
-                {% endif %}
-                >
-                <br/>
-
-                {% if origin_link is not none %}
-                    <a href="{{origin_link}}" class="origin_link">Go to origin</a><br/>
-                {% endif %}
-
-                {% if derpibooru_dl_server and origin_name and origin_id %}
-                    {% if content_title %}
-                    <a
-                            href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&dl_orig=1&title={{ title_filter(content_title) }}"
-                    >
-                        Download original
-                    </a>
-                    {% else %}
-                    <a href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&dl_orig=1">Download original</a>
-                    {% endif %}
-                    <br/>
-                {% endif %}
-
-                {% macro image_render_link(format) -%}
-                    {% if prefix_id %}
-                        {% if content_title %}
-                            <a
-                                href="/image/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ title_filter(content_title) }}"
-                            >
-                                Render {{ format|upper() }}
-                            </a><br/>
-                        {% else %}
-                            <a
-                                href="/image/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1"
-                            >
-                                Render {{ format|upper() }}
-                            </a><br/>
-                        {% endif %}
-                    {% else %}
-                        {% if content_title %}
-                            <a
-                                href="/image/{{ format }}/{{ path_str }}?download=1&title={{ title_filter(content_title) }}"
-                            >
-                                Render {{ format|upper() }}
-                            </a><br/>
-                        {% else %}
-                            <a
-                                href="/image/{{ format }}/{{ path_str }}?download=1"
-                            >
-                                Render {{ format|upper() }}
-                            </a><br/>
-                        {% endif %}
-                    {% endif %}
-                {%- endmacro %}
-            {% if content_id %}
-                    <a href="/autodownload/mlid{{ content_id }}">
-                        Autodownload
-                    </a><br/>
+            {% macro image_render_link(format) -%}
+            {% if prefix_id %}
+            {% if content_title %}
+            <a
+                href="/image/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ title_filter(content_title) }}">
+                Render {{ format|upper() }}
+            </a><br />
             {% else %}
-                    <a href="/autodownload/{{ path_str }}">
-                        Autodownload
-                    </a><br/>
+            <a href="/image/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1">
+                Render {{ format|upper() }}
+            </a><br />
+            {% endif %}
+            {% else %}
+            {% if content_title %}
+            <a href="/image/{{ format }}/{{ path_str }}?download=1&title={{ title_filter(content_title) }}">
+                Render {{ format|upper() }}
+            </a><br />
+            {% else %}
+            <a href="/image/{{ format }}/{{ path_str }}?download=1">
+                Render {{ format|upper() }}
+            </a><br />
+            {% endif %}
+            {% endif %}
+            {%- endmacro %}
+            {% if content_id %}
+            <a href="/autodownload/mlid{{ content_id }}">
+                Autodownload
+            </a><br />
+            {% else %}
+            <a href="/autodownload/{{ path_str }}">
+                Autodownload
+            </a><br />
 
             {% endif %}
 
 
-{% for format in ('png', 'webp', 'jpeg') %}
-{{ image_render_link(format) }}
-{% endfor %}
+            {% for format in ('png', 'webp', 'jpeg') %}
+            {{ image_render_link(format) }}
+            {% endfor %}
 
-                <h3>Add new tags</h3>
+            <h3>Add new tags</h3>
 
-                <div id="tags_fields_wrapper"></div>
-                <button id="add_tag_fields_btn">Add tag…</button><br/>
+            <div id="tags_fields_wrapper"></div>
+            <button id="add_tag_fields_btn">Add tag…</button><br />
 
-                <input type="submit"/>
-            </form>
-            <script>
-                tags_wrappers = document.getElementById("tags_fields_wrapper");
-                add_tag_button = document.getElementById("add_tag_fields_btn");
+            <input type="submit" />
+        </form>
+        <script>
+            tags_wrappers = document.getElementById("tags_fields_wrapper");
+            add_tag_button = document.getElementById("add_tag_fields_btn");
 
-                var tag_counter = 0;
+            var tag_counter = 0;
 
-                TAG_CATEGORY = [
-                    '',
-                    'artist',
-                    'set',
-                    'copyright',
-                    'rating',
-                    'species',
-                    'content',
-                    'character'
-                ]
+            TAG_CATEGORY = [
+                '',
+                'artist',
+                'set',
+                'copyright',
+                'rating',
+                'species',
+                'content',
+                'character'
+            ]
 
-                add_tag_button.onclick = function () {
-                    let tag_wrapper = document.createElement("div");
-                    let tag_name_label = document.createElement("label");
-                    let tag_name_id = "tag_name_" + tag_counter;
-                    tag_name_label.htmlFor = tag_name_id;
-                    tag_name_label.innerText = "Name: ";
-                    let tag_name_field = document.createElement("input");
-                    tag_name_field.type = "text";
-                    tag_name_field.name = "tag_name";
-                    tag_name_field.id = tag_name_id;
-                    tag_wrapper.appendChild(tag_name_label);
-                    tag_wrapper.appendChild(tag_name_field);
+            add_tag_button.onclick = function () {
+                let tag_wrapper = document.createElement("div");
+                let tag_name_label = document.createElement("label");
+                let tag_name_id = "tag_name_" + tag_counter;
+                tag_name_label.htmlFor = tag_name_id;
+                tag_name_label.innerText = "Name: ";
+                let tag_name_field = document.createElement("input");
+                tag_name_field.type = "text";
+                tag_name_field.name = "tag_name";
+                tag_name_field.id = tag_name_id;
+                tag_wrapper.appendChild(tag_name_label);
+                tag_wrapper.appendChild(tag_name_field);
 
-                    let tag_category_label = document.createElement("label");
-                    let tag_category_id = "tag_category_" + tag_counter;
-                    tag_category_label.htmlFor = tag_category_id;
-                    tag_category_label.innerText = "Category: ";
-                    let tag_category_field = document.createElement("select");
-                    tag_category_field.name = "tag_category";
-                    tag_category_field.id = tag_category_id;
-                    for (let tagCategoryElement of TAG_CATEGORY) {
-                        let optionElement = document.createElement("option");
-                        optionElement.innerText = tagCategoryElement;
-                        tag_category_field.appendChild(optionElement);
-                    }
-                    tag_wrapper.appendChild(tag_category_label);
-                    tag_wrapper.appendChild(tag_category_field);
+                let tag_category_label = document.createElement("label");
+                let tag_category_id = "tag_category_" + tag_counter;
+                tag_category_label.htmlFor = tag_category_id;
+                tag_category_label.innerText = "Category: ";
+                let tag_category_field = document.createElement("select");
+                tag_category_field.name = "tag_category";
+                tag_category_field.id = tag_category_id;
+                for (let tagCategoryElement of TAG_CATEGORY) {
+                    let optionElement = document.createElement("option");
+                    optionElement.innerText = tagCategoryElement;
+                    tag_category_field.appendChild(optionElement);
+                }
+                tag_wrapper.appendChild(tag_category_label);
+                tag_wrapper.appendChild(tag_category_field);
 
-                    let tag_alias_label = document.createElement("label");
-                    let tag_alias_id = "tag_alias_" + tag_counter;
-                    tag_alias_label.htmlFor = tag_alias_id;
-                    tag_alias_label.innerText = "Alias: ";
-                    let tag_alias_field = document.createElement("input");
-                    tag_alias_field.type = "text";
-                    tag_alias_field.name = "tag_alias";
-                    tag_alias_field.id = tag_alias_id;
-                    tag_wrapper.appendChild(tag_alias_label);
-                    tag_wrapper.appendChild(tag_alias_field);
+                let tag_alias_label = document.createElement("label");
+                let tag_alias_id = "tag_alias_" + tag_counter;
+                tag_alias_label.htmlFor = tag_alias_id;
+                tag_alias_label.innerText = "Alias: ";
+                let tag_alias_field = document.createElement("input");
+                tag_alias_field.type = "text";
+                tag_alias_field.name = "tag_alias";
+                tag_alias_field.id = tag_alias_id;
+                tag_wrapper.appendChild(tag_alias_label);
+                tag_wrapper.appendChild(tag_alias_field);
 
-                    let delete_button = document.createElement("button");
-                    delete_button.wrapper_context = tag_wrapper;
-                    delete_button.innerText = "Delete tag";
-                    delete_button.onclick = function () {
-                        tags_wrappers.removeChild(this.wrapper_context);
-                        return false;
-                    }
-                    tag_wrapper.appendChild(delete_button);
-                    tags_wrappers.appendChild(tag_wrapper);
-                    tag_counter++;
+                let delete_button = document.createElement("button");
+                delete_button.wrapper_context = tag_wrapper;
+                delete_button.innerText = "Delete tag";
+                delete_button.onclick = function () {
+                    tags_wrappers.removeChild(this.wrapper_context);
                     return false;
                 }
-            </script>
-            <h2>Content tags list</h2>
-            {% for category, tag_list in tags.items() %}
-                <h3>{{category}}</h3>
-                <ul>
-                {% for tag in tag_list %}
-                    <li>
-                        <a href="/medialib/tag_manager/show_tag/{{ tag[0] }}">{{ tag[1] }}</a>
-                        <a href="/medialib/tag_manager/delete_tag/content{{ content_id }}tag{{ tag[0] }}">
-                            delete
-                        </a>
-                    </li>
-                {% endfor %}
-                </ul>
+                tag_wrapper.appendChild(delete_button);
+                tags_wrappers.appendChild(tag_wrapper);
+                tag_counter++;
+                return false;
+            }
+        </script>
+        <h2>Content tags list</h2>
+        {% for category, tag_list in tags.items() %}
+        <h3>{{category}}</h3>
+        <ul>
+            {% for tag in tag_list %}
+            <li>
+                <a href="/medialib/tag_manager/show_tag/{{ tag[0] }}">{{ tag[1] }}</a>
+                <a href="/medialib/tag_manager/delete_tag/content{{ content_id }}tag{{ tag[0] }}">
+                    delete
+                </a>
+            </li>
             {% endfor %}
-            {% if albums %}
-                <h2>In albums</h2>
-                <ul>
-                {% for album_id, album_title, album_artist in albums %}
-                    <li><a href="/medialib/album/show/id{{ album_id }}">{{ album_title }} by {{ album_artist }}</a></li>
-                {% endfor %}
-                </ul>
-            {% endif %}
-            {% if 'set' in tags %}
-                <h2>Possible albums</h2>
-                <ul>
-                {% for set_tag in tags['set'] %}
-                    {% for artist_tag in tags['artist'] %}
-                        <li><a href="/medialib/album/edit?set_tag_id={{set_tag[0]}}&artist_tag_id={{artist_tag[0]}}">
-                            {{ set_tag[1] }} by {{ artist_tag[1] }}
-                        </a></li>
-                    {% endfor %}
-                {% endfor %}
-                </ul>
-            {% endif %}
-            {% if representations %}
-                <h2>Representations</h2>
-                <ul>
-                {% for representation in representations %}
-                    <li><a href="/orig/{{ representation.get_path_str() }}">
-                        level {{ representation.compatibility_level }} ({{ representation.format }})
-                    </a></li>
-                {% endfor %}
-                </ul>
-            {% endif %}
-            {% if content_id %}
-                <a href="/medialib/db-drop-thumbnails/{{ content_id }}">Drop thumbnails</a><br />
-                <a href="/autotag/mlid{{ content_id }}">Autotag</a>
-            {% else %}
-                <a href="/autotag/{{ path_str }}">Autotag</a>
-            {% endif %}
-            {% if derpibooru_dl_server and origin_name and origin_id %}
-                <a href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&rewrite=1">Redownload content</a>
-            {% endif %}
-            {% if content_id %}
-                <form action = "/medialib/content-update/{{ content_id }}" method="POST" enctype="multipart/form-data">
-                    Replace content
-                    <input type="file" name="content-update-file" />
-                    <input type="submit"/>
-                </form>
-            {% endif %}
+        </ul>
+        {% endfor %}
+        {% if albums %}
+        <h2>In albums</h2>
+        <ul>
+            {% for album_id, album_title, album_artist in albums %}
+            <li><a href="/medialib/album/show/id{{ album_id }}">{{ album_title }} by {{ album_artist }}</a></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if 'set' in tags %}
+        <h2>Possible albums</h2>
+        <ul>
+            {% for set_tag in tags['set'] %}
+            {% for artist_tag in tags['artist'] %}
+            <li><a href="/medialib/album/edit?set_tag_id={{set_tag[0]}}&artist_tag_id={{artist_tag[0]}}">
+                    {{ set_tag[1] }} by {{ artist_tag[1] }}
+                </a></li>
+            {% endfor %}
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if representations %}
+        <h2>Representations</h2>
+        <ul>
+            {% for representation in representations %}
+            <li><a href="/orig/{{ representation.get_path_str() }}">
+                    level {{ representation.compatibility_level }} ({{ representation.format }})
+                </a></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if content_id %}
+        <a href="/medialib/db-drop-thumbnails/{{ content_id }}">Drop thumbnails</a><br />
+        <a href="/autotag/mlid{{ content_id }}">Autotag</a>
+        {% else %}
+        <a href="/autotag/{{ path_str }}">Autotag</a>
+        {% endif %}
+        {% if derpibooru_dl_server and origin_name and origin_id %}
+        <a href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&rewrite=1">Redownload content</a>
+        {% endif %}
+        {% if content_id %}
+        <form action="/medialib/content-update/{{ content_id }}" method="POST" enctype="multipart/form-data">
+            Replace content
+            <input type="file" name="content-update-file" />
+            <input type="submit" />
+        </form>
+        {% endif %}
 </body>
+
 </html>
