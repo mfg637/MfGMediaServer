@@ -732,19 +732,20 @@ def get_content_metadata(pathstr, content_id):
 def autodownload(pathstr, content_id):
     def body(path: pathlib.Path | None, content_id=None):
         connection = medialib_db.common.make_connection()
-        db_query_results = None
-        db_albums_registered = None
-        is_file = True
+        db_content = None
         if content_id is not None:
-            is_file = False
-            db_query_results = medialib_db.get_content_metadata_by_content_id(
+            db_content = medialib_db.content.get_content_metadata_by_id(
                 content_id, connection
             )
-            path = pathlib.Path(db_query_results[1])
-        else:
-            db_query_results = medialib_db.get_content_metadata_by_file_path(
+            if db_content is None:
+                return flask.abort(404)
+            path = db_content.file_path
+        elif path is not None:
+            db_content = medialib_db.content.get_content_metadata_by_path(
                 path, connection
             )
+        if path is None:
+            raise ValueError("Unexpected behaviour: path is still None")
         content_title: str | None = None
         prefix_id = None
         path_str = shared_code.str_to_base32(str(path))
@@ -753,27 +754,12 @@ def autodownload(pathstr, content_id):
             "origin_name": "",
             "origin_id": "",
         }
-        if db_query_results is not None:
-            template_kwargs["content_id"] = db_query_results[0]
-            content_id = db_query_results[0]
-            if db_query_results[2] is not None:
-                content_title = db_query_results[2]
-            if db_query_results[-3] is not None:
-                template_kwargs["origin_name"] = db_query_results[-3]
-                if (
-                    db_query_results[-2] is not None
-                    and template_kwargs["origin_name"] in ORIGIN_CLASS
-                ):
-                    prefix_id = "{}{}".format(
-                        ORIGIN_CLASS[
-                            template_kwargs["origin_name"]
-                        ]().get_prefix(),
-                        db_query_results[-2].replace("#", "-"),
-                    )
-            else:
-                prefix_id = "mlid{}".format(db_query_results[0])
-            if db_query_results[-2] is not None:
-                template_kwargs["origin_id"] = db_query_results[-2]
+        if db_content is not None:
+            template_kwargs["content_id"] = str(db_content.content_id)
+            content_id = db_content.content_id
+            if db_content.title is not None:
+                content_title = db_content.title
+            prefix_id = "mlid{}".format(db_content.content_id)
         representations: (
             list[medialib_db.srs_indexer.ContentRepresentationUnit] | None
         ) = None
