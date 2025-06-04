@@ -798,14 +798,18 @@ def compare_image():
     image_data_list: list[ImageData] = list()
 
     for content_id, alternate_version in content_id_list:
-        raw_content_data = medialib_db.get_content_metadata_by_content_id(
+        db_content = medialib_db.content.get_content_metadata_by_id(
             content_id, db_connection
         )
+        if db_content is None:
+            raise ValueError(
+                f"Unexpected behavior: not found content by id {content_id}"
+            )
         representations: list[
             medialib_db.srs_indexer.ContentRepresentationUnit
         ] = list()
 
-        file_path = shared_code.root_dir.joinpath(raw_content_data[1])
+        file_path = shared_code.root_dir.joinpath(db_content.file_path)
 
         if file_path.suffix == ".srs":
             representations = load_representations(
@@ -826,15 +830,15 @@ def compare_image():
 
         image_data = ImageData(
             content_id,
-            shared_code.str_to_base32(str(raw_content_data[1])),
-            raw_content_data[3],
+            shared_code.str_to_base32(str(db_content.file_path)),
+            db_content[3],
             file_path.suffix,
             img.width,
             img.height,
             representations,
-            raw_content_data[6],
-            raw_content_data[7],
-            raw_content_data[5],
+            db_content[6],
+            db_content[7],
+            db_content[5],
             alternate_version,
             image=img,
         )

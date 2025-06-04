@@ -445,117 +445,6 @@ def detect_content_type(path: pathlib.Path):
         raise Exception("undetected content type", path.suffix, path)
 
 
-class Origin(abc.ABC):
-    @abc.abstractmethod
-    def generate_url(self, origin_content_id: str) -> str:
-        pass
-
-    @abc.abstractmethod
-    def get_prefix(self) -> str:
-        pass
-
-
-class SimpleOrigin(Origin):
-    @abc.abstractmethod
-    def _get_template_string(self) -> str:
-        pass
-
-    def generate_url(self, origin_content_id):
-        return self._get_template_string().format(origin_content_id)
-
-
-class DerpibooruOrigin(SimpleOrigin):
-    def _get_template_string(self):
-        return "https://derpibooru.org/images/{}"
-
-    def get_prefix(self):
-        return "db"
-
-
-class PonybooruOrigin(SimpleOrigin):
-    def _get_template_string(self):
-        return "https://ponybooru.org/images/{}"
-
-    def get_prefix(self):
-        return "pb"
-
-
-class TwibooruOrigin(SimpleOrigin):
-    def _get_template_string(self):
-        return "https://twibooru.org/{}"
-
-    def get_prefix(self):
-        return "tb"
-
-
-class E621Origin(SimpleOrigin):
-    def _get_template_string(self):
-        return "https://e621.net/posts/{}"
-
-    def get_prefix(self):
-        return "ef"
-
-
-class FurbooruOrigin(SimpleOrigin):
-    def _get_template_string(self):
-        return "https://furbooru.org/images/{}"
-
-    def get_prefix(self):
-        return "fb"
-
-
-class TantabusAIOrigin(SimpleOrigin):
-    def _get_template_string(self):
-        return "https://tantabus.ai/images/{}"
-
-    def get_prefix(self):
-        return "ta"
-
-
-class CivitAIOrigin(SimpleOrigin):
-    def _get_template_string(self):
-        return "https://civitai.com/images/{}"
-
-    def get_prefix(self):
-        return "ca"
-
-
-class FurAffinityOrigin(SimpleOrigin):
-    def _get_template_string(self):
-        return "https://www.furaffinity.net/view/{}/"
-
-    def get_prefix(self):
-        return "fa"
-
-
-class TwitterXOrigin(Origin):
-    def generate_url(self, origin_content_id):
-        id_parts: list[str] = origin_content_id.split("#")
-        print("ID PARTS", id_parts)
-        if len(id_parts) == 3:
-            return f"https://x.com/{id_parts[0]}/status/{id_parts[1]}/photo/{id_parts[2]}"
-        elif len(id_parts) == 2:
-            return f"https://x.com/{id_parts[0]}/status/{id_parts[1]}"
-        else:
-            raise ValueError("Incorrect X (Twitter) ID!")
-
-    def get_prefix(self):
-        return "tx-"
-
-
-ORIGIN_CLASS: dict[str, typing.Type[Origin]] = {
-    "derpibooru": DerpibooruOrigin,
-    "ponybooru": PonybooruOrigin,
-    "twibooru": TwibooruOrigin,
-    "e621": E621Origin,
-    "furbooru": FurbooruOrigin,
-    "tantabus": TantabusAIOrigin,
-    "furaffinity": FurAffinityOrigin,
-    "twitter": TwitterXOrigin,
-    "civit ai": CivitAIOrigin,
-}
-
-
 @app.route(
     "/content_metadata/mlid<int:content_id>",
     methods=["GET", "POST"],
@@ -567,8 +456,8 @@ ORIGIN_CLASS: dict[str, typing.Type[Origin]] = {
     defaults={"content_id": None},
 )
 @shared_code.login_validation
-def get_content_metadata(pathstr, content_id):
-    def body(path: pathlib.Path | None, content_id=None):
+def get_content_metadata(pathstr, content_id) -> flask.Response | str:
+    def body(path: pathlib.Path | None, content_id=None) -> str:
         connection = medialib_db.common.make_connection()
         db_content = None
         db_albums_registered = None
@@ -668,6 +557,7 @@ def get_content_metadata(pathstr, content_id):
             medialib_db.add_tags_for_content(content_id, tags, connection)
         tags = dict()
         representations = None
+        origins: list[medialib_db.origin.Origin] = []
         if content_id is not None:
             tags = medialib_db.get_tags_by_content_id(
                 content_id, auto_open_connection=False
@@ -675,6 +565,10 @@ def get_content_metadata(pathstr, content_id):
             representations = medialib_db.get_representation_by_content_id(
                 content_id, connection
             )
+            origins = medialib_db.origin.get_origins_of_content(
+                connection, content_id
+            )
+            print("Origins", origins)
         connection.close()
         if is_file:
             return flask.render_template(
@@ -685,6 +579,7 @@ def get_content_metadata(pathstr, content_id):
                 derpibooru_dl_server=config.derpibooru_dl_server,
                 albums=None,
                 representations=None,
+                origins=origins,
                 **template_kwargs,
             )
         elif db_content is not None:
@@ -707,6 +602,7 @@ def get_content_metadata(pathstr, content_id):
                 derpibooru_dl_server=config.derpibooru_dl_server,
                 albums=db_albums_registered,
                 representations=representations,
+                origins=origins,
                 **template_kwargs,
             )
         else:
@@ -716,6 +612,13 @@ def get_content_metadata(pathstr, content_id):
         return body(None, content_id)
     elif pathstr is not None:
         return file_url_template(body, pathstr)
+    else:
+        raise NotImplementedError(
+            (
+                "Unexpected Behaviour "
+                "content_id is None, but pathstr is also None"
+            )
+        )
 
 
 @app.route(
@@ -759,7 +662,17 @@ def autodownload(pathstr, content_id):
             content_id = db_content.content_id
             if db_content.title is not None:
                 content_title = db_content.title
-            prefix_id = "mlid{}".format(db_content.content_id)
+            origins = medialib_db.origin.get_origins_of_content(
+                connection, content_id
+            )
+            if len(origins):
+                for origin in origins:
+                    if origin.origin_id is not None:
+                        prefix = origin.get_prefix()
+                        if prefix is not None:
+                            prefix_id = "{}{}".format(prefix, origin.origin_id)
+            if prefix_id is None:
+                prefix_id = "mlid{}".format(db_content.content_id)
         representations: (
             list[medialib_db.srs_indexer.ContentRepresentationUnit] | None
         ) = None
@@ -815,7 +728,12 @@ def autodownload(pathstr, content_id):
                     .replace("#", "-hash-")
                 )
                 return flask.redirect(
-                    f"/image/jpeg/{path_str}?download=1&origin_id={prefix_id}&title={safe_title}"
+                    (
+                        (
+                            f"/image/jpeg/{path_str}?download=1&"
+                            f"origin_id={prefix_id}&title={safe_title}"
+                        )
+                    )
                 )
             elif prefix_id is not None:
                 return flask.redirect(

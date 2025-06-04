@@ -186,6 +186,12 @@
                 return false;
             }
         </script>
+        <h2>Origins</h2>
+        <ul>
+            {% for origin in origins %}
+            <li><a href="{{ origin.generate_url() }}">{{origin.origin_name}}</a></li>
+            {% endfor %}
+        </ul>
         <h2>Content tags list</h2>
         {% for category, tag_list in tags.items() %}
         <h3>{{category}}</h3>
