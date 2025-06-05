@@ -456,169 +456,181 @@ def detect_content_type(path: pathlib.Path):
     defaults={"content_id": None},
 )
 @shared_code.login_validation
-def get_content_metadata(pathstr, content_id) -> flask.Response | str:
-    def body(path: pathlib.Path | None, content_id=None) -> str:
-        connection = medialib_db.common.make_connection()
-        db_content = None
-        db_albums_registered = None
-        is_file = True
+def get_content_metadata(pathstr: str | None, content_id: int | None) -> str:
+    """
+    Retrieve and process metadata for a media content item,
+    identified by either a path string or a content ID.
+
+    This function handles both GET and POST requests:
+    - On GET, it fetches metadata and related information
+        for the specified content.
+    - On POST, it processes form data
+        to update or register new content metadata and associated tags.
+
+    Args:
+        pathstr (str | None):
+            Base32-encoded string representing the file path of the content,
+            or None.
+        content_id (int | None):
+            Unique identifier of the content in the database, or None.
+
+    Returns:
+        str: Rendered HTML template for the content metadata page.
+
+    Raises:
+        werkzeug.exceptions.HTTPException:
+            If the content is not found, both identifiers are None,
+            or unexpected errors occur.
+    """
+
+    def get_db_content_and_path(connection, content_id, path):
         if content_id is not None:
-            is_file = False
             db_content = medialib_db.content.get_content_metadata_by_id(
                 content_id, connection
             )
             if db_content is None:
-                raise Exception(f"Content by ID {content_id} not found")
-            path = db_content.file_path
-            db_albums_registered = medialib_db.get_content_albums(
-                content_id, connection
-            )
-            if (
-                db_albums_registered is not None
-                and len(db_albums_registered) == 0
-            ):
-                db_albums_registered = None
+                return flask.abort(
+                    404, f"Content by ID {content_id} not found"
+                )
+            return db_content, db_content.file_path, False
         elif path is not None:
             db_content = medialib_db.content.get_content_metadata_by_path(
                 path, connection
             )
+            return db_content, path, True
         else:
-            raise ValueError("content_id is None and path is None")
-        print("DB content", db_content)
-        template_kwargs = {
-            "content_title": "",
-            "content_id": "",
-            "hidden": False,
-            "description": "",
-            "prefix_id": None,
+            return flask.abort(400, "content_id and path are both None")
+
+    def build_template_kwargs(path, db_content):
+        kwargs = {
+            "content_title": (
+                db_content.title if db_content and db_content.title else ""
+            ),
+            "content_id": db_content.content_id if db_content else "",
+            "hidden": db_content.hidden if db_content else False,
+            "description": (
+                db_content.description
+                if db_content and db_content.description
+                else ""
+            ),
+            "prefix_id": (
+                f"mlid{db_content.content_id}" if db_content else None
+            ),
             "path_str": shared_code.str_to_base32(str(path)),
         }
-        if db_content is not None:
-            template_kwargs["content_id"] = db_content.content_id
-            content_id = db_content.content_id
-            if db_content.title is not None:
-                template_kwargs["content_title"] = db_content.title
+        return kwargs
 
-            template_kwargs["prefix_id"] = "mlid{}".format(
-                db_content.content_id
+    def process_form(db_content, path):
+        content_new_data = {
+            "content_title": None,
+            "content_id": db_content.content_id if db_content else None,
+            "hidden": False,
+            "description": None,
+        }
+        if db_content is None:
+            content_new_data["file_path"] = path
+            content_new_data["content_type"] = detect_content_type(path)
+            content_new_data["addition_date"] = (
+                datetime.datetime.fromtimestamp(path.stat().st_mtime)
             )
+        for key in flask.request.form:
+            value = flask.request.form[key].strip()
+            if key in content_new_data and value:
+                content_new_data[key] = value
+        if content_new_data["hidden"] == "on":
+            content_new_data["hidden"] = True
+        tag_names = flask.request.form.getlist("tag_name")
+        tag_categories = flask.request.form.getlist("tag_category")
+        tag_aliases = flask.request.form.getlist("tag_alias")
+        for i, tag_category in enumerate(tag_categories):
+            if not tag_category:
+                tag_categories[i] = None
+        for i, tag_alias in enumerate(tag_aliases):
+            if not tag_alias:
+                tag_aliases[i] = tag_names[i]
+        tags = list(zip(tag_names, tag_categories, tag_aliases))
+        return content_new_data, tags
 
-            if db_content.description is not None:
-                template_kwargs["description"] = db_content.description
-            template_kwargs["hidden"] = db_content.hidden
-        if len(flask.request.form):
-            content_new_data = {
-                "content_title": None,
-                "content_id": None,
-                "hidden": False,
-                "description": None,
-            }
-            if db_content is not None:
-                content_new_data["content_id"] = db_content.content_id
-            else:
-                content_new_data["file_path"] = path
-                content_new_data["content_type"] = detect_content_type(path)
-                content_new_data["addition_date"] = (
-                    datetime.datetime.fromtimestamp(path.stat().st_mtime)
-                )
-            for key in flask.request.form:
-                if key in content_new_data and len(
-                    flask.request.form[key].strip()
-                ):
-                    content_new_data[key] = flask.request.form[key].strip()
-                if key in template_kwargs:
-                    template_kwargs[key] = flask.request.form[key].strip()
-            if content_new_data["hidden"] == "on":
-                content_new_data["hidden"] = True
-            logger.debug("content_new_data: {}".format(content_new_data))
-            tag_names = flask.request.form.getlist("tag_name")
-            tag_categories = flask.request.form.getlist("tag_category")
-            tag_aliases = flask.request.form.getlist("tag_alias")
-            for i, tag_category in enumerate(tag_categories):
-                if len(tag_category) == 0:
-                    tag_categories[i] = None
-            for i, tag_alias in enumerate(tag_aliases):
-                if len(tag_alias) == 0:
-                    tag_aliases[i] = tag_names[i]
-            tags = list(zip(tag_names, tag_categories, tag_aliases))
-            logger.debug("tags: {}".format(tags))
-            if db_content is not None:
-                medialib_db.content.content_update(
-                    connection=connection, **content_new_data
-                )
-            else:
-                content_id = medialib_db.content_register(
-                    **content_new_data, connection=connection
-                )
-            if content_id is None:
-                raise ValueError(
-                    "Unexpected behaviour: content_id is still None"
-                )
-            medialib_db.add_tags_for_content(content_id, tags, connection)
-        tags = dict()
-        representations = None
-        origins: list[medialib_db.origin.Origin] = []
-        if content_id is not None:
-            tags = medialib_db.get_tags_by_content_id(
-                content_id, auto_open_connection=False
-            )
-            representations = medialib_db.get_representation_by_content_id(
-                content_id, connection
-            )
-            origins = medialib_db.origin.get_origins_of_content(
-                connection, content_id
-            )
-            print("Origins", origins)
-        connection.close()
-        if is_file:
-            return flask.render_template(
-                "content-metadata.html",
-                item=filesystem.browse.get_file_info(path),
-                file_name=path.name,
-                tags=tags,
-                derpibooru_dl_server=config.derpibooru_dl_server,
-                albums=None,
-                representations=None,
-                origins=origins,
-                **template_kwargs,
-            )
-        elif db_content is not None:
-            file_item = None
-            try:
-                file_item = filesystem.browse.get_db_content_info(
-                    db_content.content_id,
-                    str(db_content.file_path),
-                    db_content.content_type,
-                    db_content.title,
-                    icon_scale=2,
-                )[0]
-            except FileNotFoundError:
-                pass
-            return flask.render_template(
-                "content-metadata.html",
-                item=file_item,
-                file_name=path.name,
-                tags=tags,
-                derpibooru_dl_server=config.derpibooru_dl_server,
-                albums=db_albums_registered,
-                representations=representations,
-                origins=origins,
-                **template_kwargs,
+    # --- code body ---
+    connection = medialib_db.common.make_connection()
+    path = None
+    if pathstr is not None:
+        path = pathlib.Path(shared_code.base32_to_str(pathstr))
+    db_content, path, is_file = get_db_content_and_path(
+        connection, content_id, path
+    )
+    template_kwargs = build_template_kwargs(path, db_content)
+
+    # (POST) form processing
+    if flask.request.method == "POST" and len(flask.request.form):
+        content_new_data, tags = process_form(db_content, path)
+        if db_content:
+            medialib_db.content.content_update(
+                connection=connection, **content_new_data
             )
         else:
-            raise ValueError("db_content is None and not file")
-
-    if content_id is not None:
-        return body(None, content_id)
-    elif pathstr is not None:
-        return file_url_template(body, pathstr)
-    else:
-        raise NotImplementedError(
-            (
-                "Unexpected Behaviour "
-                "content_id is None, but pathstr is also None"
+            content_id = medialib_db.content_register(
+                **content_new_data, connection=connection
             )
+        if content_id is None:
+            connection.close()
+            flask.abort(500, "Unexpected behaviour: content_id is still None")
+        medialib_db.add_tags_for_content(content_id, tags, connection)
+
+    # fetching additional data
+    tags = {}
+    representations = None
+    origins: list[medialib_db.origin.Origin] = []
+    if content_id is not None:
+        tags = medialib_db.get_tags_by_content_id(
+            content_id, auto_open_connection=False
         )
+        representations = medialib_db.get_representation_by_content_id(
+            content_id, connection
+        )
+        origins = medialib_db.origin.get_origins_of_content(
+            connection, content_id
+        )
+        albums = medialib_db.get_content_albums(content_id, connection)
+    connection.close()
+
+    # render template
+    if is_file:
+        return flask.render_template(
+            "content-metadata.html",
+            item=filesystem.browse.get_file_info(path),
+            file_name=path.name,
+            tags=tags,
+            derpibooru_dl_server=config.derpibooru_dl_server,
+            albums=None,
+            representations=None,
+            origins=origins,
+            **template_kwargs,
+        )
+    elif db_content is not None:
+        try:
+            file_item = filesystem.browse.get_db_content_info(
+                db_content.content_id,
+                str(db_content.file_path),
+                db_content.content_type,
+                db_content.title,
+                icon_scale=2,
+            )[0]
+        except FileNotFoundError:
+            file_item = None
+        return flask.render_template(
+            "content-metadata.html",
+            item=file_item,
+            file_name=path.name,
+            tags=tags,
+            derpibooru_dl_server=config.derpibooru_dl_server,
+            albums=albums,
+            representations=representations,
+            origins=origins,
+            **template_kwargs,
+        )
+    else:
+        flask.abort(500, "db_content is None and not file")
 
 
 @app.route(
