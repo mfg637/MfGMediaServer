@@ -189,7 +189,14 @@
         <h2>Origins</h2>
         <ul>
             {% for origin in origins %}
-            <li><a href="{{ origin.generate_url() }}">{{origin.origin_name}}</a></li>
+            <li>
+                <a href="{{ origin.generate_url() }}">{{origin.origin_name}}</a>
+                {% if derpibooru_dl_server and origin.origin_name and origin.origin_id %}
+                <a href="{{ derpibooru_dl_server}}/{{ origin.origin_name }}?id={{ origin.origin_id }}&rewrite=1">
+                    Redownload content
+                </a>
+                {% endif %}
+            </li>
             {% endfor %}
         </ul>
         <h2>Content tags list</h2>
@@ -241,9 +248,6 @@
         <a href="/autotag/mlid{{ content_id }}">Autotag</a>
         {% else %}
         <a href="/autotag/{{ path_str }}">Autotag</a>
-        {% endif %}
-        {% if derpibooru_dl_server and origin_name and origin_id %}
-        <a href="{{ derpibooru_dl_server}}/{{ origin_name }}?id={{ origin_id }}&rewrite=1">Redownload content</a>
         {% endif %}
         {% if content_id %}
         <form action="/medialib/content-update/{{ content_id }}" method="POST" enctype="multipart/form-data">
