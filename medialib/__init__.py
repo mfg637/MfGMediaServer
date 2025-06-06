@@ -737,8 +737,8 @@ class ImageData:
     width: int
     height: int
     representations: list[medialib_db.srs_indexer.ContentRepresentationUnit]
-    source: str
-    source_id: str
+    source: str | None
+    source_id: str | None
     download_date: datetime.datetime
     alternate_version: bool
     image: PIL.Image.Image | None
@@ -828,20 +828,49 @@ def compare_image():
         if not isinstance(img, PILimageClass):
             raise TypeError("Unidentified image type: {}".format(type(img)))
 
-        image_data = ImageData(
-            content_id,
-            shared_code.str_to_base32(str(db_content.file_path)),
-            db_content[3],
-            file_path.suffix,
-            img.width,
-            img.height,
-            representations,
-            db_content[6],
-            db_content[7],
-            db_content[5],
-            alternate_version,
-            image=img,
+        content_origin = None
+        origins = medialib_db.origin.get_origins_of_content(
+            db_connection, content_id
         )
+
+        for current_origin in origins:
+            if not current_origin.alternate:
+                content_origin = current_origin
+
+        if content_origin is None:
+            if len(origins):
+                content_origin = origins[0]
+
+        if content_origin is not None:
+            image_data = ImageData(
+                content_id,
+                shared_code.str_to_base32(str(db_content.file_path)),
+                db_content.content_type,
+                file_path.suffix,
+                img.width,
+                img.height,
+                representations,
+                content_origin.origin_name,
+                content_origin.origin_id,
+                db_content.addition_date,
+                alternate_version,
+                image=img,
+            )
+        else:
+            image_data = ImageData(
+                content_id,
+                shared_code.str_to_base32(str(db_content.file_path)),
+                db_content.content_type,
+                file_path.suffix,
+                img.width,
+                img.height,
+                representations,
+                None,
+                None,
+                db_content.addition_date,
+                alternate_version,
+                image=img,
+            )
 
         image_data_list.append(image_data)
 
