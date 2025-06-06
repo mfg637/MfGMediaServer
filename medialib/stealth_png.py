@@ -8,6 +8,8 @@ def read_info_from_image_stealth(image: Image.Image) -> str | None:
 
     # trying to read stealth pnginfo
     width, height = image.size
+    if image.mode == "P":
+        return None
     pixels = image.load()
 
     has_alpha = True if image.mode == "RGBA" else False

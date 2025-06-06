@@ -292,8 +292,6 @@ def upload_file():
             else:
                 is_alternate_version = True
 
-    print("image metadata", image_metadata, "rgba_to_rgb", rgba_to_rgb)
-
     if description is None and isinstance(image_metadata, PlainTextData):
         description = image_metadata.data
 
