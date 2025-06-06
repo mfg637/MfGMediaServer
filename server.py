@@ -794,18 +794,26 @@ def autodownload(pathstr, content_id):
 def get_tags_from_external_service(pathstr, content_id):
     def body(path: pathlib.Path | None, content_id=None):
         connection = medialib_db.common.make_connection()
-        db_query_results = None
-        db_albums_registered = None
+        db_content: medialib_db.content.Content | None = None
         is_file = True
         if content_id is not None:
             is_file = False
-            db_query_results = medialib_db.get_content_metadata_by_content_id(
+            db_content = medialib_db.content.get_content_metadata_by_id(
                 content_id, connection
             )
-            path = pathlib.Path(db_query_results[1])
-        else:
-            db_query_results = medialib_db.get_content_metadata_by_file_path(
+            if db_content is None:
+                return flask.abort(
+                    404, f"Content with ID {content_id} not found"
+                )
+            path = db_content.file_path
+        elif path is not None:
+            db_content = medialib_db.content.get_content_metadata_by_path(
                 path, connection
+            )
+        else:
+            return flask.abort(
+                400,
+                "expected content ID or path str but no arguments provided",
             )
 
         representations: (
@@ -905,14 +913,14 @@ def get_tags_from_external_service(pathstr, content_id):
                 resource_id_type="file",
                 resource_id=pathstr,
             )
-        else:
+        elif db_content is not None:
             file_item = None
             try:
                 file_item = filesystem.browse.get_db_content_info(
-                    content_id,
-                    db_query_results[1],
-                    db_query_results[3],
-                    db_query_results[2],
+                    db_content.content_id,
+                    str(db_content.file_path),
+                    db_content.content_type,
+                    db_content.title,
                     icon_scale=2,
                 )[0]
             except FileNotFoundError:
@@ -925,6 +933,8 @@ def get_tags_from_external_service(pathstr, content_id):
                 resource_id_type="content_id",
                 resource_id=content_id,
             )
+        else:
+            return flask.abort(500, "db_content is None and not file")
 
     if content_id is not None:
         return body(None, content_id)

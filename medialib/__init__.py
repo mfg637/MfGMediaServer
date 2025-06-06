@@ -362,11 +362,11 @@ def register_tags():
 
     if content_id is None:
         path = pathlib.Path(shared_code.base32_to_str(pathstr))
-        db_query_results = medialib_db.get_content_metadata_by_file_path(
+        db_content = medialib_db.get_content_metadata_by_file_path(
             path, connection
         )
-        if db_query_results is not None:
-            content_id = db_query_results[0]
+        if db_content is not None:
+            content_id = db_content[0]
             discard_existing_tags()
         else:
             content_new_data = {
@@ -386,10 +386,14 @@ def register_tags():
                 **content_new_data, connection=connection
             )
     else:
-        db_query_results = medialib_db.get_content_metadata_by_content_id(
+        db_content = medialib_db.content.get_content_metadata_by_id(
             content_id, connection
         )
-        path = pathlib.Path(db_query_results[1])
+        if db_content is None:
+            raise Exception(
+                f"Unexpected behaviour: content by id {content_id} not found"
+            )
+        path = db_content.file_path
         discard_existing_tags()
 
     medialib_db.add_tags_for_content_by_tag_ids(
