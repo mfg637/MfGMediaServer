@@ -3,6 +3,7 @@ import logging
 import lzma
 import subprocess
 import tempfile
+import typing
 import flask
 import medialib_db.config
 import shared_code
@@ -29,6 +30,7 @@ from pyimglib.decoders.srs import decode as decode_srs
 from werkzeug.datastructures import FileStorage
 
 from shared_code import EXTENSIONS_BY_MIME
+from . import stealth_png
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +110,7 @@ def save_image(
     mime: str,
     outdir: pathlib.Path,
     img: PIL.Image.Image,
+    rgba_to_rgb: bool,
 ):
     def generate_filename(mime):
         title_only = "".join(
@@ -117,11 +120,22 @@ def save_image(
 
     is_srs = False
     if mime == PNG_MIMETYPE:
-        if img.has_transparency_data and test_alpha_channel(img):
+        if (
+            img.has_transparency_data
+            and test_alpha_channel(img)
+            and not rgba_to_rgb
+        ):
             filename, file_title = generate_filename(WEBP_MIMETYPE)
             file_path = outdir.joinpath(filename)
             img.save(file_path, quality=95)
         else:
+            if img.has_transparency_data and rgba_to_rgb:
+                if img.mode == "LA":
+                    new_img = img.convert("L")
+                else:
+                    new_img = img.convert("RGB")
+                img.close()
+                img = new_img
             is_srs = True
             filename, file_title = generate_filename(JPEG_MIMETYPE)
             file_path = outdir.joinpath(filename)
@@ -150,6 +164,11 @@ class PlainTextData:
 
 
 @dataclasses.dataclass
+class JSONData:
+    data: typing.Any
+
+
+@dataclasses.dataclass
 class ComfyUIWorkflow:
     prompt: dict
     workflow: dict
@@ -166,16 +185,39 @@ def extract_metadata_from_image(
                 for k, v in exif.get_ifd(PIL.ExifTags.Base.ExifOffset).items()
             }
             user_comment_raw: bytes = exif_items[37510]
-            return PlainTextData(user_comment_raw.decode("utf-16_be")[5:])
+            return (
+                PlainTextData(user_comment_raw.decode("utf-16_be")[5:]),
+                False,
+            )
     elif mime == PNG_MIMETYPE:
         if "parameters" in img.info:
-            return PlainTextData(img.info["parameters"])
+            return PlainTextData(img.info["parameters"]), False
         elif "prompt" in img.info and "workflow" in img.info:
-            return ComfyUIWorkflow(
-                json.loads(img.info["prompt"]),
-                json.loads(img.info["workflow"]),
+            return (
+                ComfyUIWorkflow(
+                    json.loads(img.info["prompt"]),
+                    json.loads(img.info["workflow"]),
+                ),
+                False,
             )
-    return None
+        else:
+            plain_text = stealth_png.read_info_from_image_stealth(img)
+            if type(plain_text) is str:
+                try:
+                    json_data = json.loads(plain_text)
+                    if "prompt" in json_data and "workflow" in json_data:
+                        return (
+                            ComfyUIWorkflow(
+                                json.loads(img.info["prompt"]),
+                                json.loads(img.info["workflow"]),
+                            ),
+                            True,
+                        )
+                    else:
+                        return JSONData(json_data), True
+                except json.decoder.JSONDecodeError:
+                    return PlainTextData(plain_text), True
+    return None, False
 
 
 upload_blueprint = flask.Blueprint("upload", __name__, url_prefix="/upload")
@@ -225,13 +267,16 @@ def upload_file():
     is_alternate_version = False
     image_metadata = None
     img = None
+    rgba_to_rgb = False
     if is_image:
         if mime == AVIF_MIMETYPE:
             heif = pillow_heif.open_heif(file_buffer)
             img = heif.to_pillow()
         else:
             img = PIL.Image.open(file_buffer)
-        image_metadata = extract_metadata_from_image(img, mime, origin_name)
+        image_metadata, rgba_to_rgb = extract_metadata_from_image(
+            img, mime, origin_name
+        )
         hash = pyimglib.calc_image_hash(img)
         duplicates = medialib_db.find_content_by_hash(
             hash[1].hex().lower(), hash[2], hash[3], connection
@@ -247,7 +292,7 @@ def upload_file():
             else:
                 is_alternate_version = True
 
-    print("image metadata", image_metadata)
+    print("image metadata", image_metadata, "rgba_to_rgb", rgba_to_rgb)
 
     if description is None and isinstance(image_metadata, PlainTextData):
         description = image_metadata.data
@@ -256,7 +301,7 @@ def upload_file():
     outdir.mkdir(parents=True, exist_ok=True)
 
     file_path, saved_name, is_srs = save_image(
-        file, file_size, mime, outdir, img
+        file, file_size, mime, outdir, img, rgba_to_rgb
     )
     if img is not None:
         img.close()
@@ -283,15 +328,26 @@ def upload_file():
             comfy_workflow_filepath = outdir.joinpath(saved_name + ".json.xz")
             with lzma.open(comfy_workflow_filepath, "wb") as f:
                 f.write(binary_encoded_json)
-            relative_file_path = comfy_workflow_filepath.relative_to(
-                medialib_db.config.relative_to
-            )
             medialib_db.attachment.add_attachment(
                 connection,
                 content_id,
                 "json+xz",
-                relative_file_path,
+                comfy_workflow_filepath,
                 "ComfyUI Workflow",
+            )
+        elif isinstance(image_metadata, JSONData):
+            binary_encoded_json = json.dumps(image_metadata.data).encode(
+                "utf-8"
+            )
+            json_filepath = outdir.joinpath(saved_name + ".json.xz")
+            with lzma.open(json_filepath, "wb") as f:
+                f.write(binary_encoded_json)
+            medialib_db.attachment.add_attachment(
+                connection,
+                content_id,
+                "json+xz",
+                json_filepath,
+                "JSON file",
             )
         if is_srs:
             srs_image = decode_srs(file_path)
