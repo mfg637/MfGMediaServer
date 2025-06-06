@@ -580,6 +580,7 @@ def get_content_metadata(pathstr: str | None, content_id: int | None) -> str:
     # fetching additional data
     tags = {}
     representations = None
+    attachments: list[medialib_db.attachment.Attachment] | None = None
     origins: list[medialib_db.origin.Origin] = []
     if content_id is not None:
         tags = medialib_db.get_tags_by_content_id(
@@ -592,6 +593,11 @@ def get_content_metadata(pathstr: str | None, content_id: int | None) -> str:
             connection, content_id
         )
         albums = medialib_db.get_content_albums(content_id, connection)
+        attachments = medialib_db.attachment.get_attachments_for_content(
+            connection, content_id
+        )
+        if len(attachments) == 0:
+            attachments = None
     connection.close()
 
     # render template
@@ -605,6 +611,7 @@ def get_content_metadata(pathstr: str | None, content_id: int | None) -> str:
             albums=None,
             representations=None,
             origins=origins,
+            attachments=None,
             **template_kwargs,
         )
     elif db_content is not None:
@@ -627,10 +634,11 @@ def get_content_metadata(pathstr: str | None, content_id: int | None) -> str:
             albums=albums,
             representations=representations,
             origins=origins,
+            attachments=attachments,
             **template_kwargs,
         )
     else:
-        flask.abort(500, "db_content is None and not file")
+        return flask.abort(500, "db_content is None and not file")
 
 
 @app.route(
