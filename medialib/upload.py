@@ -191,14 +191,16 @@ def extract_metadata_from_image(
             )
     elif mime == PNG_MIMETYPE:
         if "parameters" in img.info:
-            return PlainTextData(img.info["parameters"]), False
+            return PlainTextData(
+                img.info["parameters"]
+            ), stealth_png.stealth_png_check(img)
         elif "prompt" in img.info and "workflow" in img.info:
             return (
                 ComfyUIWorkflow(
                     json.loads(img.info["prompt"]),
                     json.loads(img.info["workflow"]),
                 ),
-                False,
+                stealth_png.stealth_png_check(img),
             )
         else:
             plain_text = stealth_png.read_info_from_image_stealth(img)
