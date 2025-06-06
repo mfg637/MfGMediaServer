@@ -20,7 +20,10 @@ import pyimglib
 import pillow_heif
 import re
 import dataclasses
-from pyimglib.transcoding.encoders.srs_image_encoder import test_alpha_channel, SrsLossyJpegXlEncoder
+from pyimglib.transcoding.encoders.srs_image_encoder import (
+    test_alpha_channel,
+    SrsLossyJpegXlEncoder,
+)
 from pyimglib.decoders.srs import ClImage
 from pyimglib.decoders.srs import decode as decode_srs
 from werkzeug.datastructures import FileStorage
@@ -33,7 +36,7 @@ simple_id_pattern = re.compile("[a-z]{2}\d+")
 
 CIVIT_AI_ORIGIN = "civit ai"
 MAX_TITLE_LENGTH = 63
-MAX_SAMPLE_LENGTH = 200 * 1024 * 1024 # 200 MiB
+MAX_SAMPLE_LENGTH = 200 * 1024 * 1024  # 200 MiB
 MOV_MIMETYPE = "video/quicktime"
 MPEG4V_MIMETYPE = "video/mp4"
 JPEG_MIMETYPE = "image/jpeg"
@@ -44,15 +47,16 @@ WEBP_MIMETYPE = "image/webp"
 UNDEFINED_MIMETYPE = "application/octet-stream"
 PNG_HEADER_SEQUENCE = b"\x89PNG\x0d\x0a\x1a\x0a"
 
+
 def generate_unsupported_type_response():
     supported_formats = []
     for mime in EXTENSIONS_BY_MIME:
         supported_formats.append(f"{EXTENSIONS_BY_MIME[mime]} ({mime})")
     return flask.Response(
-        "Server accepts only this formats: " + \
-            ", ".join(supported_formats),
-        415
+        "Server accepts only this formats: " + ", ".join(supported_formats),
+        415,
     )
+
 
 def detect_file_type(file_buffer: io.BytesIO, request_header_mimetype):
     mime = magic.from_buffer(file_buffer.getvalue(), mime=True)
@@ -80,8 +84,15 @@ def detect_file_type(file_buffer: io.BytesIO, request_header_mimetype):
         raise Exception("undetected content type")
     return mime, file_type, is_image
 
-def detect_source(filename: str, origin_name: str | None, origin_id: str | None):
-    if origin_name is None and simple_id_pattern.match(filename) is not None and filename[:2] == "ca":
+
+def detect_source(
+    filename: str, origin_name: str | None, origin_id: str | None
+):
+    if (
+        origin_name is None
+        and simple_id_pattern.match(filename) is not None
+        and filename[:2] == "ca"
+    ):
         origin_name = CIVIT_AI_ORIGIN
     if origin_name == CIVIT_AI_ORIGIN:
         if simple_id_pattern.match(filename) is not None:
@@ -92,11 +103,18 @@ def detect_source(filename: str, origin_name: str | None, origin_id: str | None)
 
 
 def save_image(
-        source_file: FileStorage, file_size: int, mime: str, outdir: pathlib.Path, img: PIL.Image.Image
-        ):
+    source_file: FileStorage,
+    file_size: int,
+    mime: str,
+    outdir: pathlib.Path,
+    img: PIL.Image.Image,
+):
     def generate_filename(mime):
-        title_only = ''.join(random.choices(string.ascii_letters+string.digits, k=16))
+        title_only = "".join(
+            random.choices(string.ascii_letters + string.digits, k=16)
+        )
         return title_only + EXTENSIONS_BY_MIME[mime], title_only
+
     is_srs = False
     if mime == PNG_MIMETYPE:
         if img.has_transparency_data and test_alpha_channel(img):
@@ -108,11 +126,15 @@ def save_image(
             filename, file_title = generate_filename(JPEG_MIMETYPE)
             file_path = outdir.joinpath(filename)
 
-            src_tmp_file = tempfile.NamedTemporaryFile(mode='wb', suffix=".png", delete=True)
+            src_tmp_file = tempfile.NamedTemporaryFile(
+                mode="wb", suffix=".png", delete=True
+            )
             img.save(src_tmp_file, format="PNG", compress_level=0)
 
             srs_encoder = SrsLossyJpegXlEncoder(90, file_size, 40)
-            file_path = srs_encoder.encode(pathlib.Path(src_tmp_file.name), file_path)
+            file_path = srs_encoder.encode(
+                pathlib.Path(src_tmp_file.name), file_path
+            )
             src_tmp_file.close()
     else:
         filename, file_title = generate_filename(mime)
@@ -133,11 +155,16 @@ class ComfyUIWorkflow:
     workflow: dict
 
 
-def extract_metadata_from_image(img: PIL.Image.Image, mime: str, origin_name: str | None):
+def extract_metadata_from_image(
+    img: PIL.Image.Image, mime: str, origin_name: str | None
+):
     if mime == JPEG_MIMETYPE and origin_name == CIVIT_AI_ORIGIN:
         if "exif" in img.info:
             exif = img.getexif()
-            exif_items = {k:v for k, v in exif.get_ifd(PIL.ExifTags.Base.ExifOffset).items()}
+            exif_items = {
+                k: v
+                for k, v in exif.get_ifd(PIL.ExifTags.Base.ExifOffset).items()
+            }
             user_comment_raw: bytes = exif_items[37510]
             return PlainTextData(user_comment_raw.decode("utf-16_be")[5:])
     elif mime == PNG_MIMETYPE:
@@ -146,11 +173,12 @@ def extract_metadata_from_image(img: PIL.Image.Image, mime: str, origin_name: st
         elif "prompt" in img.info and "workflow" in img.info:
             return ComfyUIWorkflow(
                 json.loads(img.info["prompt"]),
-                json.loads(img.info["workflow"])
+                json.loads(img.info["workflow"]),
             )
     return None
 
-upload_blueprint = flask.Blueprint('upload', __name__, url_prefix='/upload')
+
+upload_blueprint = flask.Blueprint("upload", __name__, url_prefix="/upload")
 
 
 @upload_blueprint.route("/")
@@ -205,59 +233,82 @@ def upload_file():
             img = PIL.Image.open(file_buffer)
         image_metadata = extract_metadata_from_image(img, mime, origin_name)
         hash = pyimglib.calc_image_hash(img)
-        duplicates = medialib_db.find_content_by_hash(hash[1].hex().lower(), hash[2], hash[3], connection)
+        duplicates = medialib_db.find_content_by_hash(
+            hash[1].hex().lower(), hash[2], hash[3], connection
+        )
         if len(duplicates) > 0:
             if "alternate_version" not in flask.request.form:
                 link_elements = []
                 for dup in duplicates:
-                    link_elements.append(f"<a href=/content_metadata/mlid{dup[0]}>mlid{dup[0]}</a>")
+                    link_elements.append(
+                        f"<a href=/content_metadata/mlid{dup[0]}>mlid{dup[0]}</a>"
+                    )
                 return "Duplicates detected " + ", ".join(link_elements)
             else:
                 is_alternate_version = True
 
     print("image metadata", image_metadata)
-    
+
     if description is None and isinstance(image_metadata, PlainTextData):
         description = image_metadata.data
-    
+
     outdir = shared_code.get_output_directory()
     outdir.mkdir(parents=True, exist_ok=True)
 
-    file_path, saved_name, is_srs = save_image(file, file_size, mime, outdir, img)
+    file_path, saved_name, is_srs = save_image(
+        file, file_size, mime, outdir, img
+    )
     if img is not None:
         img.close()
 
     content_new_data = {
-        'content_title': title,
-        'file_path': file_path,
-        'content_type': file_type,
-        'addition_date': datetime.datetime.now(),
-        'content_id': None,
-        'origin_name': origin_name,
-        'origin_id': origin_id,
-        'hidden': False,
-        'description': description,
+        "content_title": title,
+        "file_path": file_path,
+        "content_type": file_type,
+        "addition_date": datetime.datetime.now(),
+        "content_id": None,
+        "origin_name": origin_name,
+        "origin_id": origin_id,
+        "hidden": False,
+        "description": description,
     }
     try:
-        content_id = medialib_db.content_register(**content_new_data, connection=connection)
+        content_id = medialib_db.content_register(
+            **content_new_data, connection=connection
+        )
         if isinstance(image_metadata, ComfyUIWorkflow):
-            binary_encoded_json = json.dumps(image_metadata.workflow).encode("utf-8")
+            binary_encoded_json = json.dumps(image_metadata.workflow).encode(
+                "utf-8"
+            )
             comfy_workflow_filepath = outdir.joinpath(saved_name + ".json.xz")
             with lzma.open(comfy_workflow_filepath, "wb") as f:
                 f.write(binary_encoded_json)
-            relative_file_path = \
-                str(comfy_workflow_filepath.relative_to(medialib_db.config.relative_to))
-            medialib_db.register_representation(
-                content_id, "json+xz", -1, relative_file_path, connection
+            relative_file_path = comfy_workflow_filepath.relative_to(
+                medialib_db.config.relative_to
+            )
+            medialib_db.attachment.add_attachment(
+                connection,
+                content_id,
+                "json+xz",
+                relative_file_path,
+                "ComfyUI Workflow",
             )
         if is_srs:
             srs_image = decode_srs(file_path)
             levels = srs_image.get_levels()
             for level in levels:
                 representation_file = outdir.joinpath(levels[level])
-                relative_repr_path = str(representation_file.relative_to(medialib_db.config.relative_to))
+                relative_repr_path = str(
+                    representation_file.relative_to(
+                        medialib_db.config.relative_to
+                    )
+                )
                 medialib_db.register_representation(
-                    content_id, representation_file.suffix[1:], level, relative_repr_path, connection
+                    content_id,
+                    representation_file.suffix[1:],
+                    level,
+                    relative_repr_path,
+                    connection,
                 )
         connection.commit()
         connection.close()
