@@ -191,6 +191,9 @@
             {% for origin in origins %}
             <li>
                 <a href="{{ origin.generate_url() }}">{{origin.origin_name}}</a>
+                {% if origin.alternate %}
+                <span>(Alternative)</span>
+                {% endif %}
                 {% if derpibooru_dl_server and origin.origin_name and origin.origin_id %}
                 <a href="{{ derpibooru_dl_server}}/{{ origin.origin_name }}?id={{ origin.origin_id }}&rewrite=1">
                     Redownload content
