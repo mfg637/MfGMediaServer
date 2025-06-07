@@ -253,9 +253,13 @@ def medialib_tag_search():
             group_list = []
             for tag in tags_group["tags"]:
                 if type(tag) is int:
-                    group_list.append(medialib_db.get_tag_name_by_id(tag))
+                    group_list.append(
+                        medialib_db.get_tag_name_by_id(connection, tag)
+                    )
                 else:
-                    group_list.append(medialib_db.get_tag_name_by_alias(tag))
+                    group_list.append(
+                        medialib_db.get_tag_name_by_alias(connection, tag)
+                    )
             tags_group["group_str"] = " or ".join([tag for tag in group_list])
 
         title = "Search query results for {}".format(
