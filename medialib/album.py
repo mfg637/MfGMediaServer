@@ -9,16 +9,39 @@ import shared_code
 album_blueprint = flask.Blueprint("album", __name__, url_prefix="/album")
 
 
+def _get_content_list(db_connection, ordered_content_list, items_count):
+    content_data_elements: list[filesystem.browse.DataElement] = []
+    for db_content in ordered_content_list:
+        content_data_elements.append(
+            filesystem.browse.DataElement(
+                db_content,
+                medialib_db.origin.get_origins_of_content(
+                    db_connection, db_content.content_id
+                ),
+            )
+        )
+
+    content_list = filesystem.browse.db_dataclass_processing(
+        content_data_elements,
+        items_count,
+        filesystem.browse.InfoExtractor.MedialibAlbumDataExtractor,
+        orientation=shared_code.OrientationEnum.VERTICAL,
+    )
+    return content_list
+
+
 @album_blueprint.route("/show/id<int:album_id>")
 @shared_code.login_validation
 def show_album(album_id: int):
     db_connection = medialib_db.common.make_connection()
 
-    _album_title = medialib_db.get_album_title(
+    _album_title = medialib_db.album.get_album_title(
         album_id, connection=db_connection
     )
+    if _album_title is None:
+        return flask.abort(404, "album not found")
     title = "{} by {}".format(_album_title[0], _album_title[1])
-    raw_content_list = medialib_db.get_album_content(
+    ordered_content_list = medialib_db.album.get_album_content(
         album_id, connection=db_connection
     )
 
@@ -33,11 +56,8 @@ def show_album(album_id: int):
     itemslist[0]["link"] = "/"
     items_count += 1
 
-    content_list = filesystem.browse.db_content_processing(
-        raw_content_list,
-        items_count,
-        filesystem.browse.InfoExtractor.MedialibAlbumExtractor,
-        orientation=shared_code.OrientationEnum.VERTICAL,
+    content_list = _get_content_list(
+        db_connection, ordered_content_list, items_count
     )
     itemslist.extend(content_list)
 
@@ -72,7 +92,7 @@ def show_album_gallery():
     db_connection = medialib_db.common.make_connection()
 
     title = "Album Gallery"
-    raw_content_list = medialib_db.get_album_covers(db_connection)
+    raw_content_list = medialib_db.album.get_album_covers(db_connection)
 
     items_count = 0
     itemslist = [
@@ -123,9 +143,9 @@ def show_album_gallery():
 def medialib_get_album(album_id: int):
     db_connection = medialib_db.common.make_connection()
 
-    raw_content_list = None
+    ordered_content_list = None
     if album_id is not None:
-        raw_content_list = medialib_db.get_album_content(
+        ordered_content_list = medialib_db.album.get_album_content(
             album_id, connection=db_connection
         )
     else:
@@ -137,15 +157,13 @@ def medialib_get_album(album_id: int):
         )
         if set_tag_id is None or artist_tag_id is None:
             flask.abort(404)
-        raw_content_list = medialib_db.get_album_related_content(
+        ordered_content_list = medialib_db.get_album_related_content(
             set_tag_id, artist_tag_id, connection=db_connection
         )
 
     items_count = 0
-    content_list = filesystem.browse.db_content_processing(
-        raw_content_list,
-        items_count,
-        extractor_type=filesystem.browse.InfoExtractor.MedialibAlbumExtractor,
+    content_list = _get_content_list(
+        db_connection, ordered_content_list, items_count
     )
     return flask.Response(
         json.dumps(content_list), mimetype="application/json"
@@ -158,13 +176,13 @@ def medialib_get_album(album_id: int):
 def show_album_edit_from(album_id: int):
     db_connection = medialib_db.common.make_connection()
 
-    raw_content_list = None
+    ordered_content_list = None
     title = ""
     if album_id is not None:
-        raw_content_list = medialib_db.get_album_content(
+        ordered_content_list = medialib_db.album.get_album_content(
             album_id, connection=db_connection
         )
-        title = medialib_db.get_album_title(album_id, db_connection)
+        title = medialib_db.album.get_album_title(album_id, db_connection)
     else:
         set_tag_id = flask.request.args.get(
             "set_tag_id", type=int, default=None
@@ -174,7 +192,7 @@ def show_album_edit_from(album_id: int):
         )
         if set_tag_id is None or artist_tag_id is None:
             flask.abort(404)
-        raw_content_list = medialib_db.get_album_related_content(
+        ordered_content_list = medialib_db.get_album_related_content(
             set_tag_id, artist_tag_id, connection=db_connection
         )
         set_name = medialib_db.get_tag_name_by_id(db_connection, set_tag_id)
@@ -182,10 +200,8 @@ def show_album_edit_from(album_id: int):
         title = "{} by {}".format(set_name, artist)
 
     items_count = 0
-    content_list = filesystem.browse.db_content_processing(
-        raw_content_list,
-        items_count,
-        extractor_type=filesystem.browse.InfoExtractor.MedialibAlbumExtractor,
+    content_list = _get_content_list(
+        db_connection, ordered_content_list, items_count
     )
     return flask.render_template(
         "album_order_edit_blank.html",
@@ -204,11 +220,13 @@ def album_commit():
     db_connection = medialib_db.common.make_connection()
     set_id = data["set_id"]
     artist_id = data["artist_id"]
-    album_id = medialib_db.get_album_id(set_id, artist_id, db_connection)
+    album_id = medialib_db.album.get_album_id(set_id, artist_id, db_connection)
     if album_id is None:
-        album_id = medialib_db.make_album(set_id, artist_id, db_connection)
+        album_id = medialib_db.album.make_album(
+            set_id, artist_id, db_connection
+        )
     for content in data["content_order_changes"]:
-        medialib_db.set_album_order(
+        medialib_db.album.set_album_order(
             album_id, content["id"], content["order"], db_connection
         )
     db_connection.commit()

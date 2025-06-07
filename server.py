@@ -592,7 +592,7 @@ def get_content_metadata(pathstr: str | None, content_id: int | None) -> str:
         origins = medialib_db.origin.get_origins_of_content(
             connection, content_id
         )
-        albums = medialib_db.get_content_albums(content_id, connection)
+        albums = medialib_db.album.get_content_albums(content_id, connection)
         attachments = medialib_db.attachment.get_attachments_for_content(
             connection, content_id
         )
