@@ -17,6 +17,8 @@ for (let i = 0; i < meta_tags.length; i++) {
   }
 }
 
+console.log("filemeta", filemeta)
+
 const dpi_scale_coef = window.devicePixelRatio;
 
 const FILETYPE = 0;
@@ -100,6 +102,14 @@ function Image(props) {
       <img src={imgTagSource} style={imageStyles} onLoad={loaded} alt={props.filemeta.name} />
     </picture>
   )
+}
+
+function VideoLoop(props) {
+  const [isLoaded, setLoaded] = useState(false);
+  if (props.filemeta.suffix === ".gif")
+    return <Image {...props} />
+  props.contentLoaded()
+  return <video id="i" className="loop" src={props.filemeta.link} autoplay="true" muted="true" loop="true" preload="auto"></video>
 }
 
 function Caption(props) {
@@ -198,6 +208,12 @@ function ImageView(props) {
     };
   }, []);
 
+  function showImageOrVideoLoop(props) {
+    console.log("showImageOrVideoLoop.props", props)
+    if (props.filemeta.type === "video-loop")
+      return <VideoLoop {...props} xOffset={xOffset} />
+    return <Image {...props} xOffset={xOffset} />
+  }
   return (
     <div
       id="imageViewer"
@@ -207,7 +223,7 @@ function ImageView(props) {
         + "photoview-wraper container"}
     >
       <div className="container image-container" onClick={props.doSpecialAction}>
-        <Image {...props} xOffset={xOffset} />
+        {showImageOrVideoLoop(props)}
         <div className="loading-animation-wrapper">
           <div className="loading-spinner-x64">
             <div></div>
@@ -245,6 +261,8 @@ function ImageView(props) {
   )
 }
 
+const imageTypes = ["picture", "image", "video-loop"];
+
 export function ImageViewer(props) {
   const [currentImageID, setCurrentImageID] = useState(-1);
   const [isLoaded, setLoaded] = useState(false);
@@ -265,7 +283,7 @@ export function ImageViewer(props) {
       link.imageID = i;
       itemLinks[props.filemeta[i].item_index].ftype = FILETYPE;
       link.ftype = FILETYPE;
-      if ((props.filemeta[i].type === "picture") || (props.filemeta[i].type === "image")) {
+      if (imageTypes.includes(props.filemeta[i].type)) {
         link.onclick = function (e) {
           e.stopPropagation();
           console.log(this.imageID);
@@ -343,7 +361,7 @@ export function ImageViewer(props) {
 
   function doAction() {
     const currentFileMeta = props.filemeta[currentImageID];
-    if ((currentFileMeta.type === "picture") || (currentFileMeta.type === "image")) {
+    if (imageTypes.includes(currentFileMeta.type)) {
       setControlsHidden(!isControlsHidden)
     } else if (currentFileMeta.type === "video") {
       new RainbowVideoPlayer(currentFileMeta);
