@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, { useEffect } from 'react';
 import { useState } from "react";
 import { createRoot } from 'react-dom/client';
 
@@ -9,12 +9,12 @@ let dirmeta = null
 
 
 for (let i = 0; i < meta_tags.length; i++) {
-    if (meta_tags[i].getAttribute('name') === 'filemeta_json') {
-        filemeta = JSON.parse(meta_tags[i].getAttribute('content'))
-    }
-    else if (meta_tags[i].getAttribute('name') === 'dirmeta_json') {
-        dirmeta = JSON.parse(meta_tags[i].getAttribute('content'))
-    }
+  if (meta_tags[i].getAttribute('name') === 'filemeta_json') {
+    filemeta = JSON.parse(meta_tags[i].getAttribute('content'))
+  }
+  else if (meta_tags[i].getAttribute('name') === 'dirmeta_json') {
+    dirmeta = JSON.parse(meta_tags[i].getAttribute('content'))
+  }
 }
 
 const dpi_scale_coef = window.devicePixelRatio;
@@ -22,14 +22,14 @@ const dpi_scale_coef = window.devicePixelRatio;
 const FILETYPE = 0;
 const DIRTYPE = 1;
 
-let viewImage = function () {}
+let viewImage = function () { }
 
 function Image(props) {
   const [isLoaded, setLoaded] = useState(false);
   const [naturalWidth, setWidth] = useState(-1);
   const [naturalHeight, setHeight] = useState(-1);
 
-  function loaded(event){
+  function loaded(event) {
     console.log("loaded");
     setLoaded(true);
     const imgTag = event.target;
@@ -46,7 +46,7 @@ function Image(props) {
   let sources = [];
 
   if (props.filemeta.suffix === ".avif" && compatibilityLevel <= 1) {
-    sources.push({src: props.filemeta.link, type: "image/avif"})
+    sources.push({ src: props.filemeta.link, type: "image/avif" })
   }
 
   const css_width = window.innerWidth;
@@ -58,26 +58,26 @@ function Image(props) {
 
   let imageStyles = {}
   if ((props.viewMode === "fit") || !isLoaded)
-    imageStyles = {maxWidth: `${css_width}px`, maxHeight: `${css_height}px`};
-  else if (props.viewMode === "fill"){
+    imageStyles = { maxWidth: `${css_width}px`, maxHeight: `${css_height}px` };
+  else if (props.viewMode === "fill") {
     const content_aspect_ratio = naturalWidth / naturalHeight;
     const screen_aspect_ratio = css_width / css_height;
-    if (content_aspect_ratio > screen_aspect_ratio){
-      imageStyles = {maxHeight: `${css_height}px`};
-    }else{
-      imageStyles = {maxWidth: `${css_width}px`};
+    if (content_aspect_ratio > screen_aspect_ratio) {
+      imageStyles = { maxHeight: `${css_height}px` };
+    } else {
+      imageStyles = { maxWidth: `${css_width}px` };
     }
   }
-  if (props.xOffset !== null){
+  if (props.xOffset !== null) {
     imageStyles.position = "relative";
     imageStyles.left = props.xOffset;
   }
 
   if (props.filemeta.suffix === '.gif')
     imgTagSource = props.filemeta.link;
-  else if (props.filemeta.custom_icon){
+  else if (props.filemeta.custom_icon) {
     imgTagSource = props.filemeta.icon;
-  }else {
+  } else {
     let format = 'avif';
     if (compatibilityLevel === 3) {
       format = 'webp';
@@ -85,9 +85,9 @@ function Image(props) {
       format = 'jpeg'
     }
 
-    if ((props.filemeta.suffix === ".jpg" || props.filemeta.suffix === ".jpeg") && (compatibilityLevel < 3)){
+    if ((props.filemeta.suffix === ".jpg" || props.filemeta.suffix === ".jpeg") && (compatibilityLevel < 3)) {
       imgTagSource = props.filemeta.link;
-    } else if (content_id === null){
+    } else if (content_id === null) {
       imgTagSource = `/thumbnail/${format}/${pixel_width}x${pixel_height}/${base32src}?allow_origin=1`;
     } else {
       imgTagSource = `/medialib/thumbnail/${format}/${pixel_width}x${pixel_height}/id${content_id}?allow_origin=1`;
@@ -96,78 +96,78 @@ function Image(props) {
 
   return (
     <picture id="i" className="photo">
-      {sources.map((value, index) => <source src={value.src} type={value.type} key={index}/>)}
-      <img src={imgTagSource} style={imageStyles} onLoad={loaded} alt={props.filemeta.name}/>
+      {sources.map((value, index) => <source src={value.src} type={value.type} key={index} />)}
+      <img src={imgTagSource} style={imageStyles} onLoad={loaded} alt={props.filemeta.name} />
     </picture>
   )
 }
 
-function Caption(props){
+function Caption(props) {
   let captionText = null;
-  if (props.filemeta.name !== null){
+  if (props.filemeta.name !== null) {
     captionText = <div className="title">{props.filemeta.name}</div>;
   }
   return (
     <div className="imageview-text">
-      { props.currentImageID + 1 } / {props.imageCount}
-      { captionText }
+      {props.currentImageID + 1} / {props.imageCount}
+      {captionText}
     </div>
   );
 }
 
-function ImageView(props){
+function ImageView(props) {
   const [xTouchPoint, setXTouchPoint] = useState(null);
   const [xOffset, setXOffset] = useState(null);
   const [cursorHidden, setCursorHidden] = useState(false)
   const [hideTimeout, setHideTimeout] = useState(null)
-  function applySideEffects(){
+  function applySideEffects() {
     document.body.style.overflow = "hidden";
     document.body.style.touchAction = "pan-x pan-y";
     document.body.style.overscrollBehavior = "none";
     document.documentElement.requestFullscreen();
   }
 
-  function cancelSideEffects(){
+  function cancelSideEffects() {
     document.body.style.overflow = "auto";
     document.body.style.touchAction = "auto";
     document.body.style.overscrollBehavior = "unset";
     document.exitFullscreen();
   }
 
-  function expandButtonClick(e){
+  function expandButtonClick(e) {
     e.stopPropagation();
     props.doSpecialAction();
   }
 
-  function closeButtonClick(e){
+  function closeButtonClick(e) {
     e.stopPropagation();
     props.closeViewer();
   }
 
-  function prevButtonClick(e){
+  function prevButtonClick(e) {
     e.stopPropagation();
     props.prevImage();
   }
 
-  function nextButtonClick(e){
+  function nextButtonClick(e) {
     e.stopPropagation();
     props.nextImage();
   }
 
-  function touchStart(e){
+  function touchStart(e) {
     if (!props.isLoading)
       setXTouchPoint(e.touches[0].clientX);
     else
       setXTouchPoint(null);
   }
 
-  function touchEnd(e){
+  function touchEnd(e) {
     const css_width = window.innerWidth;
     const min_scroll_distanse = (css_width / 4);
-    if (xTouchPoint !== null){
-      if (xOffset > min_scroll_distanse){
+    if (xTouchPoint !== null) {
+      if (xOffset > min_scroll_distanse) {
         props.prevImage();
-      } else if (xOffset < -min_scroll_distanse){
+      } else if (xOffset < -min_scroll_distanse) {
         props.nextImage();
       }
       setXTouchPoint(null);
@@ -175,17 +175,17 @@ function ImageView(props){
     }
   }
 
-  function touchMove(e){
+  function touchMove(e) {
     e.preventDefault();
     if (xTouchPoint !== null)
       setXOffset(e.touches[0].clientX - xTouchPoint);
   }
 
-  function hideCursor(){
+  function hideCursor() {
     setCursorHidden(true);
   }
 
-  function mousemove(){
+  function mousemove() {
     clearTimeout(hideTimeout);
     setCursorHidden(false);
     setHideTimeout(setTimeout(hideCursor, 5000));
@@ -202,9 +202,9 @@ function ImageView(props){
     <div
       id="imageViewer"
       className=
-        {(props.isLoading? "load " : "") + (props.controllsHidden ? "hideControls " : "") +
-          (props.viewMode !== "fit" ? "fill-mode " : "") + (cursorHidden ? "hide-cursor " : "")
-          + "photoview-wraper container"}
+      {(props.isLoading ? "load " : "") + (props.controllsHidden ? "hideControls " : "") +
+        (props.viewMode !== "fit" ? "fill-mode " : "") + (cursorHidden ? "hide-cursor " : "")
+        + "photoview-wraper container"}
     >
       <div className="container image-container" onClick={props.doSpecialAction}>
         <Image {...props} xOffset={xOffset} />
@@ -232,12 +232,12 @@ function ImageView(props){
         onMouseMove={mousemove}
       >
         <div id="close-button" className="button square-button" onClick={closeButtonClick}></div>
-        { props.currentImageID > 0 ? (
+        {props.currentImageID > 0 ? (
           <div id="previous-image-button" className="button" onClick={prevButtonClick}></div>
-        ) : null }
-        { props.currentImageID < (props.imageCount - 1) ? (
+        ) : null}
+        {props.currentImageID < (props.imageCount - 1) ? (
           <div id="next-image-button" className="button" onClick={nextButtonClick}></div>
-        ) : null }
+        ) : null}
         <div id="expand-button" className="button square-button" onClick={expandButtonClick}></div>
         <Caption {...props} />
       </div>
@@ -245,73 +245,73 @@ function ImageView(props){
   )
 }
 
-export function ImageViewer(props){
+export function ImageViewer(props) {
   const [currentImageID, setCurrentImageID] = useState(-1);
   const [isLoaded, setLoaded] = useState(false);
   const [isControlsHidden, setControlsHidden] = useState(false);
-  const [viewMode, setViewMode]= useState("fit");
+  const [viewMode, setViewMode] = useState("fit");
 
-  viewImage = function (imageID){
+  viewImage = function (imageID) {
     setCurrentImageID(imageID);
   }
 
-  function page_init(){
-    const links = document.getElementsByTagName('a'),countPhoto = 0;
+  function page_init() {
+    const links = document.getElementsByTagName('a'), countPhoto = 0;
 
     const itemLinks = document.querySelectorAll(".item")
-    for (let i=0; i<props.filemeta.length; i++){
+    for (let i = 0; i < props.filemeta.length; i++) {
       const link = itemLinks[filemeta[i].item_index].getElementsByTagName('a')[0];
       itemLinks[props.filemeta[i].item_index].imageID = i;
       link.imageID = i;
       itemLinks[props.filemeta[i].item_index].ftype = FILETYPE;
       link.ftype = FILETYPE;
-      if ((props.filemeta[i].type === "picture") || (props.filemeta[i].type === "image")){
-        link.onclick=function(e){
+      if ((props.filemeta[i].type === "picture") || (props.filemeta[i].type === "image")) {
+        link.onclick = function (e) {
           e.stopPropagation();
           console.log(this.imageID);
           viewImage(this.imageID);
           return false;
         }
-      }else if (props.filemeta[i].type === "video"){
-        link.onclick=function(){
-            new RainbowVideoPlayer(props.filemeta[this.imageID]);
-            return false;
+      } else if (props.filemeta[i].type === "video") {
+        link.onclick = function () {
+          new RainbowVideoPlayer(props.filemeta[this.imageID]);
+          return false;
         }
       }
-      else if (props.filemeta[i].type === "DASH"){
-        link.onclick=function(){
-            new RainbowDASHVideoPlayer(props.filemeta[this.imageID]);
-            return false;
+      else if (props.filemeta[i].type === "DASH") {
+        link.onclick = function () {
+          new RainbowDASHVideoPlayer(props.filemeta[this.imageID]);
+          return false;
         }
       }
     }
-    for (let i=0; i<props.dirmeta.length; i++){
-        itemLinks[props.dirmeta[i].item_index].imageID = i;
-        itemLinks[props.dirmeta[i].item_index].ftype = DIRTYPE;
+    for (let i = 0; i < props.dirmeta.length; i++) {
+      itemLinks[props.dirmeta[i].item_index].imageID = i;
+      itemLinks[props.dirmeta[i].item_index].ftype = DIRTYPE;
     }
     console.log("init done");
   }
 
-  function closeViewer(){
+  function closeViewer() {
     setCurrentImageID(-1);
   }
 
-  function nextImage(){
-    if ((currentImageID > -1) && ((currentImageID + 1) < props.filemeta.length)){
+  function nextImage() {
+    if ((currentImageID > -1) && ((currentImageID + 1) < props.filemeta.length)) {
       setLoaded(false);
       setCurrentImageID(currentImageID + 1);
     }
   }
 
-  function prevImage(){
-    if (currentImageID > 0){
+  function prevImage() {
+    if (currentImageID > 0) {
       setLoaded(false);
       setCurrentImageID(currentImageID - 1);
     }
   }
 
   const keyControl = function (event) {
-    const ESCAPE_KEYCODE= 27;
+    const ESCAPE_KEYCODE = 27;
     const LEFT_ARROW_KEYCODE = 37;
     const RIGHT_ARROW_KEYCODE = 39;
     switch (event.keyCode) {
@@ -336,42 +336,42 @@ export function ImageViewer(props){
     return () => window.removeEventListener("keyup", keyControl);
   })
 
-  function contentLoaded(){
+  function contentLoaded() {
     console.log("content loaded")
     setLoaded(true)
   }
 
-  function doAction(){
+  function doAction() {
     const currentFileMeta = props.filemeta[currentImageID];
-    if ((currentFileMeta.type=== "picture") || (currentFileMeta.type=== "image")) {
+    if ((currentFileMeta.type === "picture") || (currentFileMeta.type === "image")) {
       setControlsHidden(!isControlsHidden)
-    }else if (currentFileMeta.type === "video") {
+    } else if (currentFileMeta.type === "video") {
       new RainbowVideoPlayer(currentFileMeta);
-    }else if (currentFileMeta.type === "DASH") {
+    } else if (currentFileMeta.type === "DASH") {
       new RainbowDASHVideoPlayer(currentFileMeta);
-    }else{
+    } else {
       document.location.href = currentFileMeta.link;
     }
   }
 
-  function doSpecialAction(){
+  function doSpecialAction() {
     const currentFileMeta = props.filemeta[currentImageID];
-    if ((currentFileMeta.type=== "picture") || (currentFileMeta.type=== "image")) {
-      if (viewMode === "fit"){
+    if ((currentFileMeta.type === "picture") || (currentFileMeta.type === "image")) {
+      if (viewMode === "fit") {
         setViewMode("fill");
-      } else if (viewMode === "fill"){
+      } else if (viewMode === "fill") {
         setViewMode("native");
-      } else if (viewMode === "native"){
+      } else if (viewMode === "native") {
         setViewMode("fit");
       }
-    }else {
+    } else {
       document.location.href = currentFileMeta.link;
     }
   }
 
   return (
     <>
-      {currentImageID > -1? (
+      {currentImageID > -1 ? (
         <ImageView
           filemeta={props.filemeta[currentImageID]}
           currentImageID={currentImageID}
