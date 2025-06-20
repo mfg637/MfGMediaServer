@@ -109,7 +109,24 @@ function VideoLoop(props) {
   if (props.filemeta.suffix === ".gif")
     return <Image {...props} />
   props.contentLoaded()
-  return <video id="i" className="loop" src={props.filemeta.link} autoplay="true" muted="true" loop="true" preload="auto"></video>
+
+  let imageStyles = {};
+  if (props.xOffset !== null) {
+    imageStyles.position = "relative";
+    imageStyles.left = props.xOffset;
+  }
+
+  return (
+    <video
+      id="i"
+      className="loop"
+      src={props.filemeta.link}
+      autoplay="true"
+      muted="true"
+      loop="true"
+      preload="auto"
+      style={imageStyles}
+    ></video>)
 }
 
 function Caption(props) {
