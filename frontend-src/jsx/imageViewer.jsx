@@ -226,7 +226,6 @@ function ImageView(props) {
   }, []);
 
   function showImageOrVideoLoop(props) {
-    console.log("showImageOrVideoLoop.props", props)
     if (props.filemeta.type === "video-loop")
       return <VideoLoop {...props} xOffset={xOffset} />
     return <Image {...props} xOffset={xOffset} />
