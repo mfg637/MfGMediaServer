@@ -9,7 +9,14 @@ import shared_code
 album_blueprint = flask.Blueprint("album", __name__, url_prefix="/album")
 
 
-def _get_content_list(db_connection, ordered_content_list, items_count):
+def _get_content_list(
+    db_connection,
+    ordered_content_list: (
+        list[medialib_db.album.OptionallyOrderedContent]
+        | list[medialib_db.album.OrderedContent]
+    ),
+    items_count,
+):
     content_data_elements: list[filesystem.browse.DataElement] = []
     for db_content in ordered_content_list:
         content_data_elements.append(
@@ -176,7 +183,11 @@ def medialib_get_album(album_id: int):
 def show_album_edit_from(album_id: int):
     db_connection = medialib_db.common.make_connection()
 
-    ordered_content_list = None
+    ordered_content_list: (
+        list[medialib_db.album.OptionallyOrderedContent]
+        | list[medialib_db.album.OrderedContent]
+        | None
+    ) = None
     title = ""
     if album_id is not None:
         ordered_content_list = medialib_db.album.get_album_content(
@@ -192,7 +203,7 @@ def show_album_edit_from(album_id: int):
         )
         if set_tag_id is None or artist_tag_id is None:
             flask.abort(404)
-        ordered_content_list = medialib_db.get_album_related_content(
+        ordered_content_list = medialib_db.album.get_album_related_content(
             set_tag_id, artist_tag_id, connection=db_connection
         )
         set_name = medialib_db.get_tag_name_by_id(db_connection, set_tag_id)
@@ -200,6 +211,8 @@ def show_album_edit_from(album_id: int):
         title = "{} by {}".format(set_name, artist)
 
     items_count = 0
+    if ordered_content_list is None:
+        flask.abort(404)
     content_list = _get_content_list(
         db_connection, ordered_content_list, items_count
     )
