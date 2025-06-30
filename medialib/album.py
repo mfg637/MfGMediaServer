@@ -229,6 +229,8 @@ def show_album_edit_from(album_id: int):
 @shared_code.login_validation
 def album_commit():
     data = flask.request.json
+    if data is None:
+        flask.abort(400, "JSON input expected")
     print(data)
     db_connection = medialib_db.common.make_connection()
     set_id = data["set_id"]
