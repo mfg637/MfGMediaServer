@@ -395,7 +395,9 @@ def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None):
             src_hash, status_code = shared_code.cache_check(path)
         if status_code is not None:
             return status_code
-        img = pyimglib.decoders.open_image(shared_code.root_dir.joinpath(path))
+        img = pyimglib.decoders.open_image(
+            shared_code.root_dir.joinpath(path), (width, height)
+        )
         extracted_img = complex_formats_processing(img, path, allow_origin)
         if isinstance(extracted_img, flask.Response):
             return extracted_img

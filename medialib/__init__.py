@@ -680,7 +680,7 @@ def gen_thumbnail(
                 )
             )
     else:
-        img = pyimglib.decoders.open_image(file_path)
+        img = pyimglib.decoders.open_image(file_path, (width, height))
 
     extracted_img = complex_formats_processing(img, file_path, allow_origin)
     logger.debug("extracted_img: {}".format(extracted_img.__repr__()))
