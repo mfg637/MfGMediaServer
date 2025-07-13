@@ -27,6 +27,27 @@
         textarea {
             width: 95%;
         }
+
+        #add_origin_form {
+            display: none;
+        }
+
+        #toggle_origin_form {
+            visibility: hidden;
+        }
+
+        #toggle_origin_form:checked~#add_origin_form {
+            display: block;
+        }
+
+        #toggle_origin_form_label::before {
+            content: ">";
+            padding-right: 0.5em;
+        }
+
+        #toggle_origin_form:checked~#toggle_origin_form_label::before {
+            content: "v";
+        }
     </style>
 </head>
 
@@ -202,6 +223,21 @@
             </li>
             {% endfor %}
         </ul>
+        {% if content_id %}
+        <div id="origin_form_wrapper">
+            <input type="checkbox" id="toggle_origin_form" />
+            <label id="toggle_origin_form_label" for="toggle_origin_form">Add origin</label>
+            <form action="/medialib/add_origin/{{ content_id }}" method="POST" id="add_origin_form">
+                <label for="origin_name_field">Name:</label>
+                <input id="origin_name_field" name="origin_name" type="text" />
+                <label for="origin_id_field">ID:</label>
+                <input id="origin_id_field" name="origin_content_id" type="text" />
+                <input id="set_primary_checkbox" name="set_primary" type="checkbox" />
+                <label for="set_primary_checkbox">Make primary</label>
+                <input type="submit" value="Add origin" />
+            </form>
+        </div>
+        {% endif %}
         <h2>Content tags list</h2>
         {% for category, tag_list in tags.items() %}
         <h3>{{category}}</h3>

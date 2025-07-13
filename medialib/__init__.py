@@ -960,3 +960,28 @@ def mark_alternate():
     )
     connection.close()
     return "OK"
+
+
+@medialib_blueprint.route("/add_origin/<int:content_id>", methods=["POST"])
+def add_origin(content_id: int):
+    origin_name = flask.request.form["origin_name"]
+    origin_id = flask.request.form["origin_content_id"]
+    set_primary = False
+    if "set_primary" in flask.request.form and flask.request.form[
+        "set_primary"
+    ] in {"on", "true", "enabled", "1"}:
+        set_primary = True
+    connection = medialib_db.common.make_connection()
+    content_metadata = medialib_db.content.get_content_metadata_by_id(
+        content_id, connection
+    )
+    if content_metadata is None:
+        connection.close()
+        flask.abort(404, f"Not found content by id {content_id}")
+    if set_primary:
+        medialib_db.origin.mark_origins_alternate(connection, content_id)
+    medialib_db.origin.add_origin(
+        connection, content_id, origin_name, origin_id, not set_primary
+    )
+    connection.close()
+    return flask.redirect(f"/content_metadata/mlid{content_id}")
