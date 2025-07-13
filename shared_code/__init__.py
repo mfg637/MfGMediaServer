@@ -1,11 +1,9 @@
 import functools
 import pathlib
-from . import enums
+
 import base64
 import hashlib
 import re
-import urllib
-import urllib.parse
 import medialib_db
 import flask
 import PIL.Image
@@ -17,6 +15,8 @@ import pyimglib
 import enum
 import datetime
 from typing import TypeVar, Callable, ParamSpec
+from . import file_uploading
+from .file_uploading import EXTENSIONS_BY_MIME
 
 import config
 
@@ -209,13 +209,3 @@ def jpeg_xl_fast_decode(file_path: pathlib.Path) -> bytes:
     proc = subprocess.run(commandline, capture_output=True)
     logger.debug(proc.stderr.decode("utf-8"))
     return proc.stdout
-
-
-EXTENSIONS_BY_MIME = {
-    "image/jpeg": ".jpeg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "video/mp4": ".mp4",
-    "video/webm": ".webm",
-    "image/avif": ".avif",
-}

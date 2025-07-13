@@ -11,6 +11,7 @@ import urllib.parse
 import filesystem
 import json
 import pyimglib
+from pyimglib.transcoding import encoders
 import pathlib
 import PIL.Image as PILimage
 from PIL.Image import Image as PILimageClass
@@ -466,39 +467,62 @@ def medialib_show_duplicates():
 def ml_update_content(content_id: int):
     if flask.request.method == "POST":
         medialib_db_connection = medialib_db.common.make_connection()
-        content_data = medialib_db.get_content_metadata_by_content_id(
+        content_data = medialib_db.content.get_content_metadata_by_id(
             content_id, medialib_db_connection
         )
         if content_data is None:
             medialib_db_connection.close()
             return flask.abort(404)
 
+        f = flask.request.files["content-update-file"]
+        if f is None:
+            flask.abort(400, "file was not provided")
+
         old_file_path = medialib_db.config.relative_to.joinpath(
-            content_data[1]
+            content_data.file_path
         )
         if old_file_path.exists():
             manifest_files_handler = None
             if old_file_path.suffix == ".srs":
-                manifest_files_handler = pyimglib.transcoding.encoders.srs_image_encoder.SrsImageEncoder(
-                    1, 1, 1
+                # TODO: replave to base_srs
+                manifest_files_handler = (
+                    encoders.srs_image_encoder.SrsLossyImageEncoder(1, 1, 1)
                 )
                 manifest_files_handler.set_manifest_file(old_file_path)
             elif old_file_path.suffix == ".mpd":
-                manifest_files_handler = pyimglib.transcoding.encoders.dash_encoder.DashVideoEncoder(
-                    1
+                manifest_files_handler = (
+                    encoders.dash_encoder.DashVideoEncoder(1)
                 )
                 manifest_files_handler.set_manifest_file(old_file_path)
             if manifest_files_handler is not None:
                 manifest_files_handler.delete_result()
+                medialib_db.purge_representations(
+                    medialib_db_connection, content_id
+                )
             else:
                 old_file_path.unlink()
 
-        f = flask.request.files["content-update-file"]
+        file_buffer = io.BytesIO(
+            f.stream.read(shared_code.file_uploading.MAX_SAMPLE_LENGTH)
+        )
+        file_buffer.seek(0)
+        f.stream.seek(0)
+        mime, file_type, is_image = (
+            shared_code.file_uploading.detect_file_type(
+                file_buffer, f.mimetype
+            )
+        )
+        file_buffer.seek(0)
 
         outdir = shared_code.get_output_directory()
         outdir.mkdir(parents=True, exist_ok=True)
+        file_name = f.filename
+        if file_name is None:
+            file_name, file_title = (
+                shared_code.file_uploading.generate_filename(mime)
+            )
         file_path = outdir.joinpath(
-            "mlid{}{}".format(content_id, pathlib.Path(f.filename).suffix)
+            "mlid{}{}".format(content_id, pathlib.Path(file_name).suffix)
         )
         f.save(file_path)
         f.close()
@@ -507,7 +531,11 @@ def ml_update_content(content_id: int):
             with PIL.Image.open(file_path) as img:
                 image_hash = pyimglib.calc_image_hash(img)
         medialib_db.update_file_path(
-            content_id, file_path, image_hash, medialib_db_connection
+            content_id,
+            file_path,
+            image_hash,
+            file_type,
+            medialib_db_connection,
         )
         medialib_db_connection.close()
         return "file uploaded successfully"

@@ -1,23 +1,28 @@
 import json
 import logging
 import lzma
-import subprocess
 import tempfile
 import typing
 import flask
 import medialib_db.config
 import shared_code
+from shared_code.file_uploading import (
+    PNG_MIMETYPE,
+    WEBP_MIMETYPE,
+    JPEG_MIMETYPE,
+    AVIF_MIMETYPE,
+    MAX_TITLE_LENGTH,
+    MAX_SAMPLE_LENGTH,
+    detect_file_type,
+    generate_filename,
+)
 import pyimglib
-import magic
 import io
 import PIL.Image
 import PIL.ExifTags
 import medialib_db
 import datetime
-import random
-import string
 import pathlib
-import pyimglib
 import pillow_heif
 import re
 import dataclasses
@@ -25,7 +30,6 @@ from pyimglib.transcoding.encoders.srs_image_encoder import (
     test_alpha_channel,
     SrsLossyJpegXlEncoder,
 )
-from pyimglib.decoders.srs import ClImage
 from pyimglib.decoders.srs import decode as decode_srs
 from werkzeug.datastructures import FileStorage
 
@@ -37,17 +41,6 @@ logger = logging.getLogger(__name__)
 simple_id_pattern = re.compile("[a-z]{2}\d+")
 
 CIVIT_AI_ORIGIN = "civit ai"
-MAX_TITLE_LENGTH = 63
-MAX_SAMPLE_LENGTH = 200 * 1024 * 1024  # 200 MiB
-MOV_MIMETYPE = "video/quicktime"
-MPEG4V_MIMETYPE = "video/mp4"
-JPEG_MIMETYPE = "image/jpeg"
-JPEG_XL_MIMETYPE = "image/jxl"
-AVIF_MIMETYPE = "image/avif"
-PNG_MIMETYPE = "image/png"
-WEBP_MIMETYPE = "image/webp"
-UNDEFINED_MIMETYPE = "application/octet-stream"
-PNG_HEADER_SEQUENCE = b"\x89PNG\x0d\x0a\x1a\x0a"
 
 
 def generate_unsupported_type_response():
@@ -58,33 +51,6 @@ def generate_unsupported_type_response():
         "Server accepts only this formats: " + ", ".join(supported_formats),
         415,
     )
-
-
-def detect_file_type(file_buffer: io.BytesIO, request_header_mimetype):
-    mime = magic.from_buffer(file_buffer.getvalue(), mime=True)
-    if mime == MOV_MIMETYPE and request_header_mimetype == MPEG4V_MIMETYPE:
-        mime = MPEG4V_MIMETYPE
-    if mime == UNDEFINED_MIMETYPE:
-        file_buffer.seek(0)
-        # check PNG header
-        header = file_buffer.read(8)
-        if header == PNG_HEADER_SEQUENCE:
-            mime = PNG_MIMETYPE
-    is_image = False
-    if mime.startswith("image/"):
-        is_image = True
-        file_type = None
-        file_type = "image"
-    if mime.startswith("video/"):
-        file_type = "video"
-    elif mime.startswith("audio/"):
-        file_type = "audio"
-    elif is_image:
-        pass
-    else:
-        logger.error(f"undetected content type, mime: {mime}")
-        raise Exception("undetected content type")
-    return mime, file_type, is_image
 
 
 def detect_source(
@@ -112,12 +78,6 @@ def save_image(
     img: PIL.Image.Image,
     rgba_to_rgb: bool,
 ):
-    def generate_filename(mime):
-        title_only = "".join(
-            random.choices(string.ascii_letters + string.digits, k=16)
-        )
-        return title_only + EXTENSIONS_BY_MIME[mime], title_only
-
     is_srs = False
     if mime == PNG_MIMETYPE:
         if (
