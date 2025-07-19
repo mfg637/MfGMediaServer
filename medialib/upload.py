@@ -109,6 +109,8 @@ def save_image(
             file_path = srs_encoder.encode(
                 pathlib.Path(src_tmp_file.name), file_path
             )
+            if file_path is None:
+                raise ValueError("file path is None after srs encoding")
             src_tmp_file.close()
     else:
         filename, file_title = generate_filename(mime)
@@ -116,11 +118,6 @@ def save_image(
         print("SAVE OUTPUT FILE", file_path)
         source_file.save(file_path)
     return file_path, file_title, is_srs
-
-
-@dataclasses.dataclass
-class PlainTextData:
-    data: str
 
 
 @dataclasses.dataclass
@@ -134,52 +131,68 @@ class ComfyUIWorkflow:
     workflow: dict
 
 
+@dataclasses.dataclass
+class ImageMetadata:
+    text_data: str | None
+    json_data: JSONData | None
+    xmp_data: str | None
+    comfyui_workflow: ComfyUIWorkflow | None
+
+
 def extract_metadata_from_image(
-    img: PIL.Image.Image, mime: str, origin_name: str | None
-):
-    if mime == JPEG_MIMETYPE and origin_name == CIVIT_AI_ORIGIN:
-        if "exif" in img.info:
-            exif = img.getexif()
-            exif_items = {
-                k: v
-                for k, v in exif.get_ifd(PIL.ExifTags.Base.ExifOffset).items()
-            }
-            user_comment_raw: bytes = exif_items[37510]
-            return (
-                PlainTextData(user_comment_raw.decode("utf-16_be")[5:]),
-                False,
-            )
-    elif mime == PNG_MIMETYPE:
-        if "parameters" in img.info:
-            return PlainTextData(
-                img.info["parameters"]
-            ), stealth_png.stealth_png_check(img)
-        elif "prompt" in img.info and "workflow" in img.info:
-            return (
-                ComfyUIWorkflow(
-                    json.loads(img.info["prompt"]),
-                    json.loads(img.info["workflow"]),
-                ),
-                stealth_png.stealth_png_check(img),
-            )
-        else:
-            plain_text = stealth_png.read_info_from_image_stealth(img)
-            if type(plain_text) is str:
-                try:
-                    json_data = json.loads(plain_text)
-                    if "prompt" in json_data and "workflow" in json_data:
-                        return (
-                            ComfyUIWorkflow(
-                                json.loads(img.info["prompt"]),
-                                json.loads(img.info["workflow"]),
-                            ),
-                            True,
-                        )
-                    else:
-                        return JSONData(json_data), True
-                except json.decoder.JSONDecodeError:
-                    return PlainTextData(plain_text), True
-    return None, False
+    source, img, mime: str
+) -> tuple[ImageMetadata, bool]:
+    metadata = {}
+    format_name = mime.removeprefix("image/")
+    if (
+        mime.startswith("image/")
+        and format_name in pyimglib.metadata.supported_formats
+    ):
+        metadata = pyimglib.metadata.get_metadata_from_source(
+            source, format_name
+        )
+    text_values = dict()
+    json_data = dict()
+    comfyui_workflow = None
+
+    if "prompt" in metadata and "workflow" in metadata:
+        comfyui_workflow = ComfyUIWorkflow(
+            json.loads(metadata.pop("prompt")),
+            json.loads(metadata.pop("workflow")),
+        )
+
+    xmp_metadata = None
+    if "XML::XMP" in metadata:
+        xmp_metadata = metadata["XML::XMP"]
+
+    for key in metadata:
+        value = metadata[key]
+        try:
+            json_data[key] = json.loads(value)
+        except json.decoder.JSONDecodeError:
+            text_values[key] = value
+
+    rgba_to_rgb = False
+    if mime == PNG_MIMETYPE:
+        rgba_to_rgb = stealth_png.stealth_png_check(img)
+
+    if text_values:
+        text_result = "\n".join(
+            [f"{key}: {text_values[key]}" for key in text_values]
+        )
+    else:
+        text_result = None
+
+    if json_data:
+        json_result = JSONData(json_data)
+    else:
+        json_result = None
+    return (
+        ImageMetadata(
+            text_result, json_result, xmp_metadata, comfyui_workflow
+        ),
+        rgba_to_rgb,
+    )
 
 
 upload_blueprint = flask.Blueprint("upload", __name__, url_prefix="/upload")
@@ -222,8 +235,11 @@ def upload_file():
     if mime not in EXTENSIONS_BY_MIME:
         return generate_unsupported_type_response()
     # trim too long filename
-    title = str(pathlib.Path(file.filename).stem[:MAX_TITLE_LENGTH])
-    origin_name, origin_id = detect_source(title, origin_name, origin_id)
+    if file.filename is not None:
+        title = str(pathlib.Path(file.filename).stem[:MAX_TITLE_LENGTH])
+        origin_name, origin_id = detect_source(title, origin_name, origin_id)
+    else:
+        title = None
     hash = None
     connection = medialib_db.common.make_connection()
     is_alternate_version = False
@@ -237,7 +253,7 @@ def upload_file():
         else:
             img = PIL.Image.open(file_buffer)
         image_metadata, rgba_to_rgb = extract_metadata_from_image(
-            img, mime, origin_name
+            file_buffer.getvalue(), img, mime
         )
         hash = pyimglib.calc_image_hash(img)
         duplicates = medialib_db.find_content_by_hash(
@@ -254,8 +270,12 @@ def upload_file():
             else:
                 is_alternate_version = True
 
-    if description is None and isinstance(image_metadata, PlainTextData):
-        description = image_metadata.data
+    if image_metadata is not None and image_metadata.text_data is not None:
+        if description is None:
+            description = "Metadata:\n" + image_metadata.text_data
+        else:
+            description += "\n" + "=" * 16 + "Metadata:\n" + "=" * 16 + "\n"
+            description += image_metadata.text_data
 
     outdir = shared_code.get_output_directory()
     outdir.mkdir(parents=True, exist_ok=True)
@@ -277,40 +297,62 @@ def upload_file():
         "hidden": False,
         "description": description,
     }
-    try:
-        content_id = medialib_db.content_register(
-            **content_new_data, connection=connection
-        )
-        if isinstance(image_metadata, ComfyUIWorkflow):
-            binary_encoded_json = json.dumps(image_metadata.workflow).encode(
-                "utf-8"
+    if image_metadata is not None:
+        try:
+            content_id = medialib_db.content_register(
+                **content_new_data, connection=connection
             )
-            comfy_workflow_filepath = outdir.joinpath(saved_name + ".json.xz")
-            with lzma.open(comfy_workflow_filepath, "wb") as f:
-                f.write(binary_encoded_json)
-            medialib_db.attachment.add_attachment(
-                connection,
-                content_id,
-                "json+xz",
-                comfy_workflow_filepath,
-                "ComfyUI Workflow",
-            )
-        elif isinstance(image_metadata, JSONData):
-            binary_encoded_json = json.dumps(image_metadata.data).encode(
-                "utf-8"
-            )
-            json_filepath = outdir.joinpath(saved_name + ".json.xz")
-            with lzma.open(json_filepath, "wb") as f:
-                f.write(binary_encoded_json)
-            medialib_db.attachment.add_attachment(
-                connection,
-                content_id,
-                "json+xz",
-                json_filepath,
-                "JSON file",
-            )
-        if is_srs:
-            srs_image = decode_srs(file_path)
+            if image_metadata.comfyui_workflow is not None:
+                binary_encoded_json = json.dumps(
+                    image_metadata.comfyui_workflow.workflow
+                ).encode("utf-8")
+                comfy_workflow_filepath = outdir.joinpath(
+                    saved_name + ".json.xz"
+                )
+                with lzma.open(comfy_workflow_filepath, "wb") as f:
+                    f.write(binary_encoded_json)
+                medialib_db.attachment.add_attachment(
+                    connection,
+                    content_id,
+                    "json+xz",
+                    comfy_workflow_filepath,
+                    "ComfyUI Workflow",
+                )
+            if image_metadata.json_data is not None:
+                binary_encoded_json = json.dumps(
+                    image_metadata.json_data
+                ).encode("utf-8")
+                json_filepath = outdir.joinpath(saved_name + ".json.xz")
+                with lzma.open(json_filepath, "wb") as f:
+                    f.write(binary_encoded_json)
+                medialib_db.attachment.add_attachment(
+                    connection,
+                    content_id,
+                    "json+xz",
+                    json_filepath,
+                    "JSON file",
+                )
+            if image_metadata.xmp_data is not None:
+                binary_encoded_xmp = image_metadata.xmp_data.encode("utf-8")
+                xmp_filepath = outdir.joinpath(saved_name + ".xmp.xz")
+                with lzma.open(xmp_filepath, "wb") as f:
+                    f.write(binary_encoded_xmp)
+                medialib_db.attachment.add_attachment(
+                    connection,
+                    content_id,
+                    "xmp+xz",
+                    xmp_filepath,
+                    "XMP metadata",
+                )
+
+        except Exception as e:
+            file_path.unlink()
+            connection.close()
+            raise e
+
+    if is_srs:
+        srs_image = decode_srs(file_path)
+        if isinstance(srs_image, pyimglib.decoders.srs.ClImage):
             levels = srs_image.get_levels()
             for level in levels:
                 representation_file = outdir.joinpath(levels[level])
@@ -326,10 +368,8 @@ def upload_file():
                     relative_repr_path,
                     connection,
                 )
-        connection.commit()
-        connection.close()
-    except Exception as e:
-        file_path.unlink()
-        raise e
+
+    connection.commit()
+    connection.close()
 
     return flask.redirect(f"/content_metadata/mlid{content_id}")
