@@ -163,7 +163,7 @@ def extract_metadata_from_image(
 
     xmp_metadata = None
     if "XML::XMP" in metadata:
-        xmp_metadata = metadata["XML::XMP"]
+        xmp_metadata = metadata.pop("XML::XMP")
 
     for key in metadata:
         value = metadata[key]
