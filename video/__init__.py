@@ -9,6 +9,8 @@ import pyimglib.common
 import shared_code
 import xml.dom.minidom
 
+from . import srs
+
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +175,7 @@ class VP9_VideoTranscoder(VP8_VideoTranscoder):
 
 
 video_blueprint = flask.Blueprint("video", __name__, url_prefix="/video")
+video_blueprint.register_blueprint(srs.srs_video_blueprint)
 
 
 @video_blueprint.route("/vp8/<string:pathstr>")
