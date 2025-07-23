@@ -95,32 +95,32 @@
             {% if prefix_id %}
             {% if content_title %}
             <a
-                href="/image/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ title_filter(content_title) }}">
+                href="/image/transcode/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1&title={{ title_filter(content_title) }}">
                 Render {{ format|upper() }}
             </a><br />
             {% else %}
-            <a href="/image/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1">
+            <a href="/image/transcode/{{ format }}/{{ path_str }}?origin_id={{ prefix_id }}&download=1">
                 Render {{ format|upper() }}
             </a><br />
             {% endif %}
             {% else %}
             {% if content_title %}
-            <a href="/image/{{ format }}/{{ path_str }}?download=1&title={{ title_filter(content_title) }}">
+            <a href="/image/transcode/{{ format }}/{{ path_str }}?download=1&title={{ title_filter(content_title) }}">
                 Render {{ format|upper() }}
             </a><br />
             {% else %}
-            <a href="/image/{{ format }}/{{ path_str }}?download=1">
+            <a href="/image/transcode/{{ format }}/{{ path_str }}?download=1">
                 Render {{ format|upper() }}
             </a><br />
             {% endif %}
             {% endif %}
             {%- endmacro %}
             {% if content_id %}
-            <a href="/autodownload/mlid{{ content_id }}">
+            <a href="/image/autodownload/mlid{{ content_id }}">
                 Autodownload
             </a><br />
             {% else %}
-            <a href="/autodownload/{{ path_str }}">
+            <a href="/image/autodownload/{{ path_str }}">
                 Autodownload
             </a><br />
 
@@ -294,9 +294,9 @@
         {% endif %}
         {% if content_id %}
         <a href="/medialib/db-drop-thumbnails/{{ content_id }}">Drop thumbnails</a><br />
-        <a href="/autotag/mlid{{ content_id }}">Autotag</a>
+        <a href="/image/autotag/mlid{{ content_id }}">Autotag</a>
         {% else %}
-        <a href="/autotag/{{ path_str }}">Autotag</a>
+        <a href="/image/autotag/{{ path_str }}">Autotag</a>
         {% endif %}
         {% if content_id %}
         <form action="/medialib/content-update/{{ content_id }}" method="POST" enctype="multipart/form-data">

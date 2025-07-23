@@ -15,7 +15,7 @@ import pyimglib
 import enum
 import datetime
 from typing import TypeVar, Callable, ParamSpec
-from . import file_uploading
+from . import file_uploading, route_template
 from .file_uploading import EXTENSIONS_BY_MIME
 
 import config
@@ -33,14 +33,6 @@ tag_query_placeholder = {
     "order_by": medialib_db.files_by_tag_search.ORDERING_BY.RANDOM.value,
     "hidden_filtering": medialib_db.files_by_tag_search.HIDDEN_FILTERING.FILTER.value,
 }
-
-
-def base32_to_str(base32code: str):
-    return base64.b32decode(base32code.encode("utf-8")).decode("utf-8")
-
-
-def str_to_base32(string: str):
-    return base64.b32encode(string.encode("utf-8")).decode("utf-8")
 
 
 def get_medialib_sorting_constants_for_template():
@@ -209,3 +201,26 @@ def jpeg_xl_fast_decode(file_path: pathlib.Path) -> bytes:
     proc = subprocess.run(commandline, capture_output=True)
     logger.debug(proc.stderr.decode("utf-8"))
     return proc.stdout
+
+
+FILE_SUFFIX_LIST = [".png", ".jpg", ".gif", ".webm", ".mp4", ".svg"]
+
+
+def get_download_filename(content_title, origin_id, path, _format) -> str:
+    if content_title is not None:
+        for suffix in FILE_SUFFIX_LIST:
+            if suffix in content_title:
+                content_title = content_title.replace(suffix, "")
+        content_title = content_title.replace("-amp-", "&").replace(
+            "-eq-", "="
+        )
+    filename = None
+    if origin_id is not None and content_title is not None:
+        filename = "{} {}.{}".format(origin_id, content_title, _format.lower)
+    elif content_title is None and origin_id is not None:
+        filename = "{}.{}".format(origin_id, _format.lower())
+    elif content_title is not None:
+        filename = "{}.{}".format(content_title, _format.lower())
+    else:
+        filename = "{}.{}".format(path.stem, _format.lower())
+    return filename

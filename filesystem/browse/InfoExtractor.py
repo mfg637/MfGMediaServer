@@ -66,7 +66,7 @@ class FileExtractor(InfoExtractor):
         super().__init__(items_count)
         self.file = file
 
-        base32path = shared_code.str_to_base32(str(file))
+        base32path = shared_code.route_template.str_to_base32(str(file))
         self.filemeta |= {
             "link": "/orig/{}".format(base32path),
             "name": shared_code.simplify_filename(file.name),
@@ -83,7 +83,9 @@ class FileExtractor(InfoExtractor):
         ):
             self.make_icon(file, self.filemeta)
             if file.suffix == ".jxl":
-                self.filemeta["link"] = "/image/png/{}".format(base32path)
+                self.filemeta["link"] = "/image/transcode/png/{}".format(
+                    base32path
+                )
         if file.suffix.lower() in image_file_extensions:
             self.filemeta["type"] = "picture"
         elif file.suffix.lower() in video_file_extensions:
@@ -101,8 +103,11 @@ class FileExtractor(InfoExtractor):
                 TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEO
                 or TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.VIDEOLOOP
             ):
+                # TODO: Implement SRS multiplexing
                 self.filemeta["type"] = "video"
-                self.filemeta["link"] = "/aclmmp_webm/{}".format(base32path)
+                self.filemeta["link"] = "/video/srs/multiplex/file/{}".format(
+                    base32path
+                )
             elif TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.IMAGE:
                 self.filemeta["type"] = "picture"
                 self.filemeta["link"] = "/image/autodetect/{}".format(
@@ -119,7 +124,7 @@ class FileExtractor(InfoExtractor):
             if icon_path.exists():
                 self.make_icon(file, self.filemeta)
         if file.suffix == ".mkv":
-            self.filemeta["link"] = "/vp8/{}".format(base32path)
+            self.filemeta["link"] = "/video/vp8/{}".format(base32path)
             self.filemeta["is_vp8"] = True
 
     def make_icon(self, file, filemeta, scale=1):
@@ -131,12 +136,12 @@ class FileExtractor(InfoExtractor):
         icon_path = pathlib.Path("{}.icon".format(file))
         if icon_path.exists():
             filemeta["custom_icon"] = True
-            icon_base32path = shared_code.str_to_base32(
+            icon_base32path = shared_code.route_template.str_to_base32(
                 str(icon_path.relative_to(shared_code.root_dir))
             )
         width = flask.session["thumbnail_width"]
         height = flask.session["thumbnail_height"]
-        filemeta["icon"] = "/thumbnail/jpeg/{}x{}/{}".format(
+        filemeta["icon"] = "/image/thumbnail/jpeg/{}x{}/{}".format(
             width * scale, height * scale, icon_base32path
         )
 
@@ -145,7 +150,7 @@ class FileExtractor(InfoExtractor):
             source_strings = []
             for _scale in THUMBNAIL_SCALES:
                 source_strings.append(
-                    "/thumbnail/{}/{}x{}/{} {}x".format(
+                    "/image/thumbnail/{}/{}x{}/{} {}x".format(
                         _format,
                         int(width * _scale * scale),
                         int(height * _scale * scale),
@@ -171,7 +176,7 @@ class MedialibDefaultExtractor(InfoExtractor):
 
         self.content_id = content_id
         self.file = pathlib.Path(file_str)
-        base32path = shared_code.str_to_base32(str(self.file))
+        base32path = shared_code.route_template.str_to_base32(str(self.file))
 
         self.filemeta |= {
             "link": "/orig/{}".format(base32path),
@@ -187,7 +192,9 @@ class MedialibDefaultExtractor(InfoExtractor):
         if content_type in ("image", "video", "video-loop"):
             self.make_icon(self.file, self.filemeta, icon_scale, orientation)
             if self.file.suffix == ".jxl":
-                self.filemeta["link"] = "/image/png/{}".format(base32path)
+                self.filemeta["link"] = "/image/transcode/png/{}".format(
+                    base32path
+                )
         if self.file.suffix.lower() == ".mpd":
             mpd_file = self.file
             if mpd_file.is_relative_to(shared_code.root_dir):
@@ -204,7 +211,9 @@ class MedialibDefaultExtractor(InfoExtractor):
         elif self.file.suffix.lower() == ".srs":
             if content_type in ("video", "video-loop"):
                 self.filemeta["type"] = "video"
-                self.filemeta["link"] = "/aclmmp_webm/{}".format(base32path)
+                self.filemeta["link"] = "/video/srs/multiplex/mlid{}".format(
+                    content_id
+                )
             elif content_type == "image":
                 self.filemeta["type"] = "picture"
                 self.filemeta["link"] = "/image/autodetect/{}".format(
@@ -223,7 +232,7 @@ class MedialibDefaultExtractor(InfoExtractor):
                     self.file, self.filemeta, icon_scale, orientation
                 )
         if self.file.suffix == ".mkv":
-            self.filemeta["link"] = "/vp8/{}".format(base32path)
+            self.filemeta["link"] = "/video/vp8/{}".format(base32path)
             self.filemeta["is_vp8"] = True
 
     def make_icon(
@@ -270,7 +279,7 @@ class MedialibDefaultDataExtractor(DataclassInfoExtractor):
 
         self.content_id = db_content.content_id
         self.file = db_content.file_path
-        base32path = shared_code.str_to_base32(str(self.file))
+        base32path = shared_code.route_template.str_to_base32(str(self.file))
 
         self.filemeta |= {
             "link": "/orig/{}".format(base32path),
@@ -286,7 +295,9 @@ class MedialibDefaultDataExtractor(DataclassInfoExtractor):
         if db_content.content_type in ("image", "video", "video-loop"):
             self.make_icon(self.file, self.filemeta, icon_scale, orientation)
             if self.file.suffix == ".jxl":
-                self.filemeta["link"] = "/image/png/{}".format(base32path)
+                self.filemeta["link"] = "/image/transcode/png/{}".format(
+                    base32path
+                )
         if self.file.suffix.lower() == ".mpd":
             mpd_file = self.file
             if mpd_file.is_relative_to(shared_code.root_dir):
@@ -303,7 +314,9 @@ class MedialibDefaultDataExtractor(DataclassInfoExtractor):
         elif self.file.suffix.lower() == ".srs":
             if db_content.content_type in ("video", "video-loop"):
                 self.filemeta["type"] = "video"
-                self.filemeta["link"] = "/aclmmp_webm/{}".format(base32path)
+                self.filemeta["link"] = "/video/srs/multiplex/mlid{}".format(
+                    db_content.content_id
+                )
             elif db_content.content_type == "image":
                 self.filemeta["type"] = "picture"
                 self.filemeta["link"] = "/image/autodetect/{}".format(
@@ -322,7 +335,7 @@ class MedialibDefaultDataExtractor(DataclassInfoExtractor):
                     self.file, self.filemeta, icon_scale, orientation
                 )
         if self.file.suffix == ".mkv":
-            self.filemeta["link"] = "/vp8/{}".format(base32path)
+            self.filemeta["link"] = "/video/vp8/{}".format(base32path)
             self.filemeta["is_vp8"] = True
 
     def make_icon(

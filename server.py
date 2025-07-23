@@ -2,30 +2,24 @@
 # -*- coding: utf-8 -*-
 import datetime
 import json
-import subprocess
 import sys
 import tempfile
-import abc
-import urllib.parse
-import xml.dom.minidom
 
 import flask
 import os
 import pathlib
-import io
-import PIL.Image
 import filesystem
-import magic
 import logging
 import logging.handlers
 
 import pyimglib
-import pyimglib.decoders.ffmpeg
+import pyimglib.common
 import shared_code
-import pyimglib.ACLMMP as ACLMMP
+from shared_code.route_template import file_url_template
 import medialib_db
 import medialib
-import typing
+import image
+import video
 
 from filesystem.browse import browse
 
@@ -38,9 +32,6 @@ app = flask.Flask(__name__)
 
 app.jinja_env.trim_blocks = True
 app.jinja_env.lstrip_blocks = True
-
-
-FILE_SUFFIX_LIST = [".png", ".jpg", ".gif", ".webm", ".mp4", ".svg"]
 
 
 def loginit():
@@ -84,30 +75,8 @@ def fs_root():
 
 
 app.register_blueprint(medialib.medialib_blueprint)
-
-
-def static_file(path, mimetype=None):
-    abspath = path.absolute()
-    if mimetype is None:
-        mimetype = magic.from_file(str(abspath), mime=True)
-        if path.suffix == ".mpd" and mimetype == "text/xml":
-            mimetype = "application/dash+xml"
-    f = flask.send_from_directory(
-        str(abspath.parent),
-        str(abspath.name),
-        etag=False,
-        mimetype=mimetype,
-        conditional=True,
-    )
-    return f
-
-
-def file_url_template(body, pathstr, **kwargs):
-    path = pathlib.Path(shared_code.base32_to_str(pathstr))
-    if path.is_file():
-        return body(path, **kwargs)
-    else:
-        flask.abort(404)
+app.register_blueprint(image.image_blueprint)
+app.register_blueprint(video.video_blueprint)
 
 
 @app.route("/orig/<string:pathstr>")
@@ -115,324 +84,33 @@ def file_url_template(body, pathstr, **kwargs):
 def get_original(pathstr):
     def body(path):
         if pyimglib.decoders.avif.is_avif(path):
-            return static_file(path, "image/avif")
+            return shared_code.route_template.static_file(path, "image/avif")
         elif pyimglib.decoders.jpeg.is_JPEG(path):
             jpeg = pyimglib.decoders.jpeg.JPEGDecoder(path)
             try:
                 if jpeg.arithmetic_coding():
                     return flask.redirect(
-                        "{}image/jpeg/{}".format(
+                        "{}image/transcode/jpeg/{}".format(
                             flask.request.host_url, pathstr
                         )
                     )
             except ValueError:
                 return flask.redirect(
-                    "{}image/jpeg/{}".format(flask.request.host_url, pathstr)
+                    "{}image/transcode/jpeg/{}".format(
+                        flask.request.host_url, pathstr
+                    )
                 )
-        return static_file(path)
+        return shared_code.route_template.static_file(path)
 
     return file_url_template(body, pathstr)
-
-
-def get_download_filename(content_title, origin_id, path, _format) -> str:
-    if content_title is not None:
-        for suffix in FILE_SUFFIX_LIST:
-            if suffix in content_title:
-                content_title = content_title.replace(suffix, "")
-        content_title = content_title.replace("-amp-", "&").replace(
-            "-eq-", "="
-        )
-    filename = None
-    if origin_id is not None and content_title is not None:
-        filename = "{} {}.{}".format(origin_id, content_title, _format.lower)
-    elif content_title is None and origin_id is not None:
-        filename = "{}.{}".format(origin_id, _format.lower())
-    elif content_title is not None:
-        filename = "{}.{}".format(content_title, _format.lower())
-    else:
-        filename = "{}.{}".format(path.stem, _format.lower())
-    return filename
-
-
-def jxl_jpeg_decode(file_path, download, content_title, origin_id, path):
-    logger.info("decoding JPEG XL to JPEG")
-    jpeg_buffer = io.BytesIO(shared_code.jpeg_xl_fast_decode(file_path))
-    f = flask.send_file(jpeg_buffer, mimetype="image/jpeg")
-    response = flask.make_response(f)
-    if download:
-        filename = get_download_filename(
-            content_title, origin_id, path, "jpeg"
-        )
-        response.headers["content-disposition"] = (
-            'attachment; filename="{}"'.format(urllib.parse.quote(filename))
-        )
-    return response
-
-
-@app.route("/image/<string:_format>/<string:pathstr>")
-@shared_code.login_validation
-def transcode_image(_format: str, pathstr):
-    def body(path: pathlib.Path, _format):
-        logger.debug(
-            "TRANSCODE path = {}, format = {}".format(path.__repr__(), _format)
-        )
-        origin_id = flask.request.args.get("origin_id", None, str)
-        content_title = flask.request.args.get("title", None, str)
-        download: bool = flask.request.args.get("download", False, bool)
-        src_hash, status_code = shared_code.cache_check(path)
-        if status_code is not None:
-            return status_code
-        if path.suffix == ".jxl" and _format == "jpeg":
-            return jxl_jpeg_decode(
-                path, download, content_title, origin_id, path
-            )
-        img = pyimglib.decoders.open_image(path)
-        possible_formats = (_format,)
-        LEVEL = int(flask.session["clevel"])
-        if _format.lower() == "autodetect":
-            _format = "webp"
-            if LEVEL <= 1:
-                possible_formats = ("avif", "webp")
-            if LEVEL == 4:
-                possible_formats = ("jpeg", "png", "gif")
-                _format = "jpeg"
-        if isinstance(img, pyimglib.decoders.srs.ClImage):
-            lods = img.get_image_file_list()
-            logger.debug("lods: {}".format(lods.__repr__()))
-            current_lod = lods.pop(0)
-            current_lod_format = pyimglib.decoders.get_image_format(
-                current_lod
-            )
-            logger.debug(
-                "current_lod {}: {}".format(
-                    current_lod.__repr__(), current_lod_format
-                )
-            )
-            if _format == "png":
-                img = pyimglib.decoders.open_image(current_lod)
-            else:
-                while len(lods):
-                    if current_lod_format not in possible_formats:
-                        current_lod = lods.pop()
-                        current_lod_format = (
-                            pyimglib.decoders.get_image_format(current_lod)
-                        )
-                        logger.debug(
-                            "current_lod {}: {}".format(
-                                current_lod.__repr__(), current_lod_format
-                            )
-                        )
-                    else:
-                        break
-                if current_lod_format in possible_formats and not download:
-                    base32path = shared_code.str_to_base32(str(current_lod))
-                    return flask.redirect(
-                        "{}orig/{}".format(flask.request.host_url, base32path)
-                    )
-                elif current_lod_format == _format and download:
-                    absolute_path = shared_code.root_dir.joinpath(current_lod)
-                    f = flask.send_file(
-                        absolute_path,
-                        mimetype=shared_code.MIME_TYPES_BY_FORMAT[_format],
-                    )
-                    filename = get_download_filename(
-                        content_title, origin_id, path
-                    )
-                    response = flask.make_response(f)
-                    response.headers["content-disposition"] = (
-                        'attachment; filename="{}"'.format(
-                            urllib.parse.quote(filename)
-                        )
-                    )
-                    return response
-                else:
-                    if current_lod_format == "jpeg xl" and _format == "jpeg":
-                        return jxl_jpeg_decode(
-                            current_lod,
-                            download,
-                            content_title,
-                            origin_id,
-                            path,
-                        )
-                    else:
-                        img = pyimglib.decoders.open_image(current_lod)
-        if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
-            _img = img.next_frame()
-            img.close()
-            img = _img
-        img = img.convert(mode="RGBA")
-        buffer = io.BytesIO()
-        mime = ""
-        if _format.lower() == "webp":
-            img.save(
-                buffer, format="WEBP", quality=90, method=4, lossless=False
-            )
-            mime = "image/webp"
-        elif _format.lower() == "jpeg":
-            if pyimglib.decoders.jpeg.is_JPEG(path):
-                jpeg_data = path.read_bytes()
-                transcoding_result = subprocess.run(
-                    ["jpegtran", "-copy", "all"],
-                    input=jpeg_data,
-                    capture_output=True,
-                )
-                buffer = io.BytesIO(transcoding_result.stdout)
-            else:
-                img = img.convert(mode="RGB")
-                img.save(buffer, format="JPEG", quality=90)
-            mime = "image/jpeg"
-        else:
-            img.save(buffer, format="PNG")
-            mime = "image/png"
-        buffer.seek(0)
-        f = flask.send_file(
-            buffer,
-            mimetype=mime,
-            max_age=24 * 60 * 60,
-            last_modified=path.stat().st_mtime,
-        )
-        # response = flask.Response(buffer, mimetype=mime, )
-        f.set_etag(src_hash)
-        response = flask.make_response(f)
-        if download:
-            filename = get_download_filename(
-                content_title, origin_id, path, _format
-            )
-            response.headers["content-disposition"] = (
-                'attachment; filename="{}"'.format(
-                    urllib.parse.quote(filename)
-                )
-            )
-        return response
-
-    return file_url_template(body, pathstr, _format=_format)
-
-
-@app.route(
-    "/thumbnail/<string:_format>/<int:width>x<int:height>/<string:pathstr>"
-)
-@shared_code.login_validation
-def gen_thumbnail(_format: str, width: int, height: int, pathstr: str | None):
-
-    def srs_image_processing(
-        img, allow_origin
-    ) -> PIL.Image.Image | pathlib.Path:
-        logger.info("srs image processing")
-        lods: list[pathlib.Path] = img.progressive_lods()
-        compatibility_level = int(flask.request.cookies.get("clevel"))
-        best_quality = compatibility_level <= 1
-        if allow_origin and best_quality:
-            return lods[-1]
-        cl2_compatible = compatibility_level <= 2
-        if allow_origin and cl2_compatible:
-            cl2_content = img.get_content_by_level(2)
-            if cl2_content is not None:
-                return cl2_content
-        current_lod = lods.pop(0)
-        current_lod_img = pyimglib.decoders.open_image(current_lod)
-        while len(lods):
-            if isinstance(
-                current_lod_img, pyimglib.decoders.frames_stream.FramesStream
-            ):
-                current_lod_img = current_lod_img.next_frame()
-            if (
-                current_lod_img.width < width
-                and current_lod_img.height < height
-            ):
-                current_lod = lods.pop()
-                logger.debug("CURRENT_LOD: {}".format(current_lod))
-                current_lod_img.close()
-                current_lod_img = pyimglib.decoders.open_image(current_lod)
-            else:
-                break
-        if current_lod_img.format == "WEBP" and allow_origin:
-            return current_lod
-        else:
-            return current_lod_img
-
-    def check_origin_allowed(img, allow_origin):
-        return (
-            allow_origin
-            and img.format == "WEBP"
-            and (
-                img.is_animated
-                or (img.width <= width and img.height <= height)
-            )
-        )
-
-    def complex_formats_processing(
-        img, file_path, allow_origin
-    ) -> PIL.Image.Image | flask.Response:
-        logger.info("complex_formats_processing")
-        if isinstance(img, pyimglib.decoders.srs.ClImage):
-            selected_image = srs_image_processing(img, allow_origin)
-            logger.debug(
-                "srs_image_processing: {}".format(selected_image.__repr__())
-            )
-            if isinstance(selected_image, pathlib.Path):
-                base32path = shared_code.str_to_base32(str(selected_image))
-                return flask.redirect(
-                    "{}orig/{}".format(flask.request.host_url, base32path)
-                )
-            else:
-                img = selected_image
-        if isinstance(img, pyimglib.decoders.frames_stream.FramesStream):
-            img = shared_code.extract_frame_from_video(img)
-            logger.debug("extracted frame: {}".format(img.__repr__()))
-        if check_origin_allowed(img, allow_origin):
-            logger.info("origin redirect allowed")
-            base32path = shared_code.str_to_base32(str(file_path))
-            return flask.redirect(
-                "{}orig/{}".format(flask.request.host_url, base32path)
-            )
-        return img
-
-    def file_path_processing(path, _format, width, height):
-        logger.info("file_path_processing")
-        allow_origin = bool(flask.request.args.get("allow_origin", False))
-        src_hash, status_code = None, None
-        if path.stat().st_size < (1024 * 1024 * 1024):
-            src_hash, status_code = shared_code.cache_check(path)
-        if status_code is not None:
-            return status_code
-        img = pyimglib.decoders.open_image(
-            shared_code.root_dir.joinpath(path), (width, height)
-        )
-        extracted_img = complex_formats_processing(img, path, allow_origin)
-        if isinstance(extracted_img, flask.Response):
-            return extracted_img
-        elif isinstance(extracted_img, PIL.Image.Image):
-            img = extracted_img
-        else:
-            raise NotImplementedError(type(extracted_img))
-        buffer, mime, _format = shared_code.generate_thumbnail_image(
-            img, _format, width, height
-        )
-        f = flask.send_file(
-            buffer,
-            mimetype=mime,
-            max_age=24 * 60 * 60,
-            last_modified=path.stat().st_mtime,
-        )
-        if src_hash is not None:
-            f.set_etag(src_hash)
-        return f
-
-    return file_url_template(
-        file_path_processing,
-        pathstr,
-        _format=_format,
-        width=width,
-        height=height,
-    )
 
 
 def detect_content_type(path: pathlib.Path):
     if path.suffix in filesystem.browse.image_file_extensions:
         return "image"
     elif path.suffix in filesystem.browse.video_file_extensions:
-        data = pyimglib.decoders.ffmpeg.probe(path)
-        if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
+        data = pyimglib.common.ffmpeg.probe(path)
+        if len(pyimglib.common.ffmpeg.parser.find_audio_streams(data)):
             return "video"
         else:
             return "video-loop"
@@ -518,7 +196,7 @@ def get_content_metadata(pathstr: str | None, content_id: int | None) -> str:
             "prefix_id": (
                 f"mlid{db_content.content_id}" if db_content else None
             ),
-            "path_str": shared_code.str_to_base32(str(path)),
+            "path_str": shared_code.route_template.str_to_base32(str(path)),
         }
         return kwargs
 
@@ -557,7 +235,7 @@ def get_content_metadata(pathstr: str | None, content_id: int | None) -> str:
     connection = medialib_db.common.make_connection()
     path = None
     if pathstr is not None:
-        path = pathlib.Path(shared_code.base32_to_str(pathstr))
+        path = pathlib.Path(shared_code.route_template.base32_to_str(pathstr))
     db_content, path, is_file = get_db_content_and_path(
         connection, content_id, path
     )
@@ -643,362 +321,11 @@ def get_content_metadata(pathstr: str | None, content_id: int | None) -> str:
         return flask.abort(500, "db_content is None and not file")
 
 
-@app.route(
-    "/autodownload/mlid<int:content_id>",
-    methods=["GET"],
-    defaults={"pathstr": None},
-)
-@app.route(
-    "/autodownload/<string:pathstr>",
-    methods=["GET"],
-    defaults={"content_id": None},
-)
-@shared_code.login_validation
-def autodownload(pathstr, content_id):
-    def body(path: pathlib.Path | None, content_id=None):
-        connection = medialib_db.common.make_connection()
-        db_content = None
-        if content_id is not None:
-            db_content = medialib_db.content.get_content_metadata_by_id(
-                content_id, connection
-            )
-            if db_content is None:
-                return flask.abort(404)
-            path = db_content.file_path
-        elif path is not None:
-            db_content = medialib_db.content.get_content_metadata_by_path(
-                path, connection
-            )
-        if path is None:
-            raise ValueError("Unexpected behaviour: path is still None")
-        content_title: str | None = None
-        prefix_id = None
-        path_str = shared_code.str_to_base32(str(path))
-        template_kwargs = {
-            "content_id": "",
-            "origin_name": "",
-            "origin_id": "",
-        }
-        if db_content is not None:
-            template_kwargs["content_id"] = str(db_content.content_id)
-            content_id = db_content.content_id
-            if db_content.title is not None:
-                content_title = db_content.title
-            origins = medialib_db.origin.get_origins_of_content(
-                connection, content_id
-            )
-            if len(origins):
-                for origin in origins:
-                    if origin.origin_id is not None:
-                        prefix = origin.get_prefix()
-                        if prefix is not None:
-                            prefix_id = "{}{}".format(prefix, origin.origin_id)
-            if prefix_id is None:
-                prefix_id = "mlid{}".format(db_content.content_id)
-        representations: (
-            list[medialib_db.srs_indexer.ContentRepresentationUnit] | None
-        ) = None
-        if content_id is not None:
-            representations = medialib_db.get_representation_by_content_id(
-                content_id, connection
-            )
-        connection.close()
-
-        if path.suffix == ".srs" and representations:
-            compatible_repr: (
-                medialib_db.srs_indexer.ContentRepresentationUnit
-            ) = representations[0]
-            for _repr in representations:
-                if (
-                    _repr.compatibility_level
-                    > compatible_repr.compatibility_level
-                ):
-                    compatible_repr = _repr
-            if (
-                compatible_repr.format == "jxl"
-                and compatible_repr.compatibility_level == 2
-            ):
-
-                return jxl_jpeg_decode(
-                    compatible_repr.file_path,
-                    True,
-                    content_title,
-                    prefix_id,
-                    path,
-                )
-            else:
-                repr_path = compatible_repr.file_path
-                f = flask.send_file(repr_path)
-                response = flask.make_response(f)
-                filename = get_download_filename(
-                    content_title, prefix_id, path, repr_path.suffix[1:]
-                )
-                response.headers["content-disposition"] = (
-                    'attachment; filename="{}"'.format(
-                        urllib.parse.quote(filename)
-                    )
-                )
-                return response
-        elif path.suffix == ".jxl":
-            return jxl_jpeg_decode(path, True, content_title, prefix_id, path)
-        elif path.suffix.lower() in {".jpg", ".jpeg"}:
-            if content_title is not None and prefix_id is not None:
-                safe_title = (
-                    content_title.replace("?", "-qm-")
-                    .replace("&", "-amp-")
-                    .replace("=", "-eq-")
-                    .replace("#", "-hash-")
-                )
-                return flask.redirect(
-                    (
-                        (
-                            f"/image/jpeg/{path_str}?download=1&"
-                            f"origin_id={prefix_id}&title={safe_title}"
-                        )
-                    )
-                )
-            elif prefix_id is not None:
-                return flask.redirect(
-                    f"/image/jpeg/{path_str}?download=1&origin_id={prefix_id}"
-                )
-            else:
-                return flask.redirect(f"/image/jpeg/{path_str}?download=1")
-        else:
-            f = flask.send_file(path)
-            response = flask.make_response(f)
-            filename = get_download_filename(
-                content_title, prefix_id, path, path.suffix[1:]
-            )
-            response.headers["content-disposition"] = (
-                'attachment; filename="{}"'.format(
-                    urllib.parse.quote(filename)
-                )
-            )
-            return response
-
-    if content_id is not None:
-        return body(None, content_id)
-    elif pathstr is not None:
-        return file_url_template(body, pathstr)
-
-
-@app.route(
-    "/autotag/mlid<int:content_id>",
-    methods=["GET", "POST"],
-    defaults={"pathstr": None},
-)
-@app.route(
-    "/autotag/<string:pathstr>",
-    methods=["GET", "POST"],
-    defaults={"content_id": None},
-)
-@shared_code.login_validation
-def get_tags_from_external_service(pathstr, content_id):
-    def body(path: pathlib.Path | None, content_id=None):
-        connection = medialib_db.common.make_connection()
-        db_content: medialib_db.content.Content | None = None
-        is_file = True
-        if content_id is not None:
-            is_file = False
-            db_content = medialib_db.content.get_content_metadata_by_id(
-                content_id, connection
-            )
-            if db_content is None:
-                return flask.abort(
-                    404, f"Content with ID {content_id} not found"
-                )
-            path = db_content.file_path
-        elif path is not None:
-            db_content = medialib_db.content.get_content_metadata_by_path(
-                path, connection
-            )
-        else:
-            return flask.abort(
-                400,
-                "expected content ID or path str but no arguments provided",
-            )
-
-        representations: (
-            list[medialib_db.srs_indexer.ContentRepresentationUnit] | None
-        ) = None
-        if content_id is not None:
-            representations = medialib_db.get_representation_by_content_id(
-                content_id, connection
-            )
-        connection.close()
-
-        img = None
-        img_file = None
-        img_file_path = None
-        mime = None
-
-        if path.suffix == ".srs" and representations:
-            compatible_repr: (
-                medialib_db.srs_indexer.ContentRepresentationUnit
-            ) = representations[0]
-            for _repr in representations:
-                if (
-                    _repr.compatibility_level
-                    > compatible_repr.compatibility_level
-                ):
-                    compatible_repr = _repr
-            if (
-                compatible_repr.format == "jxl"
-                and compatible_repr.compatibility_level == 2
-            ):
-                img_file = shared_code.jpeg_xl_fast_decode(
-                    compatible_repr.file_path
-                )
-                mime = "image/jpeg"
-            else:
-                img_file_path = compatible_repr.file_path
-        elif path.suffix == ".jxl":
-            img_file = shared_code.jpeg_xl_fast_decode(path)
-            mime = "image/x-portable-anymap"
-        elif path.suffix.lower() in {".jpg", ".jpeg"}:
-            jpeg_object = pyimglib.decoders.jpeg.JPEGDecoder(path)
-            try:
-                if jpeg_object.arithmetic_coding():
-                    img_file = jpeg_object.decode().stdout
-                else:
-                    img_file_path = path
-            except ValueError:
-                img_file = jpeg_object.decode().stdout
-        elif path.suffix.lower() in {".png", ".webp"}:
-            img_file_path = path
-        else:
-            img = pyimglib.decoders.open_image(path)
-
-        URL = "http://127.0.0.1:10877/tagging"
-
-        import requests
-
-        if img_file is not None:
-            r = requests.post(
-                URL, data={"threshold": "0.1"}, files={"image-file": img_file}
-            )
-        elif img_file_path is not None:
-            mime = magic.from_file(str(img_file_path), mime=True)
-            r = requests.post(
-                URL,
-                data={"threshold": "0.1"},
-                files={
-                    "image-file": (
-                        img_file_path.name,
-                        img_file_path.open("br"),
-                        mime,
-                    )
-                },
-            )
-        elif img is not None:
-            png_file = io.BytesIO()
-            img.save(png_file, "PNG")
-            r = requests.post(
-                URL,
-                data={"threshold": "0.1"},
-                files={
-                    "image-file": (path.name, png_file.getvalue(), "image/png")
-                },
-            )
-        else:
-            print(img, img_file, img_file_path)
-            raise Exception("Undefined state")
-
-        tags = r.json()
-
-        if is_file:
-            return flask.render_template(
-                "tag_select_form.html",
-                item=filesystem.browse.get_file_info(path),
-                file_name=path.name,
-                tags=tags,
-                resource_id_type="file",
-                resource_id=pathstr,
-            )
-        elif db_content is not None:
-            file_item = None
-            try:
-                file_item = filesystem.browse.get_db_content_info(
-                    db_content.content_id,
-                    str(db_content.file_path),
-                    db_content.content_type,
-                    db_content.title,
-                    icon_scale=2,
-                )[0]
-            except FileNotFoundError:
-                pass
-            return flask.render_template(
-                "tag_select_form.html",
-                item=file_item,
-                file_name=path.name,
-                tags=tags,
-                resource_id_type="content_id",
-                resource_id=content_id,
-            )
-        else:
-            return flask.abort(500, "db_content is None and not file")
-
-    if content_id is not None:
-        return body(None, content_id)
-    elif pathstr is not None:
-        return file_url_template(body, pathstr)
-
-
-def mpd_processing(mpd_file: pathlib.Path):
-    subs_file = mpd_file.with_suffix(".mpd.subs")
-    logger.debug("subs file: {} ({})".format(subs_file, subs_file.exists()))
-    if subs_file.exists():
-        mpd_document: xml.dom.minidom.Document = xml.dom.minidom.parse(
-            str(mpd_file)
-        )
-        period: xml.dom.minidom.Element = mpd_document.getElementsByTagName(
-            "Period"
-        )[0]
-        with subs_file.open() as f:
-            subs = json.load(f)
-            for subtitle in subs:
-                last_repr_id = int(
-                    mpd_document.getElementsByTagName("Representation")[
-                        -1
-                    ].getAttribute("id")
-                )
-                if "webvtt" in subtitle:
-                    _as: xml.dom.minidom.Element = mpd_document.createElement(
-                        "AdaptationSet"
-                    )
-                    _as.setAttribute("mimeType", "text/vtt")
-                    _as.setAttribute("lang", subtitle["lang2"])
-
-                    _repr: xml.dom.minidom.Element = (
-                        mpd_document.createElement("Representation")
-                    )
-                    _repr.setAttribute("id", str(last_repr_id + 1))
-                    _repr.setAttribute("bandwidth", "123")
-
-                    url: xml.dom.minidom.Element = mpd_document.createElement(
-                        "BaseURL"
-                    )
-                    url_text_node = mpd_document.createTextNode(
-                        subtitle["webvtt"]
-                    )
-
-                    url.appendChild(url_text_node)
-                    _repr.appendChild(url)
-                    _as.appendChild(_repr)
-
-                    period.appendChild(_as)
-        return flask.Response(
-            mpd_document.toprettyxml(), mimetype="application/dash+xml"
-        )
-    else:
-        return static_file(mpd_file)
-
-
 def file_processing(file: pathlib.Path):
     if file.suffix == ".mpd":
-        return mpd_processing(file)
+        return video.mpd_processing(file)
     else:
-        return static_file(file)
+        return shared_code.route_template.static_file(file)
 
 
 @app.route("/browse/<path:pathstr>")
@@ -1025,129 +352,6 @@ def browse_dir(pathstr):
 @app.route("/helloword")
 def hello_world():
     return "Hello, World!"
-
-
-class VideoTranscoder(abc.ABC):
-    def __init__(self):
-        self._buffer = None
-        self._io = None
-        self.process = None
-
-    @abc.abstractmethod
-    def get_specific_commandline_part(self, path, fps):
-        return None
-
-    @abc.abstractmethod
-    def get_output_buffer(self):
-        return None
-
-    @abc.abstractmethod
-    def read_input_from_pipe(self, pipe_output):
-        pass
-
-    @abc.abstractmethod
-    def get_mimetype(self):
-        return None
-
-    def do_convert(self, pathstr):
-        def body(path):
-            data = pyimglib.decoders.ffmpeg.probe(path)
-            video = None
-            for stream in data["streams"]:
-                if stream["codec_type"] == "video" and (
-                    video is None or stream["disposition"]["default"] == 1
-                ):
-                    video = stream
-            fps = None
-            if video["avg_frame_rate"] == "0/0":
-                fps = eval(video["r_frame_rate"])
-            else:
-                fps = eval(video["avg_frame_rate"])
-            seek_position = flask.request.args.get("seek", None)
-            commandline = [
-                "ffmpeg",
-            ]
-            if seek_position is not None:
-                commandline += ["-ss", seek_position]
-            commandline += self.get_specific_commandline_part(path, fps)
-            self.process = subprocess.Popen(
-                commandline, stdout=subprocess.PIPE
-            )
-            self.read_input_from_pipe(self.process.stdout)
-            f = flask.send_file(
-                self.get_output_buffer(),
-                etag=False,
-                mimetype=self.get_mimetype(),
-            )
-            return f
-
-        return file_url_template(body, pathstr)
-
-
-class VP8_VideoTranscoder(VideoTranscoder):
-    def __init__(self):
-        super().__init__()
-        self._encoder = "libvpx"
-
-    def get_mimetype(self):
-        return "video/webm"
-
-    def read_input_from_pipe(self, pipe_output):
-        self._io = pipe_output
-
-    def get_specific_commandline_part(self, path, fps):
-        width = flask.request.args.get("width", 1440)
-        height = flask.request.args.get("height", 720)
-        return [
-            "-i",
-            str(path),
-            "-vf",
-            "scale='min({},iw)':'min({}, ih)'".format(width, height)
-            + ":force_original_aspect_ratio=decrease"
-            + (",fps={}".format(fps / 2) if fps > 30 else ""),
-            "-deadline",
-            "realtime",
-            "-cpu-used",
-            "5",
-            "-vcodec",
-            self._encoder,
-            "-crf",
-            "10",
-            "-b:v",
-            "8M",
-            "-ac",
-            "2",
-            "-acodec",
-            "libopus",
-            "-b:a",
-            "144k",
-            "-f",
-            "webm",
-            "-",
-        ]
-
-    def get_output_buffer(self):
-        return self._io
-
-
-class VP9_VideoTranscoder(VP8_VideoTranscoder):
-    def __init__(self):
-        super().__init__()
-        self._encoder = "libvpx-vp9"
-
-
-@app.route("/vp8/<string:pathstr>")
-@shared_code.login_validation
-def ffmpeg_vp8_simplestream(pathstr):
-    vp8_converter = VP8_VideoTranscoder()
-    return vp8_converter.do_convert(pathstr)
-
-
-@app.route("/vp9/<string:pathstr>")
-@shared_code.login_validation
-def ffmpeg_vp9_simplestream(pathstr):
-    vp9_converter = VP9_VideoTranscoder()
-    return vp9_converter.do_convert(pathstr)
 
 
 @app.route("/folder_icon_paint/<path:pathstr>")
@@ -1193,7 +397,7 @@ def icon_paint(pathstr):
         img_url = "/thumbnail/webp/{}x{}/{}".format(
             scaled_base_size[0],
             scaled_base_size[1],
-            shared_code.str_to_base32(
+            shared_code.route_template.str_to_base32(
                 str(thumbnail_path.relative_to(shared_code.root_dir))
             ),
         )
@@ -1231,19 +435,7 @@ def icon_paint(pathstr):
 def root_open_file(pathstr):
     path = pathlib.Path(pathstr).absolute()
     if pathlib.Path(path).is_file():
-        return static_file(path)
-    else:
-        flask.abort(404)
-
-
-@app.route("/ffprobe_json/<string:pathstr>")
-@shared_code.login_validation
-def ffprobe_response(pathstr):
-    path = pathlib.Path(shared_code.base32_to_str(pathstr))
-    if path.is_file():
-        return flask.Response(
-            pyimglib.decoders.ffmpeg.probe(path), mimetype="application/json"
-        )
+        return shared_code.route_template.static_file(path)
     else:
         flask.abort(404)
 

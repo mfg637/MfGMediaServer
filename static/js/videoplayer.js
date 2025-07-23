@@ -5,7 +5,7 @@ let videoPlayer = null;
 function fixEvent(e) {
     e = e || window.event;
     if (!e.target) e.target = e.srcElement;
-    if (e.pageX == null && e.clientX != null ) {
+    if (e.pageX == null && e.clientX != null) {
         var html = document.documentElement;
         var body = document.body;
         e.pageX = e.clientX + (html.scrollLeft || body && body.scrollLeft || 0);
@@ -14,7 +14,7 @@ function fixEvent(e) {
         e.pageY -= html.clientTop || 0;
     }
     if (!e.which && e.button) {
-        e.which = e.button & 1 ? 1 : ( e.button & 2 ? 3 : ( e.button & 4 ? 2 : 0 ) )
+        e.which = e.button & 1 ? 1 : (e.button & 2 ? 3 : (e.button & 4 ? 2 : 0))
     }
     return e;
 }
@@ -26,12 +26,12 @@ function getCoords(elem) {
     var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft;
     var clientTop = docElem.clientTop || body.clientTop || 0;
     var clientLeft = docElem.clientLeft || body.clientLeft || 0;
-    var top  = box.top +  scrollTop - clientTop;
+    var top = box.top + scrollTop - clientTop;
     var left = box.left + scrollLeft - clientLeft;
     return { top: Math.round(top), left: Math.round(left) };
 }
 
-function Scrollbar(root){
+function Scrollbar(root) {
     var _root = root;
     var paused = null;
     var wrapper_for_slider = document.createElement('div'),
@@ -44,7 +44,7 @@ function Scrollbar(root){
     wrapper_for_slider.classList.add('slider-wrapper');
     wrapper_for_slider.appendChild(scrollbar);
     scrollbar.classList.add('slider-line');
-    scrollbar.cntxt=this;
+    scrollbar.cntxt = this;
     scrollbar.appendChild(bufferRanges);
     //bufferRange.classList.add('bufferRange');
     wachedRange.classList.add('slider-scrool-line');
@@ -53,34 +53,34 @@ function Scrollbar(root){
     scrollButton.classList.add('slider-scrool');
 
 
-    scrollButton.ondragstart = function() { return false; };
+    scrollButton.ondragstart = function () { return false; };
 
-    this.init = function(){
-        this.pixelsPerValue=scrollbar.clientWidth-scrollButton.clientWidth;
+    this.init = function () {
+        this.pixelsPerValue = scrollbar.clientWidth - scrollButton.clientWidth;
     }
 
-    this.appendTo = function(elem){
+    this.appendTo = function (elem) {
         elem.appendChild(wrapper_for_slider);
     }
 
-    this.setVideoSliderValue = function(currentTime, duration){
-        var playing = (currentTime/duration)*this.pixelsPerValue + 'px';
-        scrollButton.style.left=playing;
-        wachedRange.style.width=playing;
+    this.setVideoSliderValue = function (currentTime, duration) {
+        var playing = (currentTime / duration) * this.pixelsPerValue + 'px';
+        scrollButton.style.left = playing;
+        wachedRange.style.width = playing;
     }
 
-    function dragRange(e){
+    function dragRange(e) {
         paused = root.pause();
         var thumbCoords = getCoords(scrollButton);
         var shiftX = e.pageX - thumbCoords.left;
         var sliderCoords = getCoords(scrollbar);
         e = fixEvent(e);
-        newLeft = e.pageX-sliderCoords.left;
+        newLeft = e.pageX - sliderCoords.left;
         scrollButton.style.left = newLeft + 'px';
         thumbCoords = getCoords(scrollButton);
         shiftX = e.pageX - thumbCoords.left;
         shiftY = e.pageY - thumbCoords.top;
-        document.onmousemove = function(e) {
+        document.onmousemove = function (e) {
             e = fixEvent(e);
             newLeft = e.pageX - shiftX - sliderCoords.left;
             if (newLeft < 0) {
@@ -92,10 +92,10 @@ function Scrollbar(root){
             }
         }
         scrollButton.style.left = newLeft + 'px';
-        var mouse_up = function() {
-            wachedRange.style.width=newLeft+'px';
+        var mouse_up = function () {
+            wachedRange.style.width = newLeft + 'px';
             //this.init();
-            root.seek(newLeft/this.pixelsPerValue)
+            root.seek(newLeft / this.pixelsPerValue)
             document.onmousemove = document.onmouseup = null;
             root.buffer();
             if (!paused)
@@ -106,23 +106,23 @@ function Scrollbar(root){
     }
     scrollbar.onmousedown = dragRange;
 
-    this.setBufferRange = function(buffered, offset, duration){
+    this.setBufferRange = function (buffered, offset, duration) {
         while (bufferRanges.firstChild) {
             bufferRanges.removeChild(bufferRanges.firstChild);
         }
-        for (i=0; i<buffered.length; i++){
+        for (i = 0; i < buffered.length; i++) {
             bufferRange = document.createElement('div');
             bufferRange.classList.add("bufferRange");
             start = buffered.start(i) + offset;
             end = buffered.end(i) + offset;
-            bufferRange.style.left=(start/duration)*100+'%';
-            bufferRange.style.width=(end-start)/duration*100+'%';
+            bufferRange.style.left = (start / duration) * 100 + '%';
+            bufferRange.style.width = (end - start) / duration * 100 + '%';
             bufferRanges.appendChild(bufferRange);
         }
     }
 }
 
-function RainbowVideoPlayer(filemeta){
+function RainbowVideoPlayer(filemeta) {
     //state variables
     this.cntxt = this;
     videoPlayer = this;
@@ -135,16 +135,16 @@ function RainbowVideoPlayer(filemeta){
     let _filemeta = filemeta;
     this.showControlsTime = 0;
 
-    postersrcurl=filemeta.icon;
-    srcurl=filemeta.link;
+    postersrcurl = filemeta.icon;
+    srcurl = filemeta.link;
 
-    this.container=document.createElement('div');
+    this.container = document.createElement('div');
     this.container.classList.add('videocontainer');
     //this.container.classList.add('off');
     this.container.classList.add('popup');
-    this.container.cntxt=this;
+    this.container.cntxt = this;
     body_tag.appendChild(this.container);
-    body_tag.style.overflow="hidden";
+    body_tag.style.overflow = "hidden";
     this.videoElement = document.createElement('video');
     this.controls = document.createElement('div');
     let loadBanner = document.createElement('div'),
@@ -166,7 +166,7 @@ function RainbowVideoPlayer(filemeta){
         vp8_mode_btn = document.createElement('a');
     loop_button.appendChild(document.createElement('span'))
     this.container.appendChild(this.videoElement);
-    this.videoElement.cntxt=this;
+    this.videoElement.cntxt = this;
     this.container.appendChild(loadBanner);
     loadBanner.classList.add('loader');
     this.container.appendChild(this.controls);
@@ -194,16 +194,16 @@ function RainbowVideoPlayer(filemeta){
     muteButton.classList.add('speacer');
     muteButton.classList.add('button-icon')
     muteButton.classList.add('x16-button');
-    muteButton.cntxt=this;
+    muteButton.cntxt = this;
     muteButton.appendChild(span_element_in_mute_button);
     loop_button.classList.add('loop-button');
     loop_button.classList.add('button-icon');
     loop_button.classList.add('x16-button');
     loop_button.cntxt = this;
     this.controls.appendChild(loop_button);
-    vp8_mode_btn.innerText="VP8";
+    vp8_mode_btn.innerText = "VP8";
     vp8_mode_btn.classList.add("text_btn");
-    if (_filemeta.is_vp8){
+    if (_filemeta.is_vp8) {
         vp8_mode_btn.classList.add('active');
         vp8_active = true;
     }
@@ -211,54 +211,54 @@ function RainbowVideoPlayer(filemeta){
     close_btn.classList.add('closebtn');
     close_btn.cntxt = this;
     this.container.appendChild(close_btn);
-    if (srcurl) {this.videoElement.src=srcurl}
+    if (srcurl) { this.videoElement.src = srcurl }
 
-    function formatmmss(seconds){
-        var n=Math.floor(seconds%60);
-        if (n<10) {return Math.floor(seconds/60)+':'+0+n;}
-        else{return Math.floor(seconds/60)+':'+n;}
+    function formatmmss(seconds) {
+        var n = Math.floor(seconds % 60);
+        if (n < 10) { return Math.floor(seconds / 60) + ':' + 0 + n; }
+        else { return Math.floor(seconds / 60) + ':' + n; }
     }
 
-    this.load_metadata = function() {
+    this.load_metadata = function () {
         function callback(raw_data) {
             data = JSON.parse(raw_data);
             this.setDuration(parseFloat(data.format.duration));
         }
-        ajaxConnect("/ffprobe_json/" + _filemeta.base32path, callback, this);
+        ajaxConnect("/video/ffprobe_json/" + _filemeta.base32path, callback, this);
     }
 
-    this.setDuration = function(_duration){
-        duration=_duration;
-        durationTimeLabel.data=formatmmss(duration);
+    this.setDuration = function (_duration) {
+        duration = _duration;
+        durationTimeLabel.data = formatmmss(duration);
     }
 
-    this._updateCurrentTime = function(){
+    this._updateCurrentTime = function () {
         let current_time = this.videoElement.currentTime + offset
         scrollbar.setVideoSliderValue(current_time, duration);
-        currentTimeLabel.data=formatmmss(current_time);
+        currentTimeLabel.data = formatmmss(current_time);
     }
 
-    function _play(){
+    function _play() {
         this.videoElement.play();
         playButton.classList.add('pause');
-        durRefleshInt = setInterval(this._updateCurrentTime.bind(this), 1000/8);
+        durRefleshInt = setInterval(this._updateCurrentTime.bind(this), 1000 / 8);
     }
 
-    function _pause(){
+    function _pause() {
         this.videoElement.pause();
         playButton.classList.remove('pause');
         clearInterval(durRefleshInt);
     }
 
-    this.togglePlayPause=function(){
-        if(this.cntxt.videoElement.paused){
+    this.togglePlayPause = function () {
+        if (this.cntxt.videoElement.paused) {
             _play.call(this.cntxt);
-        }else{
+        } else {
             _pause.call(this.cntxt);
         }
     }
 
-    this.keyboardControl = function(keyEvent){
+    this.keyboardControl = function (keyEvent) {
         switch (keyEvent.code) {
             case "Space":
                 videoPlayer.togglePlayPause();
@@ -271,70 +271,70 @@ function RainbowVideoPlayer(filemeta){
 
     window.addEventListener("keyup", this.keyboardControl)
 
-    this.pause = function(){
+    this.pause = function () {
         let paused = this.videoElement.paused;
-        if (!paused){
+        if (!paused) {
             _pause.call(this);
         }
         return paused;
     }
-    this.play = function(){
+    this.play = function () {
         let paused = this.videoElement.paused;
-        if (paused){
+        if (paused) {
             _play.call(this);
         }
     }
     playButton.onclick = this.togglePlayPause;
-    this.toggleControlsShow = function (){
-        if (this.container.classList.contains("hide")){
+    this.toggleControlsShow = function () {
+        if (this.container.classList.contains("hide")) {
             this.showControls()
-        }else {
+        } else {
             this.hideControls()
         }
     }
-    this.videoElement.addEventListener("click", function (event){
+    this.videoElement.addEventListener("click", function (event) {
         this.cntxt.toggleControlsShow();
     })
     //this.container.ondblclick = this.playpause;
-    this.muteToggle = function(){
+    this.muteToggle = function () {
         if (muted) {
             this.cntxt.videoElement.muted = false;
-            muted=false;
+            muted = false;
             muteButton.classList.remove('mute');
-        }else{
+        } else {
             this.cntxt.videoElement.muted = true;
-            muted=true;
+            muted = true;
             muteButton.classList.add('mute');
         }
     }
 
-    this.toggle_loop = function(){
-        if (this.cntxt.videoElement.loop){
+    this.toggle_loop = function () {
+        if (this.cntxt.videoElement.loop) {
             this.cntxt.videoElement.loop = false;
             this.classList.remove('active');
-        }else{
+        } else {
             this.cntxt.videoElement.loop = true;
             this.classList.add('active');
         }
     }
     loop_button.onclick = this.toggle_loop;
-    this.hideControls = function(){
+    this.hideControls = function () {
         this.container.classList.add('hide');
         clearTimeout(this.showControlsTime);
     }
 
-    this.showControls = function(){
+    this.showControls = function () {
         clearTimeout(this.showControlsTime);
-        if (this.container.classList.contains('hide')){this.container.classList.remove('hide');}
-        this.showControlsTime=setTimeout(this.hideControls.bind(this), 10000);
+        if (this.container.classList.contains('hide')) { this.container.classList.remove('hide'); }
+        this.showControlsTime = setTimeout(this.hideControls.bind(this), 10000);
     }
 
-    this.start = function() {
+    this.start = function () {
         this.cntxt.container.classList.remove('off');
-        muteButton.onclick = function(){this.cntxt.muteToggle()};
-        this.cntxt.container.onmousemove = function(){this.cntxt.showControls()}
-        this.cntxt.container.onmouseout=function(){this.cntxt.hideControls()}
-        this.cntxt.container.onclick=function(event){
+        muteButton.onclick = function () { this.cntxt.muteToggle() };
+        this.cntxt.container.onmousemove = function () { this.cntxt.showControls() }
+        this.cntxt.container.onmouseout = function () { this.cntxt.hideControls() }
+        this.cntxt.container.onclick = function (event) {
             if ((event.target === event.currentTarget) || (event.target === this.videoElement))
                 this.cntxt.showControls();
         }
@@ -342,10 +342,10 @@ function RainbowVideoPlayer(filemeta){
         this.cntxt.showControls();
     }
 
-    this.seek = function(position){
+    this.seek = function (position) {
         let seek_position = position * duration;
-        if (vp8_active && !this.videoElement.loop){
-            this.videoElement.src = "/vp8/" + _filemeta.base32path + "?seek="+seek_position;
+        if (vp8_active && !this.videoElement.loop) {
+            this.videoElement.src = "/video/vp8/" + _filemeta.base32path + "?seek=" + seek_position;
             offset = seek_position;
         }
         else {
@@ -354,45 +354,45 @@ function RainbowVideoPlayer(filemeta){
         }
     }
 
-    this.reseek = function(){
+    this.reseek = function () {
         let seek_position = this.videoElement.currentTime;
         this.videoElement.currentTime = seek_position;
     }
 
     this.bind_video = function () {
-        this.videoElement.onloadedmetadata=function() {
+        this.videoElement.onloadedmetadata = function () {
             this.cntxt.setDuration(this.duration);
             this.cntxt.load_metadata.call(this.cntxt);
         }
-        this.videoElement.onprogress=function() {
+        this.videoElement.onprogress = function () {
             this.cntxt.buffer();
         };
-        this.videoElement.oncanplaythrough=function () {
+        this.videoElement.oncanplaythrough = function () {
             this.cntxt.play();
         }
     }
     this.bind_video();
 
-    this.buffer=function(){
-        if(this.videoElement.buffered.length){
+    this.buffer = function () {
+        if (this.videoElement.buffered.length) {
             scrollbar.setBufferRange(this.videoElement.buffered, offset, duration);
         }
     }
 
-    function fullscreen(){
-        if (document.fullScreen||document.mozFullScreen||document.webkitIsFullScreen) {
-            if(document.cancelFullScreen) {
+    function fullscreen() {
+        if (document.fullScreen || document.mozFullScreen || document.webkitIsFullScreen) {
+            if (document.cancelFullScreen) {
                 document.cancelFullScreen();
-            } else if(document.mozCancelFullScreen) {
+            } else if (document.mozCancelFullScreen) {
                 document.mozCancelFullScreen();
-            } else if(document.webkitCancelFullScreen) {
+            } else if (document.webkitCancelFullScreen) {
                 document.webkitCancelFullScreen();
             }
             this.classList.remove('back');
-        } else{
-            if(this.cntxt.container.requestFullScreen) {
+        } else {
+            if (this.cntxt.container.requestFullScreen) {
                 this.cntxt.container.requestFullScreen();
-            } else if(this.cntxt.container.requestFullscreen) {
+            } else if (this.cntxt.container.requestFullscreen) {
                 this.cntxt.container.requestFullscreen();
             }
             this.classList.add('back');
@@ -401,15 +401,15 @@ function RainbowVideoPlayer(filemeta){
     fullscreenButton.onclick = fullscreen;
 
     vp8_mode_btn.cntxt = this;
-    vp8_mode_btn.onclick = function(){
-        if (!_filemeta.is_vp8){
-            if (vp8_active){
+    vp8_mode_btn.onclick = function () {
+        if (!_filemeta.is_vp8) {
+            if (vp8_active) {
                 this.cntxt.videoElement.src = _filemeta.link;
                 this.classList.remove('active');
                 vp8_active = false;
                 offset = 0;
-            }else{
-                this.cntxt.videoElement.src = "/vp8/"+_filemeta.base32path;
+            } else {
+                this.cntxt.videoElement.src = "/video/vp8/" + _filemeta.base32path;
                 this.classList.add("active");
                 vp8_active = true;
             }
@@ -426,18 +426,18 @@ function RainbowVideoPlayer(filemeta){
     window.addEventListener('resize', this.start.bind(this));
 
 
-    this.closePlayer = function (){
+    this.closePlayer = function () {
         this.videoElement.pause();
         this.videoElement.removeAttribute("src");
         this.videoElement.load();
         window.removeEventListener('resize', this.start);
         window.removeEventListener("keyup", this.keyboardControl)
         body_tag.removeChild(this.container);
-        body_tag.style.overflow="auto";
+        body_tag.style.overflow = "auto";
         videoPlayer = null;
     }
 
-    close_btn.onclick = function(){this.cntxt.closePlayer()}
+    close_btn.onclick = function () { this.cntxt.closePlayer() }
 
 }
 
@@ -454,51 +454,51 @@ function RainbowDASHVideoPlayer(filemeta) {/*
 @@@@@@@@@@@@@@@@***,*((((((((((((((//////////////////////////////////////,...............,(((@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@(**,(((((((((((/////////////////////////////////////////,.....................(((@@@@@@@********@@@@@@@@@@
 @@@@@@@@@@@@@*///((/((((///////////////////////////////////////////...........................(((@@&***,,,,,,***@@@@@@@@
-//@@@@@@@@@@*((((///////////////////////////////////////////////,...............................((***,,,,,,,,,***@@@@@@@
-//@@@@@@@@@(((///////////////////////////////////////////////*...................................**,,,,,,,,,,,,***@@@@@@
-//@@@@@@@(((/////////////(/////////////////////////////////....................................***,,,,,,,,,,,,,,**(@@@@@
-//@@@@@#((/////////(((//////////////////////////////////,.....................................***,,,,,,,,,,,,,,,***@@@@@
-//@@@@(((/////(((((///////////////////////////////////.......................................***,,,,,,,,,,,,*,,,,**@@@@@
-//@@(((//((((*(((//////////////////////////////////,.......................................((**,,,,,,,,,,,,,*,,,,***@@@@
-//@(((((((**,((//////////////////////////////////.......................................(((***,,,,,,,,,,,,,,*,,,,***@@@@
-/*((((&@@@*(((/////////////////////////////////...../(((((((((((//**(((..............(((*,,,*,,,,,,,,,,,,,,**,,,,***@@@@
-@((@@@@@@(((////////////////////////////////(((((((*,,,,,,,,,,,,,(((.............((((,,,,,,,,,,,,,,,,,,,,,,**,,,,,**@@@@
-@@@@@@@@(((///////////////////////////(((((/,,,,,,,,,,,,,,,,,((((............((((*,,,,,,,,,,,,,,,,,,,,,,,,**,,,,,***@@@@
-@@@@@@@((////////////////////////((((/  @@,,,,,,,,,,,,,,/((((...........(((((,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,***@@@@
-@@@@@@((////////////////////(((((&&&&&&&,@@,,,,,,,,(((((,......./(((((((,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,**@@@@@
-*///@((/////////////////((((#&&&&&&&&&&&&&@@,,,,,,*/((((((((((/*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,**(@@@@@
-/*@@((///////////////(((,#&&&&&@@@@      ,&@*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,/@@@@@@@@,,,,,,,,/@,,,*,,,,,,,,**///@@@@
-/*@(((///////////((((   &&&&&@@@@@         @@,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,/@@,          @@,,%@&,,,,,,,,,,,,,***@@@@@@@
-@@%((/////////(((,    *&&&&@@@@@@@         (@,,,,,,,,,,,,,,,,,,,,,,,,,,,,,@@&&&&&&%         @@,,,,,,,,,,,,,,***&@@@@@@@@
-@@((///////(((*,.    ,&&&&@@@@@@@@         *@,,,,,,,,,,,,,,,,,,,,,,,,,,,@@&&&&&&&&&&&&       @@,,,,,,,,,,,,***@@@@@@@@@@
-@&((////((((**,,     %%%&@@@@@@@@@@        (@,,,,,,,,,,,,,,,,,,,,,,,,,@@&@@@@      &&&&(      @@@@%(*,,,,***@@@@@@@@@@@@
-@(((//(((@@/**,,    /%%%@@@@@@     @*      @#,,,,,,,,,,,,,,,,,,,,,,,*@@@@@@@         &&&/     @#,,,,,,,***@@@@@@@@@@@@@@
-@(((((#@@@@/**,,    %%%%@@@@@@@    @@@@(..@@,,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@/          &&&     #*,,,,***@@@@@@@@@@@@@@@@@
-@(((@@@@@@@/**,,    ((((@@@@@@@@@@@@@@@@@@@%,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@@@           &&,    ,*@@@@@@@@@@@@@@@@@@@@@@@@
-@(@@@@@@@@@%**,,    ((((@@@@@@@@@@@@@@@@@@@,,,,,,,,,,,,,,,,,,,,,,*@@@@@@@@@@#          &&,    .,**@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@**,,,    ,,,@@@@@@@@@@@@@@@@@@,,,,,,,,,,,,,,,,,,,,,,,@@@@@@@    %@        .%%     ,***@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@***,,    ,,,#@@@@@@@@@@@@@@@@,,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@@    @@@.    %%%%    .***@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@**,,,    #%%%%@@@@@@@@@@@%#,,,,,,,,,,,,,,,,,,,,,,,,@@@@@@@@@@@@@@@@@@@@%%%%     ,**&@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@%**,,,     %%%%%%%@&%%%%%,,,,,,,,*******,,,,,,,,,,,@@@@@@@@@@@@@@@@@@@%%%%.    ,**(@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@(**,,,.     %%%%%%%%%%,,,,,,,,,,,,,,,,,,,*,,,,,,,,@@@@@@@@@@@@@@@@@@((((     ,***@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@%**,,,,.           ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@@@@@@@@@*,(((     ,**((((((((%@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@***,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,,,,,,,,%%%@@@@@@@@@@@*,,,,     .***%%%%%%%%%(((((((((@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@(**,,,,,,,,,,,,,,,,,,,,**,,,,,,,,,,,,,,,,,,,,,*%%%%%&@@&%%%%%%,      ,**///((((#%%%%%%%%%%%((((((@@@@@
-//@@@@@@@@@@@@@@@@@@***,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,**,,,,,,,,,, #%%%%%%%%%%/       ,*****/((((((((((#%%%%%%%%%%%(((((@
-//@@@@@@@@@@@@@@@@@@@@/***,,,,,,,,,,,,**,,,,,,,,,,,,,,,,*,,,,,,,,,.               ,,*************/((((((((#%%%%%%%%%%%((
-//@@@@@@@@@@@@@@@@@@@@@@%***,,,,,,,,,,,**,,,,,,,,,,,,,**,,,,,,,,,,,,,         .,,***,..,*************/(((((((%%%%%%%%%%%
-//@@@@@@@@@@@@@@@@@@@@@@@@@#****,,,,,,,,,,***,,,,,****,,,,,,,,,,,,,,,,,,,,,,,,***,...........***********(((((((#%%%%%%%%
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*****,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,****..................**********/((((((#%%%%%%
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@********,,,,,,,,,,,,,,,,,,,,,,,,,,,*****((//////.................*********/((((((%%%%%
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@***,,,,,,****************************/((((((/////////...............*********((((((#%%%
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@**,,,,,,,,,,,,,,,,,,,,,,,,,,,((*****((((((((///////////,.............*********(((((((%#
+    //@@@@@@@@@@*((((///////////////////////////////////////////////,...............................((***,,,,,,,,,***@@@@@@@
+    //@@@@@@@@@(((///////////////////////////////////////////////*...................................**,,,,,,,,,,,,***@@@@@@
+    //@@@@@@@(((/////////////(/////////////////////////////////....................................***,,,,,,,,,,,,,,**(@@@@@
+    //@@@@@#((/////////(((//////////////////////////////////,.....................................***,,,,,,,,,,,,,,,***@@@@@
+    //@@@@(((/////(((((///////////////////////////////////.......................................***,,,,,,,,,,,,*,,,,**@@@@@
+    //@@(((//((((*(((//////////////////////////////////,.......................................((**,,,,,,,,,,,,,*,,,,***@@@@
+    //@(((((((**,((//////////////////////////////////.......................................(((***,,,,,,,,,,,,,,*,,,,***@@@@
+    /*((((&@@@*(((/////////////////////////////////...../(((((((((((//**(((..............(((*,,,*,,,,,,,,,,,,,,**,,,,***@@@@
+    @((@@@@@@(((////////////////////////////////(((((((*,,,,,,,,,,,,,(((.............((((,,,,,,,,,,,,,,,,,,,,,,**,,,,,**@@@@
+    @@@@@@@@(((///////////////////////////(((((/,,,,,,,,,,,,,,,,,((((............((((*,,,,,,,,,,,,,,,,,,,,,,,,**,,,,,***@@@@
+    @@@@@@@((////////////////////////((((/  @@,,,,,,,,,,,,,,/((((...........(((((,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,***@@@@
+    @@@@@@((////////////////////(((((&&&&&&&,@@,,,,,,,,(((((,......./(((((((,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,**@@@@@
+    *///@((/////////////////((((#&&&&&&&&&&&&&@@,,,,,,*/((((((((((/*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,**(@@@@@
+    /*@@((///////////////(((,#&&&&&@@@@      ,&@*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,/@@@@@@@@,,,,,,,,/@,,,*,,,,,,,,**///@@@@
+    /*@(((///////////((((   &&&&&@@@@@         @@,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,/@@,          @@,,%@&,,,,,,,,,,,,,***@@@@@@@
+    @@%((/////////(((,    *&&&&@@@@@@@         (@,,,,,,,,,,,,,,,,,,,,,,,,,,,,,@@&&&&&&%         @@,,,,,,,,,,,,,,***&@@@@@@@@
+    @@((///////(((*,.    ,&&&&@@@@@@@@         *@,,,,,,,,,,,,,,,,,,,,,,,,,,,@@&&&&&&&&&&&&       @@,,,,,,,,,,,,***@@@@@@@@@@
+    @&((////((((**,,     %%%&@@@@@@@@@@        (@,,,,,,,,,,,,,,,,,,,,,,,,,@@&@@@@      &&&&(      @@@@%(*,,,,***@@@@@@@@@@@@
+    @(((//(((@@/**,,    /%%%@@@@@@     @*      @#,,,,,,,,,,,,,,,,,,,,,,,*@@@@@@@         &&&/     @#,,,,,,,***@@@@@@@@@@@@@@
+    @(((((#@@@@/**,,    %%%%@@@@@@@    @@@@(..@@,,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@/          &&&     #*,,,,***@@@@@@@@@@@@@@@@@
+    @(((@@@@@@@/**,,    ((((@@@@@@@@@@@@@@@@@@@%,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@@@           &&,    ,*@@@@@@@@@@@@@@@@@@@@@@@@
+    @(@@@@@@@@@%**,,    ((((@@@@@@@@@@@@@@@@@@@,,,,,,,,,,,,,,,,,,,,,,*@@@@@@@@@@#          &&,    .,**@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@**,,,    ,,,@@@@@@@@@@@@@@@@@@,,,,,,,,,,,,,,,,,,,,,,,@@@@@@@    %@        .%%     ,***@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@***,,    ,,,#@@@@@@@@@@@@@@@@,,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@@    @@@.    %%%%    .***@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@**,,,    #%%%%@@@@@@@@@@@%#,,,,,,,,,,,,,,,,,,,,,,,,@@@@@@@@@@@@@@@@@@@@%%%%     ,**&@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@%**,,,     %%%%%%%@&%%%%%,,,,,,,,*******,,,,,,,,,,,@@@@@@@@@@@@@@@@@@@%%%%.    ,**(@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@(**,,,.     %%%%%%%%%%,,,,,,,,,,,,,,,,,,,*,,,,,,,,@@@@@@@@@@@@@@@@@@((((     ,***@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@%**,,,,.           ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,%@@@@@@@@@@@@@@@*,(((     ,**((((((((%@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@***,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,,,,,,,,%%%@@@@@@@@@@@*,,,,     .***%%%%%%%%%(((((((((@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@(**,,,,,,,,,,,,,,,,,,,,**,,,,,,,,,,,,,,,,,,,,,*%%%%%&@@&%%%%%%,      ,**///((((#%%%%%%%%%%%((((((@@@@@
+    //@@@@@@@@@@@@@@@@@@***,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,**,,,,,,,,,, #%%%%%%%%%%/       ,*****/((((((((((#%%%%%%%%%%%(((((@
+    //@@@@@@@@@@@@@@@@@@@@/***,,,,,,,,,,,,**,,,,,,,,,,,,,,,,*,,,,,,,,,.               ,,*************/((((((((#%%%%%%%%%%%((
+    //@@@@@@@@@@@@@@@@@@@@@@%***,,,,,,,,,,,**,,,,,,,,,,,,,**,,,,,,,,,,,,,         .,,***,..,*************/(((((((%%%%%%%%%%%
+    //@@@@@@@@@@@@@@@@@@@@@@@@@#****,,,,,,,,,,***,,,,,****,,,,,,,,,,,,,,,,,,,,,,,,***,...........***********(((((((#%%%%%%%%
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*****,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,****..................**********/((((((#%%%%%%
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@********,,,,,,,,,,,,,,,,,,,,,,,,,,,*****((//////.................*********/((((((%%%%%
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@***,,,,,,****************************/((((((/////////...............*********((((((#%%%
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@**,,,,,,,,,,,,,,,,,,,,,,,,,,,((*****((((((((///////////,.............*********(((((((%#
 
 
     RainbowVideoPlayer.call(this, filemeta);
     var url = filemeta.link;
     this.dash_js_player = dashjs.MediaPlayer().create();
     this.dash_js_player.initialize(this.videoElement, url, true);
-    this.representation_filter_callback = function (representation){
+    this.representation_filter_callback = function (representation) {
         const compatibility_level = Number(localStorage.getItem("clevel"));
         console.log("compatibility_level", compatibility_level);
         let mediaCapabilitiesResponse = false;
@@ -534,7 +534,7 @@ function RainbowDASHVideoPlayer(filemeta) {/*
             let fps_compatible = true;
             if ((compatibility_level >= 3) && (framerate_number > 30)) {
                 fps_compatible = false;
-            }else if ((compatibility_level >= 0) && (framerate_number > 60)) {
+            } else if ((compatibility_level >= 0) && (framerate_number > 60)) {
                 fps_compatible = false;
             }
 
@@ -543,32 +543,32 @@ function RainbowDASHVideoPlayer(filemeta) {/*
             let max_side = width;
             let min_side = height;
 
-            if (height > width){
+            if (height > width) {
                 max_side = height;
                 min_side = width;
             }
             let size_compatible = false;
-            if (compatibility_level >= 3){
+            if (compatibility_level >= 3) {
                 size_compatible = min_side <= 720 && max_side <= 1280;
-            } else if (compatibility_level === 2){
+            } else if (compatibility_level === 2) {
                 size_compatible = min_side <= 1080 && max_side <= 1920;
             }
             else {
                 size_compatible = true;
             }
             console.log(
-              "is_codec_compatible: ", is_codec_compatible,
-              ", fps_compatible: ", fps_compatible,
-              ", size_compatible: ", size_compatible
+                "is_codec_compatible: ", is_codec_compatible,
+                ", fps_compatible: ", fps_compatible,
+                ", size_compatible: ", size_compatible
             );
             is_compatible = is_codec_compatible && fps_compatible && size_compatible;
-        } else { is_compatible = true;}
+        } else { is_compatible = true; }
         console.log("return ", is_compatible);
         return is_compatible;
     }
     this.dash_js_player.registerCustomCapabilitiesFilter(this.representation_filter_callback);
     this.videoElement = this.dash_js_player.getVideoElement();
-    this.dash_js_player.cntxt=this;
+    this.dash_js_player.cntxt = this;
     this.dash_js_player.updateSettings({
         "streaming": {
             "capabilities": {

@@ -4,6 +4,7 @@ import io
 from typing import Any
 
 import flask
+import pyimglib.common
 import shared_code
 import medialib_db
 import math
@@ -304,8 +305,8 @@ def detect_content_type(path: pathlib.Path):
     if path.suffix in filesystem.browse.image_file_extensions:
         return "image"
     elif path.suffix in filesystem.browse.video_file_extensions:
-        data = pyimglib.decoders.ffmpeg.probe(path)
-        if len(pyimglib.decoders.ffmpeg.parser.find_audio_streams(data)):
+        data = pyimglib.common.ffmpeg.probe(path)
+        if len(pyimglib.common.ffmpeg.parser.find_audio_streams(data)):
             return "video"
         else:
             return "video-loop"
@@ -365,9 +366,9 @@ def register_tags():
             return flask.make_response(f"Not found tag {tag}", 500)
         tag_ids.add(tag_id)
 
-    if content_id is None:
-        path = pathlib.Path(shared_code.base32_to_str(pathstr))
-        db_content = medialib_db.get_content_metadata_by_file_path(
+    if content_id is None and pathstr is not None:
+        path = pathlib.Path(shared_code.route_template.base32_to_str(pathstr))
+        db_content = medialib_db.content.get_content_metadata_by_path(
             path, connection
         )
         if db_content is not None:
@@ -390,7 +391,7 @@ def register_tags():
             content_id = medialib_db.content_register(
                 **content_new_data, connection=connection
             )
-    else:
+    elif content_id is not None:
         db_content = medialib_db.content.get_content_metadata_by_id(
             content_id, connection
         )
@@ -400,6 +401,8 @@ def register_tags():
             )
         path = db_content.file_path
         discard_existing_tags()
+    else:
+        raise ValueError("pathstr is None and content_id is None")
 
     medialib_db.add_tags_for_content_by_tag_ids(
         content_id, list(tag_ids), connection
@@ -647,14 +650,14 @@ def gen_thumbnail(
         representations = load_representations(
             content_id, file_path, db_connection
         )
-        if allow_origin:
+        if representations and allow_origin:
             for representation in representations:
                 if (
                     representation.compatibility_level >= compatibility_level
                     and representation.format == _format
                 ):
                     db_connection.close()
-                    base32path = shared_code.str_to_base32(
+                    base32path = shared_code.route_template.str_to_base32(
                         str(representation.file_path)
                     )
                     return flask.redirect(
@@ -662,7 +665,7 @@ def gen_thumbnail(
                     )
             if representations[-1].format in {"webp", "jpeg", "png"}:
                 db_connection.close()
-                base32path = shared_code.str_to_base32(
+                base32path = shared_code.route_template.str_to_base32(
                     str(representations[-1].file_path)
                 )
                 return flask.redirect(
@@ -678,12 +681,14 @@ def gen_thumbnail(
             )
             img = pyimglib.decoders.open_image(representations[0].file_path)
             file_path = representations[0].file_path
-        else:
+        elif representations:
             logger.info(
                 "generate thumbnail from worst available representation"
             )
             # allow_hashing = False
             file_path = representations[-1].file_path
+        else:
+            pass
     else:
         logger.info("default thumbnail generation")
 
@@ -704,7 +709,7 @@ def gen_thumbnail(
             return flask.redirect(
                 "{}orig/{}".format(
                     flask.request.host_url,
-                    shared_code.str_to_base32(str(file_path)),
+                    shared_code.route_template.str_to_base32(str(file_path)),
                 )
             )
     else:
@@ -880,7 +885,9 @@ def compare_image():
         if content_origin is not None:
             image_data = ImageData(
                 content_id,
-                shared_code.str_to_base32(str(db_content.file_path)),
+                shared_code.route_template.str_to_base32(
+                    str(db_content.file_path)
+                ),
                 db_content.content_type,
                 file_path.suffix,
                 img.width,
@@ -895,7 +902,9 @@ def compare_image():
         else:
             image_data = ImageData(
                 content_id,
-                shared_code.str_to_base32(str(db_content.file_path)),
+                shared_code.route_template.str_to_base32(
+                    str(db_content.file_path)
+                ),
                 db_content.content_type,
                 file_path.suffix,
                 img.width,
