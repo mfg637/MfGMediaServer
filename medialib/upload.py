@@ -274,7 +274,7 @@ def upload_file():
         if description is None:
             description = "Metadata:\n" + image_metadata.text_data
         else:
-            description += "\n" + "=" * 16 + "Metadata:\n" + "=" * 16 + "\n"
+            description += "\n" + "=" * 16 + "\nMetadata:\n" + "=" * 16 + "\n"
             description += image_metadata.text_data
 
     outdir = shared_code.get_output_directory()
@@ -297,11 +297,11 @@ def upload_file():
         "hidden": False,
         "description": description,
     }
+    content_id = medialib_db.content_register(
+        **content_new_data, connection=connection
+    )
     if image_metadata is not None:
         try:
-            content_id = medialib_db.content_register(
-                **content_new_data, connection=connection
-            )
             if image_metadata.comfyui_workflow is not None:
                 binary_encoded_json = json.dumps(
                     image_metadata.comfyui_workflow.workflow
@@ -320,7 +320,7 @@ def upload_file():
                 )
             if image_metadata.json_data is not None:
                 binary_encoded_json = json.dumps(
-                    image_metadata.json_data
+                    image_metadata.json_data.data
                 ).encode("utf-8")
                 json_filepath = outdir.joinpath(saved_name + ".json.xz")
                 with lzma.open(json_filepath, "wb") as f:

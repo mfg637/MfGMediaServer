@@ -110,8 +110,8 @@ class FileExtractor(InfoExtractor):
                 )
             elif TYPE == pyimglib.ACLMMP.srs_parser.MEDIA_TYPE.IMAGE:
                 self.filemeta["type"] = "picture"
-                self.filemeta["link"] = "/image/autodetect/{}".format(
-                    base32path
+                self.filemeta["link"] = (
+                    "/image/transcode/autodetect/{}".format(base32path)
                 )
             self.make_icon(file, self.filemeta)
         elif file.suffix.lower() == ".m3u8":
@@ -216,8 +216,8 @@ class MedialibDefaultExtractor(InfoExtractor):
                 )
             elif content_type == "image":
                 self.filemeta["type"] = "picture"
-                self.filemeta["link"] = "/image/autodetect/{}".format(
-                    base32path
+                self.filemeta["link"] = (
+                    "/image/transcode/autodetect/{}".format(base32path)
                 )
             self.make_icon(self.file, self.filemeta, icon_scale, orientation)
         elif self.file.suffix.lower() == ".m3u8":
@@ -319,8 +319,8 @@ class MedialibDefaultDataExtractor(DataclassInfoExtractor):
                 )
             elif db_content.content_type == "image":
                 self.filemeta["type"] = "picture"
-                self.filemeta["link"] = "/image/autodetect/{}".format(
-                    base32path
+                self.filemeta["link"] = (
+                    "/image/transcode/autodetect/{}".format(base32path)
                 )
             self.make_icon(self.file, self.filemeta, icon_scale, orientation)
         elif self.file.suffix.lower() == ".m3u8":
