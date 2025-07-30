@@ -1,4 +1,4 @@
-import React, {MouseEventHandler, useEffect} from 'react';
+import React, { MouseEventHandler, useEffect } from 'react';
 import { useState } from "react";
 import { createRoot } from 'react-dom/client';
 
@@ -10,7 +10,7 @@ interface ContentRepresentationUnit {
     format: string
 }
 
-interface ImageData{
+interface ImageData {
     content_id: number
     pathstr: string
     content_type: string
@@ -37,7 +37,7 @@ interface CompareResult {
     no_difference: boolean
 }
 
-interface ComparisonDataSerialised{
+interface ComparisonDataSerialised {
     image_data: ImageData[],
     compare_results: CompareResult[]
 }
@@ -59,7 +59,7 @@ interface AssignedComparisonResult {
     second_content: ImageData
 }
 
-interface ListRepresentationsProps{
+interface ListRepresentationsProps {
     reprList: ContentRepresentationUnit[]
 }
 
@@ -73,12 +73,12 @@ function ListRepresentations(props: ListRepresentationsProps) {
     )
 }
 
-function ImageDataBlock(imageData: ImageData){
-    function remove_highlight_from_button(button: HTMLButtonElement){
+function ImageDataBlock(imageData: ImageData) {
+    function remove_highlight_from_button(button: HTMLButtonElement) {
         button.classList.remove("green-highlight");
     }
 
-    function copy_content_id_to_clipboard(e: React.MouseEvent<HTMLButtonElement>){
+    function copy_content_id_to_clipboard(e: React.MouseEvent<HTMLButtonElement>) {
         const button = e.currentTarget;
         const content_id = button.dataset.contentId;
         navigator.clipboard.writeText(content_id);
@@ -88,7 +88,7 @@ function ImageDataBlock(imageData: ImageData){
     return (
         <div className="image-data">
             <div>
-                content id: 
+                content id:
                 <a href={`/content_metadata/mlid${imageData.content_id}`}>{imageData.content_id}</a>
                 <button
                     type="button"
@@ -121,7 +121,7 @@ function ImageDataBlock(imageData: ImageData){
                 Representations: <ListRepresentations reprList={imageData.representations} />
             </div>
             <div>
-                {imageData.alternate_version?"Alternate version":"Replacement candidate"}
+                {imageData.alternate_version ? "Alternate version" : "Replacement candidate"}
             </div>
         </div>
     )
@@ -130,13 +130,13 @@ function ImageDataBlock(imageData: ImageData){
 function ComprassionBlock(results: CompareResult) {
     let show_difference = (
         <div >
-           Impossible to calculate difference
+            Impossible to calculate difference
         </div>
     );
-    if (results.difference !== null){
+    if (results.difference !== null) {
         show_difference = (
-            <div 
-                className={results.no_difference?"status-good":"status-warning"}
+            <div
+                className={results.no_difference ? "status-good" : "status-warning"}
             >
                 Difference: {(results.difference * 100).toFixed(2)} %
             </div>
@@ -144,27 +144,27 @@ function ComprassionBlock(results: CompareResult) {
     }
     return (
         <div className="comparison-block">
-            <div className={results.is_size_equal?"status-warning":"status-good"}>
-                {results.is_size_equal?"Size equal":results.is_first_larger?"First image larger":"Second image larger"}
+            <div className={results.is_size_equal ? "status-warning" : "status-good"}>
+                {results.is_size_equal ? "Size equal" : results.is_first_larger ? "First image larger" : "Second image larger"}
             </div>
-            <div className={results.is_aspect_ratio_equal?"status-warning":"status-good"}>
-                {results.is_aspect_ratio_equal?"Aspect ratio is equal":"Different aspect ratios"}
+            <div className={results.is_aspect_ratio_equal ? "status-warning" : "status-good"}>
+                {results.is_aspect_ratio_equal ? "Aspect ratio is equal" : "Different aspect ratios"}
             </div>
             <div>
-                {results.is_first_newer?"First content newer":"Second content newer"}
+                {results.is_first_newer ? "First content newer" : "Second content newer"}
             </div>
-            <div className={results.is_origin_equal?"status-warning":"status-good"}>
-                {results.is_origin_equal?"Both images from the same origin":"Images were taken from different origins"}
+            <div className={results.is_origin_equal ? "status-warning" : "status-good"}>
+                {results.is_origin_equal ? "Both images from the same origin" : "Images were taken from different origins"}
             </div>
-            <div className={results.both_alternate_version?"status-important":"status-good"}>
-                {results.both_alternate_version?"Both images are alternate versions":"There is an replacement candidate"}
+            <div className={results.both_alternate_version ? "status-important" : "status-good"}>
+                {results.both_alternate_version ? "Both images are alternate versions" : "There is an replacement candidate"}
             </div>
-            { show_difference }
+            {show_difference}
             <div>
-                {!results.both_alternate_version?
+                {!results.both_alternate_version ?
                     <a href={`/medialib/mark_alternate?content_id=${results.first_content_id}&content_id=${results.second_content_id}`} >
                         Mark as alternate versions
-                    </a>:null
+                    </a> : null
                 }
             </div>
 
@@ -172,12 +172,12 @@ function ComprassionBlock(results: CompareResult) {
     )
 }
 
-enum ViewMode{
+enum ViewMode {
     FIT_WIDTH,
     ORIGINAL_SIZE
 }
 
-interface ImageComparisonViewProps{
+interface ImageComparisonViewProps {
     first_image: ImageData,
     second_image: ImageData
 }
@@ -200,7 +200,7 @@ function ImageComparisonView(props: ImageComparisonViewProps) {
     }
 
     const firstImageStyles = {
-        opacity: opacityLevel==MAX_OPACITY?0:1,
+        opacity: opacityLevel == MAX_OPACITY ? 0 : 1,
     }
 
     const secondImageStyles = {
@@ -210,12 +210,12 @@ function ImageComparisonView(props: ImageComparisonViewProps) {
     return (
         <div className="image-view">
             <div className="controls">
-                <button onClick={modeChangeEvent} >Mode: {viewMode === ViewMode.ORIGINAL_SIZE?"ORIGINAL":"FIT"}</button>
-                <input type="range" min="0" max={MAX_OPACITY} value={opacityLevel} onChange={changeOpacityEvent}/>
+                <button onClick={modeChangeEvent} >Mode: {viewMode === ViewMode.ORIGINAL_SIZE ? "ORIGINAL" : "FIT"}</button>
+                <input type="range" min="0" max={MAX_OPACITY} value={opacityLevel} onChange={changeOpacityEvent} />
             </div>
-            <div className={"image-wrapper " + ((viewMode === ViewMode.FIT_WIDTH)?"fit-image":"")}>
-                <img src={`/image/png/${props.first_image.pathstr}`} style={firstImageStyles}/>
-                <img src={`/image/png/${props.second_image.pathstr}`} style={secondImageStyles}/>
+            <div className={"image-wrapper " + ((viewMode === ViewMode.FIT_WIDTH) ? "fit-image" : "")}>
+                <img src={`/image/transcode/png/${props.first_image.pathstr}`} style={firstImageStyles} />
+                <img src={`/image/transcode/png/${props.second_image.pathstr}`} style={secondImageStyles} />
             </div>
         </div>
     )
@@ -238,13 +238,13 @@ function ImageComparisonApp(props: ComparisonDataSerialised) {
         let first_elem_index: number | null = null;
         let second_elem_index: number | null = null;
         for (let i = 0; i < props.image_data.length; i++) {
-            if (props.image_data[i].content_id === props.compare_results[result_index].first_content_id){
+            if (props.image_data[i].content_id === props.compare_results[result_index].first_content_id) {
                 first_elem_index = i;
                 break;
             }
         }
         for (let i = 0; i < props.image_data.length; i++) {
-            if (props.image_data[i].content_id === props.compare_results[result_index].second_content_id){
+            if (props.image_data[i].content_id === props.compare_results[result_index].second_content_id) {
                 second_elem_index = i;
                 break;
             }
