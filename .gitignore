@@ -10,3 +10,4 @@ venv/
 .python-version
 *.code-workspace
 *.bundle.js.LICENSE.txt
+.vscode
